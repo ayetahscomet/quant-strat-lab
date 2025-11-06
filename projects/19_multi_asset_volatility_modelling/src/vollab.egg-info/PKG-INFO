@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: vollab
+Version: 0.1.0
+Summary: A modular multi-asset volatility modelling and forecasting system using GARCH, EGARCH and GJR-GARCH.
+Author: Deborah Akintoye
+Author-email: Deborah Akintoye <deborah@example.com>
+Project-URL: Homepage, https://github.com/deborahakintoye
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: matplotlib
+Requires-Dist: scipy

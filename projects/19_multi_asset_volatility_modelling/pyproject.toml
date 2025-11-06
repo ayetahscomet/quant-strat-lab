@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vollab"
+version = "0.1.0"
+description = "A modular multi-asset volatility modelling and forecasting system using GARCH, EGARCH and GJR-GARCH."
+authors = [
+    { name="Deborah Akintoye", email="deborah@example.com" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "scipy",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/deborahakintoye"

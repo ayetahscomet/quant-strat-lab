@@ -1,0 +1,25 @@
+Metadata-Version: 2.4
+Name: factorlab
+Version: 0.1.0
+Summary: A modular factor-based investment research framework
+Author: Deborah Akintoye
+Author-email: Deborah Akintoye <youremail@example.com>
+Project-URL: Homepage, https://github.com/deborahakintoye
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: matplotlib
+
+# --- Factor-Based Investment Framework ---
+
+This project builds a modular factor-investing research framework.
+
+## Features
+- Synthetic data generation (GBM + stochastic vol + missing values)
+- Factors: Momentum, Volatility, Mean-Reversion
+- Cross-sectional standardisation
+- Composite factor scoring
+- Top-K long/short strategy
+- Backtesting with Sharpe ratio
+- Clean, modular structure
