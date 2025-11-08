@@ -1,4 +1,4 @@
-# --- Hybrid Alpha Capture and Volatility Conditioning Analysis ---
+# Hybrid Alpha Capture and Volatility Conditioning Analysis
 
 (A) DATA & IDEA GENERATION (FOUNDATION)
 
