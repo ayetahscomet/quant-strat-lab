@@ -1,0 +1,14 @@
+# --- Hybrid Alpha Capture and Volatility Conditioning Analysis ---
+
+# Notations & Conventions
+
+t           :=      indexes trading days
+i           :=      indexes instruments / currency pairs (e.g. EURUSD, USDTRY)
+r_t,i       :=      log return for asset i on day (ie r_t,i = ln(P_t,i / P_t-1,i))
+R_t         :=      [r_t,1, r_t,2, ...] ** T (nx1 vector)
+s_t,i       :=      sythetic aggregated alpha score for asset i on day t
+sigma_t,i   :=      volatility estimate for asset i at time t (daily)
+w_t,i       :=      portfolio weight in asset i on day t (sum of absolute weights typically scaled to 1 to leverage)
+c_t,i       :=      transaction cost applied when changing weight w_t,i
+V_target    :=       target annualised volatility
+v           :=      daily target (ie v = V_target / sqrt(252))
