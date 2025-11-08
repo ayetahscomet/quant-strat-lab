@@ -2,6 +2,6 @@ pandas
 numpy
 matplotlib
 seaborn
-arch	# optional gor GARCH analysis
+arch	# optional for GARCH analysis
 scipy
 jupyterlab
