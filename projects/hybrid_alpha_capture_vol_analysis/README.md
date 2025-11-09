@@ -1,11 +1,11 @@
-# --- Hybrid Alpha Capture and Volatility Conditioning Analysis ---
+# Hybrid Alpha Capture and Volatility Conditioning Analysis
 
 (A) DATA & IDEA GENERATION (FOUNDATION)
 
         A1  Synthetic FX Price Generator (multivariate with regime-switching / GARCH-like vol)
         A2  Synthetic analysis/idea generator (timestamped ideas with sentiment, confidence, horizon)
 
-(B) SIGNAL ENGINEERING (ALPHA CAPTURE, INSPIRED BY MARSHALL WACE'S PTRADE OPTIMISATION PORTFOLIO SYSTEM)
+(B) SIGNAL ENGINEERING (ALPHA CAPTURE, INSPIRED BY MARSHALL WACE'S TRADE OPTIMISATION PORTFOLIO SYSTEM)
 
         B1  Alpha aggregation (decay, confidence-weighting)
         B2  Signal normalisation & simple filters (age decay, min confidence)
