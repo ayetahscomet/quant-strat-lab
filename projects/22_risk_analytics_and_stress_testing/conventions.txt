@@ -1,2 +1,46 @@
 ## Conventions & Notations
 
+(1)  Portfolio daily P&L
+
+r[t,i]            :=        Returns at time t for asset i
+w[t,i]            :=        Weights at time t for asset i
+R[t]              :=        ∑ w[t,i] * r[t,i]  ,  1 ≤ i ≤ N
+                              ie daily portfolio return
+NAV[t]            :=        NAV[t-1] * (1 + R[t]) - TC[t]
+TC[t]             :=        NAV[t-1] * tau * ∑ | w[t,i] - w[t-1,i] |
+tau               :=        per-unit turnover cost
+PnL[t]            :=        NAV[t] - NAV[t-1]
+
+(2) Parametric (variance-covariance) VaR (Guassian)
+
+Portfolio returns R ~ N(µ[p], σ[p] ** 2)
+
+mu[p]             :=      transpose(w) * mu
+sigma[p]          :=      (transpose(w) * Σ * w) ** 0.5
+z_a               :=      a-quantile of standard normal
+                            (e.g. for 99% -> z[0.01] ≈ - 2.33)
+VaR_param_a       :=      -(mu[p] + z_a * sigma[p])
+ES_param_a        :=      -mu[p] + sigma[p] * (phi(z_a) / a)
+phi               :=      standard normal pdf
+
+(3)  Historical VaR ((1 - a)-quantile loss)
+
+VaR_hist_a        :=      -q_(1-a)(R)  st ES is the mean loss beyond this quantile
+
+(4)  Monte-Carlo VaR
+
+M                :=      Simulated return vectors r(m) ~ N(mu, Σ)
+R(m)             :=      transpose(w) * r(m)
+
+(5)  Stress Scenarios
+
+Return-shock          :=    shift mean reutnrs mu → mu + ∆r.
+                              Recompute portfolio loss.
+Volatility-shock      :=    scale covariance Σ → s ** 2 * Σ
+                              Or sigma_i * s
+                              Compute new VaR/ES/simulate.
+Correlation-breakdown: :=   reduce off-diagonal correlations towards zero 
+                              Or a low floor rho_min, then convert back to covariance.
+                            Σ' = DR'D, where D = diag(sigma_i)
+∆NAV(scenario)         :=  NAV[baseline] - NAV[scenrio]
+
