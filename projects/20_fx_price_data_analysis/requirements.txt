@@ -1,0 +1,5 @@
+pathlib
+yfinance
+numpy
+pandas
+matplotlib.pyplot
