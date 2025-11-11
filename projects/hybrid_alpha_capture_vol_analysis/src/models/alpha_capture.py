@@ -43,3 +43,5 @@ if __name__ == "__main__":
     ideas_df = load_ideas("data/synthetic/analyst_ideas.csv")
     scores = aggregate_daily_scores(ideas_df, r.index.min(), r.index.max())
     print(scores.iloc[:5])
+
+
