@@ -1,0 +1,64 @@
+# Project Structuring
+
+Objectives when structuring:
+    -   Reproducibility
+    -   Separation of research vs production code
+    -   Clean import in python
+    -   Easy navigation
+    -   Scalability (small projects > full research repo > production pipeline)
+
+Folder-by-folder logic:
+
+data/
+    raw/        # untouched original data
+    interim/    # lightly cleaned (e.g., NaNs handled)
+    processed/  # ready-for-modelling, features created
+
+-   If it's a CSV/Prquet/h5/JSON etc, it goes here
+-   No Python code ever goes here
+-   Keeps all data out of code folders
+-   Prevents pushing large files into Git (usually you add /data/ to .gitignore)
+
+notebooks/
+-   Home to brainstorming and rough experiments
+-   Focusses on:
+        -   Exploratory data analysis   |
+        -   Idea generation             |
+        -   Rough feature tests         |- They're not for production code
+        -   Visual checks               |
+        -   Debugging ideas             |
+
+reports/
+    figures/            |
+    tables/             |- Anything generated "by" the project goes here
+    logs/               |
+    final_report.md     |
+
+src/
+    backtest/
+    data/
+    experiments/
+    models/
+    utils/
+    __init__.py
+
+    -   src/data/ focusses of functions ie data loading, processing, transformation functions etc
+    -   src/models/ focusses on modelling logic
+    -   src/backtest/ is our backtesting engine and focusses of execution rules
+    -   src/experiments/ are scripts that combine everything
+    -   src/utils/ focusses of general helper functions ie logging, plotting, mathematical utilities, etc
+
+    src/ can be used for clean imports and modularity ie "from src.models.garch import GARCHModel"
+
+\README.md
+    A human intro to the project
+
+\requirement.txt
+    Records a list of the Python libraries used, prevening version conflicts, and clean intallation on a new server
+
+\notation.txt
+    This is hyper-quant specific for understanding and readability
+
+/main.py
+    Acts as the central controller of the pipeline
+    -   It's written in a way that is eary to extend as your project grows
