@@ -14,7 +14,7 @@ def parameteric_var_es(weights, mu, cov, alpha = 0.99):
     es = -mu_p + sigma_p * (pdf / alpha)
     return var, es
 
-def historical_var_e(portfolio_returns, alpha = 0.99):
+def historical_var_es(portfolio_returns, alpha = 0.99):
     sorted_r = np.sort(portfolio_returns)
     cutoff = int(np.ceil((1-alpha) * len(sorted_r)))
     var = -sorted_r[:cutoff].max() if cutoff > 0 else - sorted_r.min()
