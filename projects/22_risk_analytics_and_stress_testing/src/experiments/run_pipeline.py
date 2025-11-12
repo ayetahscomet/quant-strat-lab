@@ -6,8 +6,7 @@ LOCATION = "workspaces"
 os.chdir(f"/{LOCATION}/quant-strat-lab/projects/22_risk_analytics_and_stress_testing/")
 print(os.getcwd())
 
-# src/experiments/run_pipeline.py
-import os
+
 from src.data.generator import generate_synthetic_universe
 from src.pnl.aggregator import compute_nav
 from src.risk.var_es import parametric_var_es, historical_var_es, montecarlo_var_es
