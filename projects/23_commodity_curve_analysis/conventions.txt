@@ -1,0 +1,13 @@
+# Conventions and Notation
+
+ROWS  = t 
+COLUMNS = Commodity
+T   =   [1M, 3M, 6M]
+Commodities :=  [crude oil, natural gas, corn, copper]
+
+S[t, T]     :=  S[t - 1, i] * np.exp((mu - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * dZ[t, i])
+F[t, T]     :=  S[t] * exp((r + c - y) * (T - t))
+r           :=  0.02
+c           :=  commodity-specific storage cost 
+dt          :=  1 / n_steps
+n_steps     :=  800
