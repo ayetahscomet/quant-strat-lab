@@ -1,0 +1,23 @@
+
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "factorlab"
+version = "0.1.0"
+authors = [
+    { name="Deborah Akintoye", email="youremail@example.com" },
+]
+description = "A modular factor-based investment research framework"
+readme = "README.md"
+requires-python = ">=3.9"
+
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/deborahakintoye" 

@@ -1,0 +1,7 @@
+pandas
+numpy
+matplotlib
+seaborn
+arch	# optional for GARCH analysis
+scipy
+jupyterlab

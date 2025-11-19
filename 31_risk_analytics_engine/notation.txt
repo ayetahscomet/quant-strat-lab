@@ -1,0 +1,68 @@
+====================================================================
+Notation — Risk Analytics Engine
+====================================================================
+
+General:
+--------
+t              = time index (trading day)
+N              = number of assets
+Σ              = covariance matrix
+ρ              = correlation matrix
+w              = portfolio weight vector (Nx1)
+r_t            = return vector at time t
+P_t            = portfolio PnL on day t
+μ              = mean return
+σ              = volatility (standard deviation)
+
+Portfolio:
+----------
+P_t = w' r_t
+Portfolio variance:   Var(P) = w' Σ w
+Portfolio vol:        σ_p = sqrt(w' Σ w)
+DV01_t = duration × price_t × 0.0001
+
+Value at Risk:
+---------------
+VaR_α      = α quantile of loss distribution
+Historical VaR:
+    VaR_α = Quantile(P_t, 1 - α)
+
+Parametric VaR (normal):
+    VaR_α = μ + z_α σ
+
+Monte Carlo VaR:
+    Generate X ~ N(μ, Σ), compute P = w'X, take α-quantile
+
+Expected Shortfall (ES):
+------------------------
+ES_α = E[P_t | P_t < VaR_α]
+
+Covariance & Correlation:
+-------------------------
+σ_i      = volatility of asset i
+ρ_ij     = correlation between i and j
+Σ_ij     = covariance = ρ_ij σ_i σ_j
+
+Eigen-decomposition:
+--------------------
+Σ v_i = λ_i v_i
+λ_i    = eigenvalue (variance explained)
+v_i    = eigenvector (factor loading)
+
+PCA:
+----
+PC_i(t) = v_i' r_t
+Explained variance = λ_i / sum_j λ_j
+
+Stress Testing:
+---------------
+Return Shock:          r*_t = r_t + shock
+Volatility Shock:      Σ* = k Σ
+Correlation Breakdown: ρ* = ρ × decay_factor
+
+PCA Factor Shock:
+    Σ* = Σ + δ v_i v_i'
+
+Scenario Loss Attribution:
+--------------------------
+L_i = w_i × r_i^stress

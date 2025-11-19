@@ -1,0 +1,6 @@
+numpy
+pandas
+matplotlib
+arch
+scipy.stats
+os
