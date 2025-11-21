@@ -1,6 +1,7 @@
 # Macro-Informed Systematic FX Strategy Project
 
 Author: Deborah Akintoye
+
 Inception Date: 21-November-2025
 
 ## Project Overview
