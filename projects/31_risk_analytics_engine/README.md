@@ -29,48 +29,91 @@ This project was built to strengthen knowledge in:
 risk_engine_project/
 
 │
+
 ├── data/
+
 │   ├── raw/
+
 │   ├── interim/
+
 │   └── processed/
+
 │
+
 ├── notebooks/
+
 │   └── 01_risk_engine_walkthrough.ipynb
+
 │
+
 ├── reports/
+
 │   ├── figures/
+
 │   ├── tables/
+
 │   ├── logs/
+
 │   └── final_report.md
+
 │
+
 ├── src/
+
 │   ├── data/
+
 │   │   ├── generate_synthetic.py
+
 │   │   └── load_data.py
+
 │   │
+
 │   ├── models/
+
 │   │   ├── var.py
+
 │   │   ├── es.py
+
 │   │   ├── pca.py
+
 │   │   └── stress_tests.py
+
 │   │
+
 │   ├── backtest/
+
 │   │   └── portfolio_sim.py
+
 │   │
+
 │   ├── utils/
+
 │   │   ├── math_utils.py
+
 │   │   ├── plotting.py
+
 │   │   └── logging_setup.py
+
 │   │
+
 │   ├── experiments/
+
 │   │   └── run_full_pipeline.py
+
 │   │
+
 │   └── __init__.py
+
 │
+
 ├── main.py
+
 ├── notation.txt
+
 ├── requirements.txt
+
 └── README.md
+
 
 
 ---
