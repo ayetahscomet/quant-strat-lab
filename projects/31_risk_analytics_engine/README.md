@@ -27,6 +27,7 @@ This project was built to strengthen knowledge in:
 ## Project Structure
 
 risk_engine_project/
+
 │
 ├── data/
 │   ├── raw/
