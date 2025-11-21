@@ -30,7 +30,7 @@ US Treasury Bonds:  "Foreign investors snap up Japanese government bonds as yiel
     -   Recent regulations require JPN instutitonal investors to remain equally weighted in asset and liability positions, preventing large-scale bond participation.
     -   BOJ are also reducing short-dated easing efforts, and hence tapering purchases of long-dated bonds (10s25s); essentially between insitiutions and the BOJ 10s25s are open season to foreigners; supply is high, prices are dropping, long-dated yields are being pushed up
 
-
+---
 
 ##  Market Observations
 
@@ -58,4 +58,4 @@ IVV:    S&P 500 ETF
 
 21-Nov-2025:    
 
-    0.5086% EMB drawdown; AGG-2d drawdown of 0.2094% ;crenellation theme seen throughout 1d                  yields on GOVT; DBC trading down assumingly due as "global steel production capacity                     to exceed demand by 38% by 2027"; S&P earning a 1.16% yield
+    0.5086% EMB drawdown; AGG-2d drawdown of 0.2094% ; crenellation theme seen throughout 1d                  yields on GOVT; DBC trading down assumingly due as "global steel production capacity                     to exceed demand by 38% by 2027"; S&P earning a 1.16% yield
