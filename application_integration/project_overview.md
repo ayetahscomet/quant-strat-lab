@@ -18,7 +18,7 @@ Users often want:
 
 There is an opportunity to build a product that reframes global education as a daily habit. 
 
-    *Simple, reflective and rooted in genuine exploration.*
+   *Simple, reflective and rooted in genuine exploration.*
 
 ## 3.   Proposed Solution
 
