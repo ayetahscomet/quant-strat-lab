@@ -2,14 +2,14 @@
 ---
 E
 ---
-Economic Bubble:          An economic cycle that is characterised by the rapid escalation of market values; When high valuation ratios, increased leverage, market euphoria, dominant narratives, and market concentrations occur simulatiously, a "bubble environment" is formed.
+**Economic Bubble**:          An economic cycle that is characterised by the rapid escalation of market values; When high valuation ratios, increased leverage, market euphoria, dominant narratives, and market concentrations occur simulatiously, a "bubble environment" is formed.
 
 M
 ---
 
-Margin Call:              An action taken by brokers when an investor's equity in a margin account falls below the broker's required minimum, prompting the transfer of additional funds to restore the account's balance. 
+**Margin Call**:              An action taken by brokers when an investor's equity in a margin account falls below the broker's required minimum, prompting the transfer of additional funds to restore the account's balance. 
 
 ---
 Y
 ---
-Yield Curve Control:        A strategy employed by central banks involving the the buying or selling of as many bonds as necessary to hit a longer-term interest rate target. Unlike QE, investors do not know the exact volume of intervention required, creating an imformation gap. 
+**Yield Curve Control**:        A strategy employed by central banks involving the the buying or selling of as many bonds as necessary to hit a longer-term interest rate target. Unlike QE, investors do not know the exact volume of intervention required, creating an imformation gap. 
