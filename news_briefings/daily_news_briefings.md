@@ -24,11 +24,10 @@ Emergigng Markets:  "Hedge funds’ bets on Argentina pay off after US bailout"
 
 *Joseph Cotterill and Costas Mourselas in London*
     
--   ...
--   ...
--   ...
--   ...
-
+-   Newly Appointed, Javier Milei's electoral win began a run on ARS, which threatened to wipe out the country's foreign currency reserves; This only adds to a strong year for EM investor's amidst dollar weakness
+-   The US bailout, boosted the prices of ARG's Dollar bond (maturing 2038), forcing yields down, due to the percieved reduced risk premium; The US offering was a backstop contingency plan providing a secondary source of funds
+-   Investors are computing the likeihood of Milei's government even being able to source dollars to rebuild its foreign currency reserves, while keeping the peso's value within a trading band; Many investors believe the band is keeping ARS overvalued, making it harder for the government to strengthen reserves
+-   2025 is shaping to be the 
 ---
 
 ### Date:       22-Nov-2025
