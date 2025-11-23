@@ -10,6 +10,27 @@ Termination:       -
 
 ##  Article Summaries
 
+### Date:       23-Nov-2025
+
+Global Economy:    "How long will the dearth of US data persist?"
+
+*Alexandra White in New York, Rachel Rees in London and Olaf Storbeck in Frankfurt*
+
+-   The Bureau of Economic Analysis has postponed two releases that were due out on 26-Nov; Data postponed includes Q3GDP and September Inflation; The next Fed rate decision is due 10-Dec, so delays may force the the act with limited data (which would increase the likeihood of a rate-hold, rather than cut)
+-   Q3GDP is polling at 3% (down from 38% in Q2) signalling comparative economic strength (post Q1's negative reading); Inflation (usually measured with the index of cre personal consumption expenditures) is polling at 2.9%, unchanged from August; This comes after the Bureau of Labor Statistics's NFP for October has been outright cancelled
+-   In October, the IMF upgraded its outlook for the US, but warned that the AI-investment-surge was the main mover - This raises similar concerns to the "dotcom bubble"
+
+Emergigng Markets:  "Hedge funds’ bets on Argentina pay off after US bailout"
+
+*Joseph Cotterill and Costas Mourselas in London*
+    
+-   ...
+-   ...
+-   ...
+-   ...
+
+---
+
 ### Date:       22-Nov-2025
 
 Equities:    "US stocks rebound after top Fed official signals openness to rate cut"
