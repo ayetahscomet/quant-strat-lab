@@ -1,5 +1,8 @@
 # Quant-Market Glossary
 ---
+E
+---
+Economic Bubble:          An economic cycle that is characterised by the rapid escalation of market values; When high valuation ratios, increased leverage, market euphoria, dominant narratives, and market concentrations occur simulatiously, a "bubble environment" is formed.
 
 M
 ---
