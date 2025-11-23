@@ -99,7 +99,17 @@ IVV:    S&P 500 ETF
 
 -   A tracker of 500 leading companies listed on U.S. stock exchanges.
         
-**22-Nov-2025**:
+---
+**23-Nov-2025** (Closed):
+WoW Expections:
+-    GOVT prices are expected to continue on their downward trend with key data releases expected to point toward economic contraction. This is expected to push yields up. Additionally, with fresh shorted-dated supply entering the market, this can only push yields up.
+EMB is expected to have a strong week, with reduced price pressure. With all eyes on the US, upward prices are expected, with tighter spreads on EM supply.
+-    AGG's stochastic behaviour is expected to continue, due to changing impacts of Fed cuts in various bond sectors. However, if the market chooses to reprice in line with Fed cut expectations, a risk-on environment with heightened bond risk premiums may emerge. We expect prices to trade down WoW.
+-    With commodities being the main channel of inflationary pressure, this week's EU Inflation data will be a mover, with a downward trend expecting to continue. The market is pricing a low ~2% +/- 0.2 YoY figure. Falling inflation would typically dampen commodity prices, so the impact on the DBC depends on whether the market views this as a sign of easing pressures or a temporary blip.
+-    IVV, a market that thrives on volatility, is expected to witness wider spreads and significant data-by-data variances. This week, we expect the S&P to strengthen due to our hypothesis of weak data, which could lead to a repricing of rate fundamentals and an expectation of December rate cuts, forcing prices up.
+
+
+**22-Nov-2025** (Closed):
 
 EMB prices closed down ~0.0834% due Fed-Dec-cut-expectations; AGG priced 100.28 - 100.50 on day; GOVT closed high on the week with the market pricing in lower yields; DBCs downward pressure continued from 19-present accounting for the repricing of an expected high-commodity-risk-premium; S&P gained 6.51 on 662.28 at close
 
