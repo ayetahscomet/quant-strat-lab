@@ -12,7 +12,9 @@ M
 ---
 R
 ---
+
 **Random Walk**:              A theory stating that an asset's future price movements are unpredictable and independent of its past price actions, suggesting that it is imposible to consistently beat the market through historical analysis alone.
+
 ---
 Y
 ---
