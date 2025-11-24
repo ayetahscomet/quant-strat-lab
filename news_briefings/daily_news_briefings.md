@@ -9,6 +9,29 @@ Termination:       -
 ----
 
 ##  Article Summaries
+
+### Date:       25-Nov-2025
+
+UK Autumn Budget 2025:    "What big bond investors want from the UK Budget"
+
+*Ian Smith, Senior Markets Correspondent*
+
+-   ...
+-   ...
+-   ...
+-   ...
+
+Hedge Funds:  "What US hedge funds are shorting right now"
+
+*Robin Wigglesworth*
+    
+-   ...
+-   ...
+-   ...
+-   ...
+
+---
+
 ### Date:       24-Nov-2025
 
 Commodities:    "China’s Li pushes developing country alliance on rare earths"
