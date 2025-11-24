@@ -1,0 +1,44 @@
+{
+    "2025-11-20": {
+        "full_challenge_header": "First Look: Global Geography Challenge",
+        "parts": [
+            {
+                "part_header": "Part A: Name 5 African Capitals",
+                "question": "Name **5** capital cities on the African continent.",
+                "input_type": "list_entry",
+                "expected_count": 5,
+                "kb_key": "AfricanCapitals",
+                "hint": "Start with the northern or eastern parts of the continent.",
+                "error_categories": [
+                    {
+                        "category": "wrong_continent",
+                        "feedback_text": "Wrong continent. Focus on Africa."
+                    },
+                    {
+                        "category": "is_country_not_capital",
+                        "feedback_text": "That's a country, not a capital."
+                    }
+                ]
+            },
+            {
+                "part_header": "Part B: The Letter A",
+                "question": "Name **3** sovereign countries that begin with the letter 'A'.",
+                "input_type": "list_entry",
+                "expected_count": 3,
+                "kb_key": "CountriesStartingWithA",
+                "hint": "One is landlocked in Europe, and one is a massive island nation.",
+                "error_categories": [
+                    {
+                        "category": "not_sovereign",
+                        "feedback_text": "Is that territory fully sovereign?"
+                    },
+                    {
+                        "category": "wrong_letter",
+                        "feedback_text": "This country doesn't start with 'A'."
+                    }
+                ]
+            }
+        ],
+        "feedback_template": "[CUSTOM RESPONSE: Your list was complete and accurate! See the insights dashboard.]"
+    }
+}

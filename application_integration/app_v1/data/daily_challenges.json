@@ -1,0 +1,24 @@
+{
+  "2025-11-20": {
+    "full_challenge_header": "First Look",
+    "parts": [
+      {
+        "part_header": "Part A",
+        "question": "Name 5 capital cities on the African continent.",
+        "expected_count": 5,
+        "correct_answers": ["Cairo", "Nairobi", "Accra", "Abuja", "Pretoria"]
+      }
+    ]
+  },
+  "2025-11-23": {
+    "full_challenge_header": "Midday Check-In",
+    "parts": [
+      {
+        "part_header": "Part A",
+        "question": "What is the highest-volume currency pair traded on the forex market?",
+        "expected_count": 1,
+        "correct_answers": ["EUR/USD"]
+      }
+    ]
+  }
+}
