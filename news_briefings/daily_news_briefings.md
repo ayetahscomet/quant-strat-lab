@@ -9,6 +9,27 @@ Termination:       -
 ----
 
 ##  Article Summaries
+### Date:       24-Nov-2025
+
+Commodities:    "China’s Li pushes developing country alliance on rare earths"
+
+*Joe Leahy in Beijing*
+
+-   China is pitching, a limited-detail rare earths initiative; Chinese production of rate earths was a point of contension in the trade wars with the US; China is keen to build ties with resource-rich countries
+-   This has been titled the "international economic and trade co-operation inicative on green minerals"; 19+ nations, including massive commodity ports like Cambodia, Nigeria, Myanmar, are to participate in the allience
+-   No quantifiers have been attached to this initiatve as it is in early stages, but the idea is anchored in the "better safeguarding [of] the interests of developing countries"
+-   Earlier in the year, in retaliation to US tarrifs, China imposed export licences with controls for rate earths; The US are intent on reshaping the global green mineral resource supplt chain to curb China's resource imports
+
+European Banks:  "European banks offer investors sweeteners as rally fades"
+
+*Simon Foy and Emily Herbert in London*
+    
+-   European banks are on the tail end of recent rallies, and are handing out incentives; BNPP and SOCGEN accelerated their share buyback programmes, handing a combined ¢2.15bn to investors earlier than anticipated; DB also revealed new targets of faster growth and lower costs, by 2028, but announcement failed to impress investors with stocks falling 3%
+-   The Euro Stoxx Banks index climbed >60% between January and mid-August; The European banking industry is facing a more difficult period as falling interest rates are putting pressure on their net interest margins
+-   Lenders, Santander, Intea Sanpaolo and UniCredit are now value between 1.3 and 1.5 times book (S&PGlobal); BBVA's shares are priced as high as 1.8 times book
+-   PM's are being selective on EU lenders; Analysts are largely bullish; Loan growth is back, ECB rates are at 2%, and there is an upward-sloping yield curve
+
+---
 
 ### Date:       23-Nov-2025
 
@@ -100,6 +121,10 @@ IVV:    S&P 500 ETF
 -   A tracker of 500 leading companies listed on U.S. stock exchanges.
         
 ---
+**24-Nov-2025**:
+
+EMB 96.15 (at close on 21st); AGG pre-market is trading up 0.16%; GOVT is trading at + 0.04 , hence up  0.17%; DBC is trading down - 0.04% pre-market, with a risk-off sentiment dominating the commodities index; IVV is trading at 0.19% pre-market with yields experiencing downward pressure indicitive of a risk-on environment
+
 **23-Nov-2025** (Closed):
 WoW Expections:
 -    GOVT prices are expected to continue on their downward trend with key data releases expected to point toward economic contraction. This is expected to push yields up. Additionally, with fresh shorted-dated supply entering the market, this can only push yields up.
