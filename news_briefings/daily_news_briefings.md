@@ -16,19 +16,20 @@ UK Autumn Budget 2025:    "What big bond investors want from the UK Budget"
 
 *Ian Smith, Senior Markets Correspondent*
 
--   ...
--   ...
--   ...
--   ...
+-   Reeves must deliver a budget that simultaneously cuts spending and raises money without fulling inflation; Earlier this month the plan to raise income tax was scrapted prompting a sell-off; The market is positioned as though to state that the UK government will not be able to increase their headroom against their self-imposed borrowing limits
+-   The street expects a _minimum_ of higher taxes and modest spending cuts to expand fiscal headroom to ~£15bn; Discipline in reaffirming current fiscal rules, commitment to fiscal consolidation, realistic productivity growth projection; Failure to achieve this would likely trigger a rally in gilt yields
+-   The street is keeping an eye of for language that hints at reduced inflation (The UK cannot afford to put upward pressure on near-term inflation): reduced levies on energy bills, a credible approach to reforming spending etc: These would increase the likelihood of BoE rate cuts supporting growth and reduced debt-servicing costs
+-   A budget that is good for the gilt market is not neccessarily good for the UK enconomy; but a Budget that's bad for gilts would see borrowing costs soar, which is definitely bad for the economy: “Higher taxes are not needed in the upcoming Budget. In an economy like the UK, which already has a historically high tax burden, raising taxes won’t translate into material revenue gains, as this impairs growth and deters wealth creation. What the bond market would rather see is more action to tackle runaway welfare spending." - Mark Dowding (RBC BlueBay Asset Management)
 
 Hedge Funds:  "What US hedge funds are shorting right now"
 
 *Robin Wigglesworth*
     
--   ...
--   ...
--   ...
--   ...
+-   Goldman Sachs' report on hedge fund positioning showed that smart money is not yet shorting their AI-motived investments, but are looking into their weaker members; This file gathers delayed data based on 982 hedge funds with $4tn of gross equity positions (2.6 long, 1.4 short): Amazon, Microsoft, Meta, Nvidia, and Alphabet are the five most common bets by US hedge funds tallied by Goldman
+-   S&P shorting is at the 99th percentile relative to the past five years, and well above the long term average since 1995; Short interest in the tech-heavy Nasdaq 100 is a touch higher (2.5%), but the biggest rise is present in small-caps (Russel 2000)
+-   From the "median stock short interest as shares of market cap" chart, Utilities is at one of its highest levels historically recorded, which is being treated as a proxy for the AI bubble, due to their use to fuel AI models; Ordered, Consumer Staples, Health Care, Eberge, and Real Estate are experiencing significant shorting (Please note, these are proportional to their history of shorting, not overall)
+-   Overall, Tesla continues to be the most common short, with shorts valued at $33 billion as of 31-Oct-2025; Interesting new entries to the largest stock positions are JPM, Robinhood Markets, Oracle and Intel; However, note, that that these new entries can be classified as AI players or exceptionally frothy AI adjacent stocks
+-   When considering stocks over $25 billion with largest short interest as a % of their market cap, Bloom Energy Corp, a heavy electrical equipment company, tops the list at 18% taking an Avg of 3 days for hedgefunds to liquidate their position; An overwhelming majority of stocks on this list are IT-AI adjacent companies
 
 ---
 
@@ -144,6 +145,10 @@ IVV:    S&P 500 ETF
 -   A tracker of 500 leading companies listed on U.S. stock exchanges.
         
 ---
+**25-Nov-2025**:
+
+EMB closed up by 0.21% from the day prior; AGG interestingly traded up 0.20% at yesterday's close, with no movement (0.00%) in pre-market trades, believe to be encouraged by the Nasdaq's success (+2.69%); DBC is trading at 22.64 (+0.49%); GOVT is trading with stability with a minor 0.02-0.04 change from close to pre-market; S&P closed up at close (1.48%), but is skewing negative (-0.03%) pre-market
+
 **24-Nov-2025**:
 
 EMB 96.15 (at close on 21st); AGG pre-market is trading up 0.16%; GOVT is trading at + 0.04 , hence up  0.17%; DBC is trading down - 0.04% pre-market, with a risk-off sentiment dominating the commodities index; IVV is trading at 0.19% pre-market with yields experiencing downward pressure indicitive of a risk-on environment
@@ -151,7 +156,7 @@ EMB 96.15 (at close on 21st); AGG pre-market is trading up 0.16%; GOVT is tradin
 **23-Nov-2025** (Closed):
 WoW Expections:
 -    GOVT prices are expected to continue on their downward trend with key data releases expected to point toward economic contraction. This is expected to push yields up. Additionally, with fresh shorted-dated supply entering the market, this can only push yields up.
-EMB is expected to have a strong week, with reduced price pressure. With all eyes on the US, upward prices are expected, with tighter spreads on EM supply.
+-    EMB is expected to have a strong week, with reduced price pressure. With all eyes on the US, upward prices are expected, with tighter spreads on EM supply.
 -    AGG's stochastic behaviour is expected to continue, due to changing impacts of Fed cuts in various bond sectors. However, if the market chooses to reprice in line with Fed cut expectations, a risk-on environment with heightened bond risk premiums may emerge. We expect prices to trade down WoW.
 -    With commodities being the main channel of inflationary pressure, this week's EU Inflation data will be a mover, with a downward trend expecting to continue. The market is pricing a low ~2% +/- 0.2 YoY figure. Falling inflation would typically dampen commodity prices, so the impact on the DBC depends on whether the market views this as a sign of easing pressures or a temporary blip.
 -    IVV, a market that thrives on volatility, is expected to witness wider spreads and significant data-by-data variances. This week, we expect the S&P to strengthen due to our hypothesis of weak data, which could lead to a repricing of rate fundamentals and an expectation of December rate cuts, forcing prices up.
