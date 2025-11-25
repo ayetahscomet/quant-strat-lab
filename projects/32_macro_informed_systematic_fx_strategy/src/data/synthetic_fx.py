@@ -27,7 +27,7 @@ def generate_synthetic_fx_data(CURRENCIES = ["GBPUSD=X", "EURUSD=X", "JPYUSD=X",
             S[i, t] = S[i-1, t] * np.exp((MU - 0.5 * SIGMA**2) * dt + SIGMA * np.sqrt(dt) * Z[i])
 
     out_path = os.path.join(SYNTHETIC_DIR, "synthetic_fx_data.csv");
-    synthetic_S_df = pd.DataFrame(S, columns = CURRENCIES)
+    synthetic_S_df = pd.DataFrame(S, columns = CURRENCIES, index = "Date")
     synthetic_S_df.index = pd.date_range(start = START_DATE, periods = N_STEPS, freq='B')
     synthetic_S_df.to_csv(out_path, index=True);
     return f"--- Synthetic {CURRENCIES} Data Loaded. Stored in {SYNTHETIC_DIR}. ---";
