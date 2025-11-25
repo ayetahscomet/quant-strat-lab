@@ -2,8 +2,16 @@
 ---
 E
 ---
+
 **Economic Bubble**:          An economic cycle that is characterised by the rapid escalation of market values; When high valuation ratios, increased leverage, market euphoria, dominant narratives, and market concentrations occur simulatiously, a "bubble environment" is formed.
 
+---
+F
+---
+
+**Froth**:                    Market conditions where an asset's price being to increase beyond its intrinsic value, characterised by overconfidence and often a precursor to an market/economic bubble. 
+
+---
 M
 ---
 
