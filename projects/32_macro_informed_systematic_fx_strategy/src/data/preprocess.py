@@ -1,7 +1,6 @@
 # ...existing code...
 import numpy as np
 import pandas as pd
-import yfinance as yf
 import os
 
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -24,9 +23,10 @@ def preprocess_fx_data(fx_data_type="raw"):
         os.makedirs(RAW_DIR, exist_ok=True)
         src = os.path.join(RAW_DIR, "raw_fx_data.csv")
 
-    processed_data = pd.read_csv(src, index_col=0)
+    processed_data = pd.read_csv(src, index_col="Date")
     processed_data = processed_data.drop_duplicates().ffill().bfill()
     processed_data.to_csv(out_path, index=True)
 
     return f"--- Data Loaded and Preprocessed. Stored in {PROCESSED_DIR}. ---"
 
+preprocess_fx_data()
