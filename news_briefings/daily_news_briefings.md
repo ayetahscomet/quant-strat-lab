@@ -10,6 +10,20 @@ Termination:       -
 
 ##  Article Summaries
 
+### Date:       26-Nov-2025
+
+Currencies:    "Currency traders bet against sterling ahead of Budget"
+
+*Ian Smith and Rachel Rees in London*
+
+-   Traders are expecting today's UK Autumn Budget to push USD/GBP up, on tax-rising fears; In fact, trading volumes in GBP/USD puts have increased with put prices trading up; puts are oversubscribed to calls 4x over (CME Group); The exceptation of the BoE cutting rates is weighing on currency valuations
+-   Reeves with need a goldilocks scenario for everyone to win as a result of this budget; Taxes rises need to be small enough to not weigh heavily on consumers and High enough that signals to investors that they will achieve the parties self-imposed budget
+-   GBP was up 0.6% at 1.318 against the dollar by yesterday afternoon, but that was dollar-ideosyncratic; The GBP/EUR is a more accurate measure of strength, showing GBP's slide against the EUR, bottoming out at ~1.13; This view is primarily being expressed through currency forwards
+-   Gilt Yields are inverted-to-flat in recent data, with expectations of a 25-bp cut in December; If Reeves is able to create sufficient fiscal headroom, clearly dispel fears of futher tax rises in the coming year, and deliver news on growth sterling could rally, putting 1 in 4 put investors out of the money 
+-   The bet currently is that short-dated gilts are BoE conditional, with little movement expected on that front; however, if long-dated gilts are skewed then the BoE, Labour Government, etc, as a result of today's budget, further panic will insue in need of correction: "I haven't heard anyone say good news about sterling and UK in the last three months" - Steve englander, (SCB)
+
+---
+
 ### Date:       25-Nov-2025
 
 UK Autumn Budget 2025:    "What big bond investors want from the UK Budget"
@@ -145,6 +159,11 @@ IVV:    S&P 500 ETF
 -   A tracker of 500 leading companies listed on U.S. stock exchanges.
         
 ---
+**26-Nov-2025***:
+
+EMB close up 0.26%, however if the UK Budget proves strong, we expect USD/GBP to strengthen, pushing the index down; AGG lused up 0.16%; IVV closed up 0..94% which was welcomed by the market; DBC closed down -0.53%; GOVT closed up 0.22%, a moddest 0.05 price increase
+
+
 **25-Nov-2025**:
 
 EMB closed up by 0.21% from the day prior; AGG interestingly traded up 0.20% at yesterday's close, with no movement (0.00%) in pre-market trades, believe to be encouraged by the Nasdaq's success (+2.69%); DBC is trading at 22.64 (+0.49%); GOVT is trading with stability with a minor 0.02-0.04 change from close to pre-market; S&P closed up at close (1.48%), but is skewing negative (-0.03%) pre-market
