@@ -12,6 +12,12 @@ F
 **Froth**:                    Market conditions where an asset's price being to increase beyond its intrinsic value, characterised by overconfidence and often a precursor to an market/economic bubble. 
 
 ---
+I
+---
+
+**Interbank Lending Market**:  A market in which banks lends funds to one another under specific terms, with short-term maturities, specifically overnight.
+
+---
 M
 ---
 
