@@ -1,6 +1,7 @@
 # Macro-Informed Systematic FX Strategy Project
 
 Author: Deborah Akintoye
+
 Inception Date: 21-November-2025
 
 ## Project Overview
@@ -153,50 +154,52 @@ VaR / PnL timeline
 
 ### Achievements:
 
-i.      End-to-end FX strategy pipeline
+  i.      End-to-end FX strategy pipeline
 
-ii.     Modular, well-documented Python code
+  ii.     Modular, well-documented Python code
 
-iii.    Multi-source dataset acquisition & cleaning
+  iii.    Multi-source dataset acquisition & cleaning
 
-iv.     Signals: returns, volatility, carry, momentum, macro
+  iv.     Signals: returns, volatility, carry, momentum, macro
 
-v.      Backtesting framework with PnL, NAV, performance metrics
+  v.      Backtesting framework with PnL, NAV, performance metrics
 
-vi.     Risk analysis & stress testing
+  vi.     Risk analysis & stress testing
 
-vii.    Signal & currency-level attribution
+  vii.    Signal & currency-level attribution
 
 ### Insights:
 
-i.      Macro-FX interactions
+  i.      Macro-FX interactions
 
-ii.     Object-oriented quant programming
+  ii.     Object-oriented quant programming
 
-iii.    Risk management & scenario analysis
+  iii.    Risk management & scenario analysis
 
-iv.     Data quality challenges
+  iv.     Data quality challenges
 
-v.      Quantitative performance metrics interpretation
+  v.      Quantitative performance metrics interpretation
 
 ### Limitations
 
-i.      Historical data ≠ future regimes
+  i.      Historical data ≠ future regimes
 
-ii.     Simplified transaction cost & slippage
+  ii.     Simplified transaction cost & slippage
 
-iii.    Macro signals are proxies
+  iii.    Macro signals are proxies
 
-iv.     Monte Carlo assumes normal returns
+  iv.     Monte Carlo assumes normal returns
 
 ### Next Steps
 
-i.      ML for signal enhancement
+  i.      ML for signal enhancement
 
-ii.     Regime-switching dynamic weights
+  ii.     Regime-switching dynamic weights
 
-iii.    Expand currency universe
+  iii.    Expand currency universe
 
-iv.     Integrate derivatives for hedging
+  iv.     Integrate derivatives for hedging
 
-v.      Out-of-sample or pseudo-live validation
+  v.      Out-of-sample or pseudo-live validation
+
+  

@@ -1,1 +1,1 @@
-__init__ = ["load_data", "preprocess", "synthetic_fx"]
+__init__ = ["load_data", "preprocess", "synthetic_fx", "macro"]
