@@ -11,6 +11,8 @@ F
 
 **Froth**:                    Market conditions where an asset's price being to increase beyond its intrinsic value, characterised by overconfidence and often a precursor to an market/economic bubble. 
 
+**Floating Exchange Rate**    A system where a currency's value is determined by the suppy and demand in the FX market.  Unlike a fixed or pegged excchange rate, the value of a floating currency is not directly controlled by a central bank, though they may intervine to stabilise or influence the currency.
+
 ---
 G
 ---
