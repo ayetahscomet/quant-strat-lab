@@ -10,6 +10,32 @@ Termination:       -
 
 ##  Article Summaries
 
+### Date:       28-Nov-2025
+
+Gilts:    "UK signals expansion of short-term debt market in ‘radical’ borrowing shift"
+
+*Ian Smith and Rachel Rees in London*
+
+-   Investors are expecting a ridical shift away from long term borrowing by the UK government, as they shared that they were considering selling more short-term Treasury bills; These short term bills only currently make up 3.72% of circulating UK sovereign debt
+-   The UK are attempting to lower their interest bill by shortening debt maturity dates; Currently 1m Tbills yield 4.05%, while 30s have fallen to 5.21%
+-   Leaning more heavily on short-dated borrow creates more exposure to swings in interest rates, as they would have to return to the market more frequency to refinance their debt
+-   In the US, short term instruments account for 20% of their outstanding government debt; This was a Biden-era policy that was critised yet continued; The key counterargument to the UK moving in this direction is the issue of natural demand
+
+---
+
+### Date:       27-Nov-2025
+
+Currencies:    "Why China needs to let the renminbi rise"
+
+*Weijian Shan*
+
+-   CNY is severly undervalued especially, when juxtaposed to Hong Kong's HKD, which is pegged to the USD; Using the economist's Big Mac Index CNY appears to be in excess  ~41% undervalued
+-   It is beleived that a steady appreciation in RMB would boost domestic consumption and improve trade relations; For 32 years China has run a surplus and has exceeded its capital account deficits and growing USD 3.3 tn in foreign exchange reserves
+-   USD/RMB has never traded below 1:8.7 since 1994, even under the 1996-98 Asian financial crisis, or during the 2008-2009; It seems that China has found a way to achieve stability and credibility through undervaluation
+-   Even with China's steady 5% annual GDP growth since 2023, China needs to curb their export dependence and move towards domestic consumption, which would only be encourage by astrong CNY
+
+---
+
 ### Date:       26-Nov-2025
 
 Currencies:    "Currency traders bet against sterling ahead of Budget"
