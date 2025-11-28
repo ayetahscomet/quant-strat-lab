@@ -12,10 +12,18 @@ F
 **Froth**:                    Market conditions where an asset's price being to increase beyond its intrinsic value, characterised by overconfidence and often a precursor to an market/economic bubble. 
 
 ---
+G
+---
+
+**Gamma Hedging**:            A trading strategy that tries to maintain a constant delta in an options position, often one that is delta-neutral, as the underlying asset changes price.
+
+---
 I
 ---
 
 **Interbank Lending Market**:  A market in which banks lends funds to one another under specific terms, with short-term maturities, specifically overnight.
+
+**Inventory Risk Management**:  A risk managment strategy used to manage financial losses that can occur from holding an unbalanced or depreciating inventory of assets. This may be via delta hedging, dynamic pricing, positioning limits and monitoring, and/or capital buffers and stress testing.
 
 ---
 M
