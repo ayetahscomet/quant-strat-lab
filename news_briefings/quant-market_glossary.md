@@ -11,11 +11,21 @@ F
 
 **Froth**:                    Market conditions where an asset's price being to increase beyond its intrinsic value, characterised by overconfidence and often a precursor to an market/economic bubble. 
 
+**Floating Exchange Rate**:    A system where a currency's value is determined by the suppy and demand in the FX market.  Unlike a fixed or pegged excchange rate, the value of a floating currency is not directly controlled by a central bank, though they may intervine to stabilise or influence the currency.
+
+---
+G
+---
+
+**Gamma Hedging**:            A trading strategy that tries to maintain a constant delta in an options position, often one that is delta-neutral, as the underlying asset changes price.
+
 ---
 I
 ---
 
 **Interbank Lending Market**:  A market in which banks lends funds to one another under specific terms, with short-term maturities, specifically overnight.
+
+**Inventory Risk Management**:  A risk managment strategy used to manage financial losses that can occur from holding an unbalanced or depreciating inventory of assets. This may be via delta hedging, dynamic pricing, positioning limits and monitoring, and/or capital buffers and stress testing.
 
 ---
 M
