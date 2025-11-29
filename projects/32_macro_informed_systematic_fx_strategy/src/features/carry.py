@@ -26,5 +26,7 @@ def compute_carry(domestic_rate = float, foreign_rate = float):
     forward_prices = compute_forward_prices(domestic_rate = domestic_rate, foreign_rate = foreign_rate)
     CURRENCIES = forward_prices.columns.to_list()
     carry = (forward_prices[CURRENCIES] - spot_rates[CURRENCIES]) / spot_rates[CURRENCIES]
+    carry.columns = [f'{c[:-2]}_carry' for c in carry.columns]
     return carry
 
+compute_carry(domestic_rate=0.1, foreign_rate=1)
