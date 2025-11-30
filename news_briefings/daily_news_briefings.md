@@ -31,7 +31,7 @@ Outages:  "CME trading outage disrupts global markets"
 
 *Nikou Asgari, Camilla Hodgson, Emily Herbert and Rachel Rees*
     
--   tHE Chicago Mercantile Exchange, the largest derivatives, experienced a data outage for ~10 hours binging futures trading to a hault; This impacted asset classes including equities, bonds, currencies, and commodities; It has caused investors to consider their exchange-market consentration risks
+-   The Chicago Mercantile Exchange, the largest derivatives, experienced a data outage for ~10 hours binging futures trading to a hault; This impacted asset classes including equities, bonds, currencies, and commodities; It has caused investors to consider their exchange-market consentration risks
 -   CME said the stop was due to a cooling issue at a data centre 35 miles from their headquarters; Disruptions resemble the three hour 2019 CME outage; Thankfully the outage occured the day following US Thanksgiving
 -   The issue lies in the issues occuring on the last trading day of November ie the day were the majority of options expiry and new posiitions are entered; Due to investor trade reluctant their was more dynamic bid-ask pricing from the sell-side across asset classes
 -   Post-outage the CME stock traded up, surprising retail investors; When asked for reasoning an interesting comment was made: "Same reason Amazon was up on the day of the global AWS outage? Market reminded of the company's global reach and criticality"; Systematic importances' true value is only known under stress
