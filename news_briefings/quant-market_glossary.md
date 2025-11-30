@@ -40,6 +40,14 @@ R
 **Random Walk**:              A theory stating that an asset's future price movements are unpredictable and independent of its past price actions, suggesting that it is imposible to consistently beat the market through historical analysis alone.
 
 ---
+S
+---
+
+Securitisation:              The process or technique used to create structured credit products through pooling assets like morgages and loans, and selling securities backed by them to investors.
+
+Structured Credit:            A financial investment that pools and tranches underlying assets, offering investors various risk and return profiles, often through Commercial mortgage-backed securities (CMBS), residential mortgage-backed securities (RMBS), asset-backed securities (ABS), and collateralised debt obligations (CDOs).
+
+---
 Y
 ---
 **Yield Curve Control**:        A strategy employed by central banks involving the the buying or selling of as many bonds as necessary to hit a longer-term interest rate target. Unlike QE, investors do not know the exact volume of intervention required, creating an imformation gap. 
