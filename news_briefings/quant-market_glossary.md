@@ -43,9 +43,9 @@ R
 S
 ---
 
-Securitisation:              The process or technique used to create structured credit products through pooling assets like morgages and loans, and selling securities backed by them to investors.
+**Securitisation**:              The process or technique used to create structured credit products through pooling assets like morgages and loans, and selling securities backed by them to investors.
 
-Structured Credit:            A financial investment that pools and tranches underlying assets, offering investors various risk and return profiles, often through Commercial mortgage-backed securities (CMBS), residential mortgage-backed securities (RMBS), asset-backed securities (ABS), and collateralised debt obligations (CDOs).
+**Structured Credit**:            A financial investment that pools and tranches underlying assets, offering investors various risk and return profiles, often through Commercial mortgage-backed securities (CMBS), residential mortgage-backed securities (RMBS), asset-backed securities (ABS), and collateralised debt obligations (CDOs).
 
 ---
 Y
