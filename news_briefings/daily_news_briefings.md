@@ -10,6 +10,34 @@ Termination:       -
 
 ##  Article Summaries
 
+### Date:       30-Nov-2025
+
+ETFs:    "Rapid growth of US tax-minimising ETFs draws scrutiny"
+
+*Steve Johnson in London*
+
+-   A number of fund firms have been creating ETFs that either lower the interest or dividend income that can be taxed, or alternatively reduce capital gains tax on investors’ pre-existing stock portfolios
+-   Some US politicians are already opposing these funds. In June, Ron Wyden, the top Democrat on the Senate finance committee, put forward legislation that would prevent tax-free transfers of appreciated securities to 351 funds
+-   ETFs have always been more tax efficient than more traditional mutual funds in the US, due to a quirk in the tax system. Whereas mutual funds often trigger a capital gains tax event when they sell profitable positions, ETFs can usually avoid doing so by trading “in kind” with market makers, so that no cash changes hands
+
+-   “From a tax fairness point of view the investor has brilliantly avoided taxes and has had access to a good portion of his or her assets, and everyone else in the country has been deprived of that money for the Treasury” - Elisabeth Kashner (Director, FactSet)
+
+
+---
+
+### Date:       29-Nov-2025
+
+Outages:  "CME trading outage disrupts global markets"
+
+*Nikou Asgari, Camilla Hodgson, Emily Herbert and Rachel Rees*
+    
+-   tHE Chicago Mercantile Exchange, the largest derivatives, experienced a data outage for ~10 hours binging futures trading to a hault; This impacted asset classes including equities, bonds, currencies, and commodities; It has caused investors to consider their exchange-market consentration risks
+-   CME said the stop was due to a cooling issue at a data centre 35 miles from their headquarters; Disruptions resemble the three hour 2019 CME outage; Thankfully the outage occured the day following US Thanksgiving
+-   The issue lies in the issues occuring on the last trading day of November ie the day were the majority of options expiry and new posiitions are entered; Due to investor trade reluctant their was more dynamic bid-ask pricing from the sell-side across asset classes
+-   Post-outage the CME stock traded up, surprising retail investors; When asked for reasoning an interesting comment was made: "Same reason Amazon was up on the day of the global AWS outage? Market reminded of the company's global reach and criticality"; Systematic importances' true value is only known under stress
+
+---
+
 ### Date:       28-Nov-2025
 
 Gilts:    "UK signals expansion of short-term debt market in ‘radical’ borrowing shift"
