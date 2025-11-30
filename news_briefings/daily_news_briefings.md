@@ -213,7 +213,15 @@ IVV:    S&P 500 ETF
 -   A tracker of 500 leading companies listed on U.S. stock exchanges.
         
 ---
-**26-Nov-2025***:
+
+**29-Nov-2025**:
+EoW Outcomes:
+
+EMB traded up 0.645% in line with WoW expectations; AGG traded up 0.378% with no obvious Fed-related-risk repricing; GOVT 0.215% surpisingly traded tightly with fresh supply having limited impacts on market activity, beleived to be largely due to Thanksgiving slump; This week's late week glit/surpise was the CME Group outage, with DBC mimicing the group's movement (with large futures-linked correlations), intrestingly trading up on short-lived uncertainty (Trading up 2.39%!); IVV was our big winner of the week , trading up 3.058% in line with WoW expectatons
+
+
+
+**26-Nov-2025**:
 
 EMB close up 0.26%, however if the UK Budget proves strong, we expect USD/GBP to strengthen, pushing the index down; AGG lused up 0.16%; IVV closed up 0..94% which was welcomed by the market; DBC closed down -0.53%; GOVT closed up 0.22%, a moddest 0.05 price increase
 
