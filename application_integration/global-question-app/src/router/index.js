@@ -4,23 +4,11 @@ import TodayQuestion from '../pages/Play.vue'
 import DailyAnalytics from '../pages/DailyAnalytics.vue'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHistory("/"),   // ⬅ URL stays at akinto.io
   routes: [
-    {
-      path: '/',
-      name: 'landing',
-      component: LandingView,
-    },
-    {
-      path: '/play',
-      name: 'play',
-      component: TodayQuestion,
-    },
-    {
-      path: '/analytics',
-      name: 'analytics',
-      component: DailyAnalytics,
-    },
+    { path: '/', name: 'landing', component: LandingView },
+    { path: '/play', name: 'play', component: TodayQuestion },
+    { path: '/analytics', name: 'analytics', component: DailyAnalytics }
   ],
 })
 

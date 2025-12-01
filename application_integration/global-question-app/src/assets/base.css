@@ -84,3 +84,41 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* -----------------------------------------------
+   🔥 Global Responsive Scale System (AKINTO)
+------------------------------------------------*/
+:root {
+  /* base rem size (desktop default = 16px) */
+  font-size: 16px;
+
+  /* spacing scale */
+  --space-xs: .5rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3.5rem;
+
+  /* text scale */
+  --fs-xs: 0.85rem;
+  --fs-sm: 1rem;
+  --fs-md: 1.2rem;
+  --fs-lg: 1.6rem;
+  --fs-xl: 2.3rem;
+  --fs-xxl: 3rem;
+}
+
+/* MOBILE — scale down globally */
+@media (max-width: 700px) {
+  :root {
+    font-size: 14px;
+  }
+}
+
+/* SMALL MOBILE — scale further */
+@media (max-width: 420px) {
+  :root {
+    font-size: 13px;
+  }
+}
+
