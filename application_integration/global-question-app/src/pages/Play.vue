@@ -133,14 +133,16 @@
       <h1 v-else-if="!question" class="question-title muted">No question found.</h1>
       <h1 v-else class="question-title">{{ question }}</h1>
 
-      <div class="input-group" v-if="answers.length">
+      <div class="input-group" v-if="answers.length" :class="{ visible: inputsVisible }">
         <input
           v-for="(ans, i) in answers"
           :key="i"
           v-model="answers[i]"
           :placeholder="i + 1 + '.'"
-          :class="['answer-input', fieldStatus[i]]"
+          :class="['answer-input', fieldStatus[i], `stagger-${i}`]"
           :disabled="fieldStatus[i] === 'correct'"
+          :ref="(el) => registerInputRef(el, i)"
+          @keydown="onKey($event, i)"
         />
       </div>
 
@@ -152,34 +154,38 @@
     <!-- ========================================================= -->
     <!-- MODAL (unchanged) -->
     <!-- ========================================================= -->
-    <div v-if="showModal" class="overlay">
-      <div class="modal">
-        <template v-if="modalMode === 'success'">
-          <h2 class="modal-title">Nicely done!</h2>
-          <p class="modal-text">You’ve locked in all {{ answerCount }} answers correctly.</p>
-          <button class="modal-btn primary" @click="closeModal">Continue</button>
-        </template>
+    <transition name="modal-fade">
+      <div v-if="showModal" class="overlay modal-slide">
+        <div class="modal">
+          <template v-if="modalMode === 'success'">
+            <h2 class="modal-title">Nicely done!</h2>
+            <p class="modal-text">You’ve locked in all {{ answerCount }} answers correctly.</p>
+            <button class="modal-btn primary" @click="closeModal">Continue</button>
+          </template>
 
-        <template v-else-if="modalMode === 'askHint'">
-          <h2 class="modal-title">Not quite yet…</h2>
-          <p class="modal-text">Some of your answers aren’t quite there. Want a hint?</p>
-          <div class="modal-actions">
-            <button class="modal-btn secondary" @click="closeModal">No, retry</button>
-            <button class="modal-btn primary" @click="showHint">Yes, show hint</button>
-          </div>
-        </template>
+          <template v-else-if="modalMode === 'askHint'">
+            <h2 class="modal-title">Not quite yet…</h2>
+            <p class="modal-text modal-spaced">
+              Some of your answers aren’t quite there. Want a hint?
+            </p>
+            <div class="modal-actions">
+              <button class="modal-btn secondary" @click="closeModal">No, retry</button>
+              <button class="modal-btn primary" @click="showHint">Yes, show hint</button>
+            </div>
+          </template>
 
-        <template v-else-if="modalMode === 'hint'">
-          <div class="hint-wrapper">
-            <h2 class="modal-title">Hint</h2>
-            <p class="modal-text">{{ hintText || 'Hint coming soon.' }}</p>
-            <button class="modal-btn primary" @click="closeModal" style="margin-top: 14px">
-              Back
-            </button>
-          </div>
-        </template>
+          <template v-else-if="modalMode === 'hint'">
+            <div class="hint-wrapper">
+              <h2 class="modal-title">Hint</h2>
+              <p class="modal-text modal-spaced">{{ hintText || 'Hint coming soon.' }}</p>
+              <button class="modal-btn primary" @click="closeModal" style="margin-top: 14px">
+                Back
+              </button>
+            </div>
+          </template>
+        </div>
       </div>
-    </div>
+    </transition>
   </div>
 </template>
 
@@ -208,7 +214,12 @@ const loading = ref(true)
 const questionDate = ref('') // Airtable Date field (for key)
 
 const answers = ref([]) // user inputs
+
+// --- PATCH 5B: store input element refs ---
+
 const fieldStatus = ref([]) // "correct" | "incorrect" | "" for styling
+// --- PATCH 3A: staggered input reveal ---
+const inputsVisible = ref(false)
 
 // attempts per time-window
 const MAX_ATTEMPTS = 3
@@ -227,9 +238,26 @@ const storageKey = computed(() =>
 
 const userCorrect = computed(() => answers.value.filter((a) => isAnswerCorrect(a)))
 
-const missingAnswers = computed(() =>
-  correctAnswers.value.filter((c) => !userCorrect.value.map(normalise).includes(normalise(c))),
-)
+// --- PATCH 1: Alias-aware missing answer detection ---
+const missingAnswers = computed(() => {
+  const userClean = userCorrect.value.map((a) => resolveAlias(normalise(a)))
+  return correctAnswers.value.filter((c) => {
+    const expected = resolveAlias(normalise(c))
+    return !userClean.includes(expected)
+  })
+})
+
+// --- PATCH 9B: Remove punctuation + emojis before matching ---
+function cleanAbbrev(str) {
+  return str
+    .toLowerCase()
+    .normalize('NFKD') // strip accents
+    .replace(/\p{Emoji_Presentation}/gu, '') // remove emojis (e.g. 🇬🇧)
+    .replace(/[\.\,\!\?\(\)\[\]\-]/g, '') // remove punctuation
+    .replace(/\s+/g, '') // collapse spaces
+    .replace(/st$/g, 'st_') // handle "st." → saint
+    .replace(/mt$/g, 'mt_') // "mt." → mount
+}
 
 const hardLocked = ref(false) // NEW — true when attempts are 0
 
@@ -269,9 +297,107 @@ onMounted(() => {
     })
 })
 
+// --- PATCH 3B: trigger staggered input animation ---
+setTimeout(() => {
+  inputsVisible.value = true
+}, 120) // small delay for clean reveal
+
 /* ---------- Normalisation + fuzzy matching ---------- */
 function normalise(str) {
   return str.toLowerCase().replace(/\s+/g, '')
+}
+
+// --- PATCH 1: Abbreviation + Alias Dictionary ---
+const ANSWER_ALIASES = {
+  // --- Countries / Regions ---
+  uk: ['unitedkingdom', 'britain', 'greatbritain', 'gb', 'u.k.'],
+  usa: ['unitedstates', 'america', 'us', 'u.s.', 'u.s.a'],
+  uae: ['unitedarabemirates'],
+  drc: ['congo', 'democraticrepublicofcongo'],
+  rsa: ['southafrica', 'sa', 's.a'],
+  ksa: ['saudiarabia'],
+  prc: ['china', 'peoplesrepublicofchina'],
+
+  // --- General geopolitical ---
+  eu: ['europeanunion'],
+  au: ['africanunion'],
+  un: ['unitednations'],
+  nato: ['northatlantictreatyorganization'],
+  asean: ['associationofsoutheastasiannations'],
+
+  // --- Other common alternates ---
+  cotedivoire: ['ivorycoast'],
+  czechia: ['czechrepublic'],
+  timorleste: ['easttimor'],
+  myanmar: ['burma'],
+}
+
+// --- PATCH 9A: Expanded abbreviation + alias map ---
+const ABBREVIATION_EXPANSIONS = {
+  // ——— COUNTRY SHORT FORMS ———
+  uk: 'united kingdom',
+  gb: 'united kingdom',
+  britain: 'united kingdom',
+  nl: 'netherlands',
+  holland: 'netherlands',
+  uae: 'united arab emirates',
+  aus: 'australia',
+  nz: 'new zealand',
+  sa: 'south africa',
+  za: 'south africa',
+  sk: 'south korea',
+  nk: 'north korea',
+  drc: 'democratic republic of the congo',
+  roc: 'republic of the congo',
+  prc: 'china',
+  eu: 'european union',
+  usa: 'united states',
+  us: 'united states',
+  u_s_a: 'united states', // punctuation-protected alias
+  u_s: 'united states',
+
+  // ——— CITY SHORT FORMS ———
+  nyc: 'new york city',
+  la: 'los angeles',
+  sf: 'san francisco',
+  dc: 'washington dc',
+  chi: 'chicago',
+  vegas: 'las vegas',
+  hk: 'hong kong',
+
+  // ——— REGION / COLLOQUIAL ———
+  balkans: 'the balkans',
+  maghreb: 'maghreb region',
+  levante: 'levant',
+  mideast: 'middle east',
+
+  // ——— SAINT / MOUNT PATTERNS ———
+  st: 'saint',
+  st_: 'saint', // “st.” becomes st_
+  mt: 'mount',
+  mt_: 'mount',
+
+  // ——— COMMON EDUCATIONAL SHORT FORMS ———
+  asean: 'association of southeast asian nations',
+  au: 'african union',
+  nato: 'north atlantic treaty organization',
+  un: 'united nations',
+  unesco: 'united nations educational scientific and cultural organization',
+  imf: 'international monetary fund',
+  wb: 'world bank',
+}
+
+// Helper to resolve any known alias → canonical form
+function resolveAlias(normStr) {
+  // check if normStr *is itself* a canonical abbreviation
+  if (ANSWER_ALIASES[normStr]) return normStr
+
+  // check if normStr is one of the alias values for a key
+  for (const [canonical, list] of Object.entries(ANSWER_ALIASES)) {
+    if (list.includes(normStr)) return canonical
+  }
+
+  return normStr // unchanged if no alias applies
 }
 
 function levenshtein(a, b) {
@@ -298,19 +424,72 @@ function similar(a, b) {
   return d <= 2
 }
 
+// --- PATCH 7: Abbreviation dictionary ---
+const ABBREVIATIONS = {
+  // Countries
+  uk: 'united kingdom',
+  gb: 'united kingdom',
+  usa: 'united states',
+  us: 'united states',
+  uae: 'united arab emirates',
+  drc: 'democratic republic of the congo',
+  congo: 'democratic republic of the congo',
+  roc: 'republic of the congo',
+  eu: 'european union',
+
+  // Regions
+  sa: 'south africa',
+  aus: 'australia',
+  nz: 'new zealand',
+
+  // Common geography abbreviations
+  nyc: 'new york city',
+  la: 'los angeles',
+  dc: 'washington dc',
+
+  // You can freely expand this later
+}
+
+// --- PATCH 1: Abbreviation-aware correctness check ---
 function isAnswerCorrect(userAnswer) {
   if (!userAnswer) return false
-  const nu = normalise(userAnswer)
+
+  // normalised user input
+  let nu = cleanAbbrev(normalise(userAnswer))
+
+  // PATCH 9: Abbreviation expansion (extended)
+  if (ABBREVIATIONS[nu]) {
+    nu = normalise(ABBREVIATIONS[nu])
+  }
+  if (ABBREVIATION_EXPANSIONS[nu]) {
+    nu = normalise(ABBREVIATION_EXPANSIONS[nu])
+  }
+
+  nu = resolveAlias(nu) // NEW — apply alias mapping
+
   return correctAnswers.value.some((c) => {
-    const nc = normalise(c)
-    return similar(nu, nc)
+    let nc = normalise(c)
+    nc = resolveAlias(nc) // NEW — apply alias mapping for official answers
+
+    // compare after alias resolution
+    return nu === nc || similar(nu, nc)
   })
+}
+
+// --- PATCH 5A: Restart incorrect animation every lock-in ---
+function restartShakeAnimation(i) {
+  const inputEl = inputRefs[i]
+  if (!inputEl) return
+
+  inputEl.classList.remove('incorrect')
+  // force reflow to restart CSS animation
+  void inputEl.offsetWidth
+  inputEl.classList.add('incorrect')
 }
 
 /* -----------------------------------------------
    🧠 SESSION SUMMARY + ANALYTICS EXPORT (FINAL)
 ------------------------------------------------*/
-import airtable from 'airtable'
 const analyticsTable = base('Analytics') // NEW analytics table
 
 /* ---------- Build analytics object ---------- */
@@ -444,6 +623,23 @@ async function onLockIn() {
     a.trim() && isAnswerCorrect(a.trim()) ? 'correct' : 'incorrect',
   )
 
+  // PATCH 8A — Re-trigger shake animation for incorrect inputs
+  answers.value.forEach((_, idx) => {
+    if (fieldStatus.value[idx] === 'incorrect') {
+      const el = inputRefs.value[idx]
+      if (el) {
+        el.style.animation = 'none'
+        void el.offsetWidth // force reflow
+        el.style.animation = null // resume default shake class
+      }
+    }
+  })
+
+  // --- PATCH 5C: re-trigger shake for incorrect fields ---
+  fieldStatus.value.forEach((s, i) => {
+    if (s === 'incorrect') restartShakeAnimation(i)
+  })
+
   const allCorrectNow = fieldStatus.value.every((s) => s === 'correct')
 
   // pause so colours + animation show before modal (longer so they can read)
@@ -464,8 +660,11 @@ async function onLockIn() {
     modalMode.value = 'lockout_full'
     showModal.value = false
   } else {
-    modalMode.value = 'askHint'
-    showModal.value = true
+    // --- PATCH 5D: delay modal so shake animation completes cleanly ---
+    setTimeout(() => {
+      modalMode.value = 'askHint'
+      showModal.value = true
+    }, 350) // matches shake duration
   }
 
   saveState()
@@ -481,6 +680,13 @@ function closeModal() {
   }
   showModal.value = false
 }
+
+// --- PATCH 2: ESC closes fullscreen lockout modal too ---
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && modalMode.value === 'lockout_full') {
+    showModal.value = false
+  }
+})
 
 function showHint() {
   modalMode.value = 'hint'
@@ -553,6 +759,55 @@ const nextSlotLabel = computed(() => {
   )
 })
 
+// --- PATCH 2: Keyboard Navigation ---
+
+// Focus management reference array
+const inputRefs = ref([])
+
+// Assign refs dynamically during rendering
+function registerInputRef(el, index) {
+  if (el) inputRefs.value[index] = el
+}
+
+// Move focus up/down between inputs
+function focusInput(index) {
+  const el = inputRefs.value[index]
+  if (el) el.focus()
+}
+
+// Handle key events for navigation + actions
+function onKey(e, index) {
+  if (modalMode.value && showModal.value) {
+    // ESC closes modal
+    if (e.key === 'Escape') {
+      closeModal()
+    }
+    return
+  }
+
+  switch (e.key) {
+    case 'ArrowDown':
+    case 'Tab':
+      e.preventDefault()
+      focusInput(Math.min(index + 1, answers.value.length - 1))
+      break
+
+    case 'ArrowUp':
+      e.preventDefault()
+      focusInput(Math.max(index - 1, 0))
+      break
+
+    case 'Enter':
+      e.preventDefault()
+      onLockIn()
+      break
+
+    case 'Escape':
+      // ESC does nothing during normal play
+      break
+  }
+}
+
 /* ---------- RESET WHEN TIME UNLOCKS ---------- */
 function refreshCheck() {
   if (timeRemaining.value.includes('Available')) {
@@ -595,6 +850,10 @@ function goAnalytics() {
     router.replace({ name: 'DailyAnalytics' })
   }, 1800)
 }
+
+setTimeout(() => {
+  if (inputRefs.value[0]) inputRefs.value[0].focus()
+}, 300)
 </script>
 
 <style>
@@ -795,6 +1054,15 @@ body,
   animation: shake 0.35s ease;
 }
 
+/* ================================
+   PATCH 5 — Shake retrigger support
+================================ */
+.answer-input.incorrect {
+  animation-name: shake !important;
+  animation-duration: 0.35s !important;
+  animation-timing-function: ease !important;
+}
+
 /* BUTTONS */
 .button-row {
   display: flex;
@@ -843,7 +1111,7 @@ body,
   font-size: 18px !important;
   color: #000;
   line-height: 1.5;
-  padding-bottom: 20;
+  padding-bottom: 20px;
 }
 .modal-sub {
   font-size: 32px !important;
@@ -927,6 +1195,51 @@ body,
   border: none;
   font-size: 18px;
   cursor: pointer;
+}
+/* ================================
+   PATCH 4 — Modal Slide + Spacing
+================================ */
+
+.modal-slide .modal {
+  transform: translateY(40vh); /* start lower */
+  opacity: 0;
+}
+
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: 0.45s cubic-bezier(0.18, 0.74, 0.32, 1);
+}
+
+.modal-fade-enter-from {
+  opacity: 0;
+  transform: translateY(45vh);
+}
+
+.modal-fade-enter-to {
+  opacity: 1;
+  transform: translateY(30vh); /* bottom third */
+}
+
+.modal-fade-leave-from {
+  opacity: 1;
+  transform: translateY(30vh);
+}
+
+.modal-fade-leave-to {
+  opacity: 0;
+  transform: translateY(47vh);
+}
+
+/* More breathing room under modal text */
+.modal-spaced {
+  margin-bottom: 22px !important; /* adds clean separation */
+}
+
+/* Modal positioned lower on screen */
+.overlay.modal-slide {
+  display: flex;
+  align-items: flex-end; /* push modal downward */
+  padding-bottom: 14vh; /* adjustable bottom offset */
 }
 
 /* 🔥 NEW LOCK-OUT DESIGN */
@@ -1075,6 +1388,13 @@ body,
   color: var(--correct-text) !important;
 }
 
+.answer-input:focus {
+  outline: none;
+  border-color: #000;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.15);
+  transition: 0.18s ease;
+}
+
 /* Placeholder obeys theme */
 input::placeholder {
   color: var(--text-muted) !important;
@@ -1175,6 +1495,49 @@ input::placeholder {
 .split-lock-leave-to {
   opacity: 0;
   transform: scale(0.96);
+}
+
+/* ===============================
+   PATCH 8B — Enhanced modal motion
+================================ */
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.21, 0.75, 0.29, 0.99);
+}
+
+.modal-fade-enter-to,
+.modal-fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Slight lift effect */
+.modal-slide > .modal {
+  animation: modalPop 0.45s cubic-bezier(0.17, 0.85, 0.39, 1);
+}
+
+@keyframes modalPop {
+  0% {
+    transform: scale(0.94) translateY(12px);
+    opacity: 0.7;
+  }
+  60% {
+    transform: scale(1.02) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* animations */
@@ -1488,5 +1851,159 @@ body {
   letter-spacing: 0.15px;
   color: #111; /* rich contrast */
   margin-bottom: 6px;
+}
+
+/* ================================
+   PATCH 3 — Stagger input animation
+================================ */
+
+.input-group {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: 0.35s ease;
+}
+
+.input-group.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Each input fades + slides in sequence */
+.answer-input {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: 0.45s cubic-bezier(0.18, 0.74, 0.32, 1);
+}
+
+/* Shorter, cleaner-sized boxes */
+.answer-input {
+  padding: 0.55rem 0.9rem; /* was 0.75rem 1rem */
+  font-size: var(--fs-md);
+}
+
+/* stagger timing */
+.stagger-0 {
+  transition-delay: 0.05s;
+}
+.stagger-1 {
+  transition-delay: 0.12s;
+}
+.stagger-2 {
+  transition-delay: 0.19s;
+}
+.stagger-3 {
+  transition-delay: 0.26s;
+}
+.stagger-4 {
+  transition-delay: 0.33s;
+}
+.stagger-5 {
+  transition-delay: 0.4s;
+}
+
+/* Once visible, inputs animate in */
+.input-group.visible .answer-input {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===============================
+   PATCH 8C — Split lockout transition polish
+================================ */
+
+.split-lock-enter-from {
+  opacity: 0;
+  transform: translateY(30px) scale(0.97);
+}
+
+.split-lock-enter-active {
+  transition: 0.55s cubic-bezier(0.16, 0.8, 0.32, 1);
+}
+
+.split-lock-enter-to {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.split-lock-leave-from {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.split-lock-leave-active {
+  transition: 0.45s cubic-bezier(0.16, 0.8, 0.32, 1);
+}
+
+.split-lock-leave-to {
+  opacity: 0;
+  transform: scale(0.97);
+}
+
+/* ============================================
+   PATCH 10A — Smart Retry / Hint Modal Position
+=============================================== */
+
+.overlay.modal-lower {
+  display: flex;
+  align-items: flex-end; /* moves modal to bottom */
+  justify-content: center;
+  padding-bottom: 12vh; /* controls vertical position */
+}
+
+.modal.smart-lower {
+  transform-origin: bottom center;
+  animation: modalRise 0.45s cubic-bezier(0.16, 0.8, 0.34, 1) forwards;
+}
+
+@keyframes modalRise {
+  0% {
+    opacity: 0;
+    transform: translateY(35px) scale(0.97);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ============================================
+   PATCH 10C — Better modal internal spacing
+=============================================== */
+
+.modal-text {
+  margin-bottom: 22px !important;
+  line-height: 1.45;
+}
+
+.modal-actions {
+  margin-top: 10px !important;
+  padding-bottom: 4px;
+}
+
+/* Smoothen transition from shake → retry box */
+.modal-fade-enter-active {
+  transition-delay: 0.1s;
+}
+
+/* Mobile-adaptive modal sizing */
+@media (max-width: 500px) {
+  .modal.smart-lower {
+    width: 94%;
+    padding: 18px 16px;
+    border-radius: 14px;
+  }
+
+  .modal-title {
+    font-size: 22px !important;
+  }
+
+  .modal-text {
+    font-size: 15px !important;
+    margin-bottom: 18px !important;
+  }
 }
 </style>
