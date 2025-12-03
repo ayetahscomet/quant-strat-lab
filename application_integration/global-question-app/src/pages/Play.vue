@@ -694,7 +694,8 @@ function showHint() {
 
 /* ---------- Time-of-day theming ---------- */
 const stageLabel = computed(() => {
-  if (hour < 11) return 'First Look'
+  if (hour < 9) return 'Early Bird'
+  if (hour < 12) return 'First Look'
   if (hour < 15) return 'Don’t Worry We Have All Day'
   if (hour < 20) return 'Midday Check-In'
   return 'Last Chance.'
@@ -708,10 +709,11 @@ const timeClass = computed(() => {
 })
 
 const nextCheckLabel = computed(() => {
-  if (hour < 11) return '12:00 (Don’t Worry We Have All Day)'
-  if (hour < 15) return '15:00 (Midday Check-In)'
-  if (hour < 20) return '20:00 (Last Chance.)'
-  return 'tomorrow morning'
+  if (hour < 9) return '09:00'
+  if (hour < 12) return '12:00'
+  if (hour < 15) return '15:00'
+  if (hour < 20) return '20:00'
+  return 'Tomorrow at 09:00'
 })
 
 /* ==== Lockout timing logic ==== */
@@ -719,14 +721,26 @@ const now = new Date()
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
 function nextAvailableSlot() {
+  const now = new Date()
   const d = new Date()
-  if (hour < 11) d.setHours(11, 0, 0, 0)
-  else if (hour < 15) d.setHours(15, 0, 0, 0)
-  else if (hour < 20) d.setHours(20, 0, 0, 0)
-  else {
+
+  // Local times based on user’s detected timezone
+  const currentHour = now.getHours()
+
+  if (currentHour < 9) {
+    d.setHours(9, 0, 0, 0)
+  } else if (currentHour < 12) {
+    d.setHours(12, 0, 0, 0)
+  } else if (currentHour < 15) {
+    d.setHours(15, 0, 0, 0)
+  } else if (currentHour < 20) {
+    d.setHours(20, 0, 0, 0)
+  } else {
+    // Next day 9am local time
     d.setDate(d.getDate() + 1)
     d.setHours(9, 0, 0, 0)
   }
+
   return d
 }
 
@@ -832,8 +846,9 @@ const nextSlotShort = computed(() => {
   return nextSlot.toLocaleTimeString('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false, // forces 20:00 rather than 8:00pm
-    timeZoneName: 'short', // shows BST / GMT instead of Europe/London
+    hour12: false,
+    timeZone: timezone,
+    timeZoneName: 'short',
   })
 })
 
