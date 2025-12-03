@@ -1,196 +1,165 @@
 <template>
-  <div :class="['play-wrapper', timeClass]">
-    <!-- HEADER -->
-    <header class="header">
-      <img src="/logo-800-full.svg" class="logo" />
-      <span class="counter">
-        <span class="num-light">1 </span> / <span class="num-bold"> 1</span>
-      </span>
-      <span class="divider">|</span>
-      <span class="stage">{{ stageLabel }}</span>
-    </header>
+  <transition name="screen-fade" mode="out-in">
+    <div :class="['play-wrapper', timeClass]" :key="screenState">
+      <!-- HEADER -->
+      <header class="header">
+        <img src="/logo-800-full.svg" class="logo" />
+        <span class="counter">
+          <span class="num-light">1 </span> / <span class="num-bold"> 1</span>
+        </span>
+        <span class="divider">|</span>
+        <span class="stage">{{ stageLabel }}</span>
+      </header>
 
-    <!-- ATTEMPTS INDICATOR -->
-    <div class="attempts-row">
-      <span class="attempts-label">Attempts this check-in:</span>
-      <div class="dots">
-        <span
-          v-for="n in MAX_ATTEMPTS"
-          :key="n"
-          :class="['dot', { active: n <= attemptsRemaining }]"
-        />
-      </div>
-    </div>
-
-    <!-- ========================================================= -->
-    <!-- 🔥 SPLIT LAYOUT WITH ANIMATION (correct structure)       -->
-    <!-- ========================================================= -->
-    <transition name="split-lock" mode="out-in">
-      <div v-if="hardLocked && !isDayComplete" class="lockout-split">
-        <!-- LEFT SIDE — Last attempt answers -->
-        <div class="left-pane">
-          <h2 class="attempt-title">Latest Attempt</h2>
-
-          <div v-for="(ans, i) in answers" :key="i" class="locked-result" :class="fieldStatus[i]">
-            {{ ans || '—' }}
-          </div>
-        </div>
-
-        <!-- RIGHT SIDE — Countdown -->
-        <div class="right-pane">
-          <img src="/logo-800-full.svg" class="mini-logo" />
-
-          <h1 class="lockout-title">That’s all for now</h1>
-          <p class="next-label">Next check-in:</p>
-
-          <p class="lockout-time">{{ nextSlotShort }}</p>
-          <p class="lockout-countdown">Come back in {{ timeRemaining }}</p>
-
-          <button
-            v-if="timeRemaining.includes('Available')"
-            class="reopen-btn"
-            @click="unlockReturn"
-          >
-            Give it another shot ↻
-          </button>
+      <!-- ATTEMPTS INDICATOR -->
+      <div class="attempts-row">
+        <span class="attempts-label">Attempts this check-in:</span>
+        <div class="dots">
+          <span
+            v-for="n in MAX_ATTEMPTS"
+            :key="n"
+            :class="['dot', { active: n <= attemptsRemaining }]"
+          />
         </div>
       </div>
-    </transition>
 
-    <!-- ========================================================= -->
-    <!-- ORIGINAL FULLSCREEN LOCKOUT (kept for end-of-day/perfect) -->
-    <!-- ========================================================= -->
-    <!-- ========================= master UI switch ========================= -->
-    <template v-if="hardLocked && !isDayComplete">
-      <!-- split lockout (with animation wrapper) -->
-      <transition name="split-lock" mode="out-in">
-        <div class="lockout-split">
-          <div class="left-pane">
-            <h2 class="attempt-title">Latest Attempt</h2>
+      <!-- ===================== MASTER UI SWITCH ===================== -->
 
-            <div v-for="(ans, i) in answers" :key="i" class="locked-result" :class="fieldStatus[i]">
-              {{ ans || '—' }}
+      <!-- 1) SPLIT LOCKOUT -->
+      <template v-if="screenState === 'split-lockout'">
+        <transition name="split-lock" mode="out-in">
+          <!-- NOTE: .ready added here so right-pane content fades in -->
+          <div class="lockout-split ready">
+            <div class="left-pane">
+              <h2 class="attempt-title">Latest Attempt</h2>
+
+              <div
+                v-for="(ans, i) in answers"
+                :key="i"
+                class="locked-result"
+                :class="fieldStatus[i]"
+              >
+                {{ ans || '—' }}
+              </div>
             </div>
           </div>
+        </transition>
 
-          <div class="right-pane">
-            <img src="/logo-800-full.svg" class="mini-logo" />
+        <div class="right-pane midday-pane">
+          <img src="/logo-800-full.svg" class="mini-logo" />
 
-            <h1 class="lockout-title">That’s all for now</h1>
-            <p class="next-label">Next check-in:</p>
+          <h1 class="midday-title">{{ lockoutHeadline.title }}</h1>
 
-            <p class="lockout-time">{{ nextSlotShort }}</p>
-            <p class="lockout-countdown">Come back in {{ timeRemaining }}</p>
+          <p class="midday-sub">Next check-in:</p>
 
-            <button
-              v-if="timeRemaining.includes('Available')"
-              class="reopen-btn"
-              @click="unlockReturn"
-            >
-              Give it another shot ↻
-            </button>
-          </div>
+          <p class="midday-time">{{ nextSlotShort }}</p>
+
+          <p class="midday-countdown">Come back in {{ timeRemaining }}</p>
         </div>
-      </transition>
-    </template>
+      </template>
 
-    <!-- ========================= FULLSCREEN LOCKOUT ========================= -->
-    <template v-else-if="modalMode === 'lockout_full'">
-      <div class="lockout-fullscreen">
-        <div class="lockout-center">
-          <img src="/logo-800-full.svg" class="lockout-logo" />
-          <h1 class="lockout-title">
-            <span v-if="allPerfect">You cleared today flawlessly!</span>
-            <span v-else-if="isDayComplete">You learn something new everyday!</span>
-            <span v-else>That’s all for now</span>
-          </h1>
-
-          <template v-if="isDayComplete || allPerfect">
-            <p class="lockout-subtext">Let’s see how you stack up globally</p>
+      <!-- 2) FULL LOCKOUT -->
+      <template v-else-if="screenState === 'full-lockout'">
+        <div class="lockout-fullscreen">
+          <div class="lockout-center">
+            <img src="/logo-800-full.svg" class="lockout-logo" />
+            <h1 class="lockout-title">{{ lockoutHeadline.title }}</h1>
+            <p class="lockout-subtext">{{ lockoutHeadline.sub }}</p>
 
             <div class="reveal-block" v-if="missingAnswers.length">
               <p class="reveal-title">Other answers you didn’t find:</p>
-              <ul class="reveal-list">
-                <li v-for="a in missingAnswers" :key="a">{{ a }}</li>
+              <ul class="reveal-list reveal-sandbox">
+                <li v-for="a in missingAnswers" :key="a" class="reveal-item">{{ a }}</li>
               </ul>
             </div>
 
             <button class="lockout-btn" @click="goAnalytics">View today’s analytics →</button>
-          </template>
-
-          <template v-else>
-            <p class="lockout-subtext">Next check-in:</p>
-            <p class="lockout-time">{{ nextSlotShort }}</p>
-            <p class="lockout-countdown">Come back in {{ timeRemaining }}</p>
-          </template>
+          </div>
         </div>
-      </div>
-    </template>
+      </template>
 
-    <!-- ========================= NORMAL GAMEPLAY ========================= -->
-    <template v-else>
-      <h1 v-if="loading" class="question-title muted">Loading question...</h1>
-      <h1 v-else-if="!question" class="question-title muted">No question found.</h1>
-      <h1 v-else class="question-title">{{ question }}</h1>
-
-      <div class="input-group" v-if="answers.length" :class="{ visible: inputsVisible }">
-        <input
-          v-for="(ans, i) in answers"
-          :key="i"
-          v-model="answers[i]"
-          :placeholder="i + 1 + '.'"
-          :class="['answer-input', fieldStatus[i], `stagger-${i}`]"
-          :disabled="fieldStatus[i] === 'correct'"
-          :ref="(el) => registerInputRef(el, i)"
-          @keydown="onKey($event, i)"
-        />
-      </div>
-
-      <div class="button-row">
-        <button class="lock" @click="onLockIn" :disabled="attemptsRemaining <= 0">Lock In</button>
-      </div>
-    </template>
-
-    <!-- ========================================================= -->
-    <!-- MODAL (unchanged) -->
-    <!-- ========================================================= -->
-    <transition name="modal-fade">
-      <div v-if="showModal" class="overlay modal-slide">
-        <div class="modal">
-          <template v-if="modalMode === 'success'">
-            <h2 class="modal-title">Nicely done!</h2>
-            <p class="modal-text">You’ve locked in all {{ answerCount }} answers correctly.</p>
-            <button class="modal-btn primary" @click="closeModal">Continue</button>
-          </template>
-
-          <template v-else-if="modalMode === 'askHint'">
-            <h2 class="modal-title">Not quite yet…</h2>
-            <p class="modal-text modal-spaced">
-              Some of your answers aren’t quite there. Want a hint?
-            </p>
-            <div class="modal-actions">
-              <button class="modal-btn secondary" @click="closeModal">No, retry</button>
-              <button class="modal-btn primary" @click="showHint">Yes, show hint</button>
-            </div>
-          </template>
-
-          <template v-else-if="modalMode === 'hint'">
-            <div class="hint-wrapper">
-              <h2 class="modal-title">Hint</h2>
-              <p class="modal-text modal-spaced">{{ hintText || 'Hint coming soon.' }}</p>
-              <button class="modal-btn primary" @click="closeModal" style="margin-top: 14px">
-                Back
-              </button>
-            </div>
-          </template>
+      <!-- 3) LOADING -->
+      <template v-else-if="loading">
+        <div class="loading-screen">
+          <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Loading today’s question…</p>
+          </div>
         </div>
-      </div>
-    </transition>
-  </div>
+      </template>
+
+      <!-- 4) NORMAL GAMEPLAY -->
+      <template v-else>
+        <h1 v-if="!question" class="question-title muted">No question found.</h1>
+        <h1 v-else class="question-title">{{ question }}</h1>
+
+        <div
+          class="input-group"
+          v-if="answers.length"
+          :class="{ visible: inputsVisible, 'final-attempt-replay': isReplaySequence }"
+        >
+          <input
+            v-for="(ans, i) in answers"
+            :key="i"
+            v-model="answers[i]"
+            :placeholder="i + 1 + '.'"
+            :class="[
+              'answer-input',
+              fieldStatus[i],
+              `stagger-${i}`,
+              { 'hero-flash': heroFlashIndex === i },
+            ]"
+            :disabled="fieldStatus[i] === 'correct'"
+            :ref="(el) => registerInputRef(el, i)"
+            @keydown="onKey($event, i)"
+          />
+        </div>
+
+        <div class="button-row">
+          <button class="lock" @click="onLockIn" :disabled="attemptsRemaining <= 0">Lock In</button>
+        </div>
+      </template>
+
+      <!-- MODAL (unchanged) -->
+      <!-- ========================================================= -->
+      <transition name="modal-fade">
+        <div v-if="showModal" class="overlay modal-lower">
+          <div class="modal modal-lower-card">
+            <template v-if="modalMode === 'success'">
+              <h2 class="modal-title">Nicely done!</h2>
+              <p class="modal-text">You’ve locked in all {{ answerCount }} answers correctly.</p>
+              <button class="modal-btn primary" @click="closeModal">Continue</button>
+            </template>
+
+            <template v-else-if="modalMode === 'askHint'">
+              <h2 class="modal-title">Not quite yet…</h2>
+              <p class="modal-text modal-spaced">
+                Some of your answers aren’t quite there. Want a hint?
+              </p>
+              <div class="modal-actions">
+                <button class="modal-btn secondary" @click="closeModal">No, retry</button>
+                <button class="modal-btn primary" @click="showHint">Yes, show hint</button>
+              </div>
+            </template>
+
+            <template v-else-if="modalMode === 'hint'">
+              <div class="hint-wrapper">
+                <h2 class="modal-title">Hint</h2>
+                <p class="modal-text modal-spaced">{{ hintText || 'Hint coming soon.' }}</p>
+                <button class="modal-btn primary" @click="closeModal" style="margin-top: 14px">
+                  Back
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </transition>
+    </div>
+  </transition>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import Airtable from 'airtable'
 import { useRouter } from 'vue-router' // ⬅ Add at top of <script setup>
 const router = useRouter()
@@ -247,6 +216,25 @@ const missingAnswers = computed(() => {
   })
 })
 
+/* ========== PATCH 15G — Unified Screen State Resolver ========== */
+
+const screenState = computed(() => {
+  // If day completed (after 20:00)
+  if (isDayComplete.value || allPerfect.value) {
+    return 'full-lockout'
+  }
+
+  // Temporary lockout (used all attempts)
+  if (hardLocked.value) {
+    return 'split-lockout'
+  }
+
+  // Normal gameplay
+  return 'play'
+})
+
+const isReplaySequence = ref(false)
+
 // --- PATCH 9B: Remove punctuation + emojis before matching ---
 function cleanAbbrev(str) {
   return str
@@ -269,7 +257,14 @@ onMounted(() => {
       maxRecords: 1,
     })
     .firstPage((err, records) => {
-      loading.value = false
+      // PATCH 15C — Delay input reveal after question loads
+      setTimeout(() => {
+        loading.value = false
+        setTimeout(() => {
+          inputsVisible.value = true
+        }, 250)
+      }, 350)
+
       if (err || !records?.length) {
         console.error(err)
         return
@@ -476,15 +471,19 @@ function isAnswerCorrect(userAnswer) {
   })
 }
 
-// --- PATCH 5A: Restart incorrect animation every lock-in ---
+// --- PATCH 15A: Fully reliable shake retrigger ---
 function restartShakeAnimation(i) {
-  const inputEl = inputRefs[i]
-  if (!inputEl) return
+  const el = inputRefs.value[i]
+  if (!el) return
 
-  inputEl.classList.remove('incorrect')
-  // force reflow to restart CSS animation
-  void inputEl.offsetWidth
-  inputEl.classList.add('incorrect')
+  // Remove class
+  el.classList.remove('incorrect')
+
+  // Force reflow (crucial)
+  void el.offsetHeight
+
+  // Reapply class
+  el.classList.add('incorrect')
 }
 
 /* -----------------------------------------------
@@ -575,25 +574,56 @@ function saveState() {
 
 function restoreState() {
   if (!storageKey.value) return
+
   try {
     const raw = localStorage.getItem(storageKey.value)
     if (!raw) return
+
     const saved = JSON.parse(raw)
 
+    // Restore answers
     if (Array.isArray(saved.answers)) {
       answers.value = saved.answers.slice(0, answerCount.value)
     }
+
+    // Restore attempts
     if (typeof saved.attemptsRemaining === 'number') {
       attemptsRemaining.value = Math.max(0, Math.min(MAX_ATTEMPTS, saved.attemptsRemaining))
     }
-    if (saved.hardLocked) {
-      hardLocked.value = true
-      modalMode.value = 'lockout_full' // ensures returning user sees lock-stat
-      modalMode.value = null // ensures return goes to split mode, not fullscreen modal
+
+    // Restore lockout state
+    hardLocked.value = !!saved.hardLocked
+
+    // Always rebuild fieldStatus on refresh
+    fieldStatus.value = answers.value.map((a) => (a && isAnswerCorrect(a) ? 'correct' : ''))
+
+    // --- PATCH 15K: Trigger hero flash for first correct input of the day ---
+    if (heroFlashIndex.value === null) {
+      const firstCorrect = fieldStatus.value.findIndex((s) => s === 'correct')
+      if (firstCorrect !== -1) {
+        heroFlashIndex.value = firstCorrect
+        setTimeout(() => {
+          heroFlashIndex.value = null
+        }, 650) // flash duration
+      }
     }
 
-    // Recompute field status from restored answers
-    fieldStatus.value = answers.value.map((a) => (a && isAnswerCorrect(a) ? 'correct' : ''))
+    // 🔥 Critical — Fix UI positioning upon refresh
+    if (screenState.value === 'split-lockout') {
+      modalMode.value = null
+      showModal.value = false
+      return
+    }
+
+    if (screenState.value === 'full-lockout') {
+      modalMode.value = 'lockout_full'
+      showModal.value = false
+      return
+    }
+
+    // Otherwise → return to gameplay
+    modalMode.value = null
+    showModal.value = false
   } catch (e) {
     console.error('Failed to restore state', e)
   }
@@ -635,9 +665,13 @@ async function onLockIn() {
     }
   })
 
-  // --- PATCH 5C: re-trigger shake for incorrect fields ---
+  // --- PATCH 15A — ensure shake triggers AFTER DOM update ---
+  await nextTick()
+
   fieldStatus.value.forEach((s, i) => {
-    if (s === 'incorrect') restartShakeAnimation(i)
+    if (s === 'incorrect') {
+      restartShakeAnimation(i)
+    }
   })
 
   const allCorrectNow = fieldStatus.value.every((s) => s === 'correct')
@@ -657,8 +691,32 @@ async function onLockIn() {
   attemptsRemaining.value--
 
   if (attemptsRemaining.value <= 0) {
+    // 🔥 PATCH 15J — trigger replay motion
+    isReplaySequence.value = true
+
+    // Step 1: apply class to inputs based on correctness
+    fieldStatus.value.forEach((s, i) => {
+      const el = inputRefs.value[i]
+      if (!el) return
+
+      if (s === 'correct') {
+        el.classList.add('replay-lock')
+      } else if (s === 'incorrect') {
+        el.classList.add('replay-dim')
+      }
+    })
+
+    // Step 2: allow sweep bar + dim sequence to play
+    await new Promise((r) => setTimeout(r, 1150))
+
+    // Step 3: proceed to lockout AFTER replay
     modalMode.value = 'lockout_full'
     showModal.value = false
+    hardLocked.value = true
+
+    saveAnalytics(buildSessionSummary())
+    saveState()
+    return
   } else {
     // --- PATCH 5D: delay modal so shake animation completes cleanly ---
     setTimeout(() => {
@@ -857,6 +915,8 @@ const allPerfect = computed(
   () => fieldStatus.value.length > 0 && fieldStatus.value.every((s) => s === 'correct'),
 )
 
+const heroFlashIndex = ref(null) // null = no flash yet
+
 const analyticsLoading = ref(false)
 
 function goAnalytics() {
@@ -869,6 +929,37 @@ function goAnalytics() {
 setTimeout(() => {
   if (inputRefs.value[0]) inputRefs.value[0].focus()
 }, 300)
+
+/* ========== PATCH 15F — Smart Lockout Headline ========== */
+
+const lockoutHeadline = computed(() => {
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const completed = allPerfect.value || isDayComplete.value
+
+  // If day fully complete → stronger reflection message
+  if (completed) {
+    return {
+      title: allPerfect.value
+        ? 'You absolutely nailed today!'
+        : 'You learn something new every day!',
+      sub: `See how your thinking compares globally (${zone})`,
+    }
+  }
+
+  // If locked out temporarily (attempts used up)
+  if (hardLocked.value && !completed) {
+    return {
+      title: 'Strong attempt — let’s take a breather',
+      sub: `You can try again at ${nextSlotShort.value} (${zone})`,
+    }
+  }
+
+  // fallback
+  return {
+    title: 'Let’s take a quick breather',
+    sub: `Back at ${nextSlotShort.value} (${zone})`,
+  }
+})
 </script>
 
 <style>
@@ -1063,16 +1154,10 @@ body,
   color: white;
 }
 
+/* --- PATCH 15A: Explicit shake animation binding --- */
 .answer-input.incorrect {
   background: #ffffff;
   border-color: #242227;
-  animation: shake 0.35s ease;
-}
-
-/* ================================
-   PATCH 5 — Shake retrigger support
-================================ */
-.answer-input.incorrect {
   animation-name: shake !important;
   animation-duration: 0.35s !important;
   animation-timing-function: ease !important;
@@ -1756,42 +1841,6 @@ input::placeholder {
   }
 }
 
-/* -----------------------------------
-   Responsive Layout Adjustments
------------------------------------*/
-
-/* Tablet */
-@media (max-width: 900px) {
-  .play-wrapper {
-    padding-top: var(--space-md);
-  }
-  .question-title {
-    font-size: var(--fs-md);
-  }
-}
-
-/* Mobile */
-@media (max-width: 600px) {
-  .question-title {
-    font-size: var(--fs-sm);
-    max-width: 90%;
-  }
-  .stage {
-    font-size: var(--fs-lg) !important;
-  }
-}
-
-/* Very small mobile */
-@media (max-width: 400px) {
-  .answer-input {
-    font-size: var(--fs-sm);
-  }
-  .lock {
-    font-size: var(--fs-sm);
-    padding: 0.6rem 1.6rem;
-  }
-}
-
 html,
 body {
   overflow-x: hidden;
@@ -1954,35 +2003,49 @@ body {
   transform: scale(0.97);
 }
 
-/* ============================================
-   PATCH 10A — Smart Retry / Hint Modal Position
-=============================================== */
+/* ===========================================
+   PATCH 15B — Lower-third modal slide + rise
+=========================================== */
 
+/* Position overlay at lower third */
 .overlay.modal-lower {
   display: flex;
-  align-items: flex-end; /* moves modal to bottom */
+  align-items: flex-end;
   justify-content: center;
-  padding-bottom: 12vh; /* controls vertical position */
+  padding-bottom: 14vh; /* controls how high modal appears */
 }
 
-.modal.smart-lower {
+/* Smooth rise/pop animation */
+.modal-lower-card {
   transform-origin: bottom center;
-  animation: modalRise 0.45s cubic-bezier(0.16, 0.8, 0.34, 1) forwards;
+  animation: modalRise 0.48s cubic-bezier(0.16, 0.8, 0.32, 1) forwards;
+  opacity: 0;
 }
 
 @keyframes modalRise {
   0% {
     opacity: 0;
-    transform: translateY(35px) scale(0.97);
+    transform: translateY(42px) scale(0.95);
   }
-  60% {
+  55% {
     opacity: 1;
     transform: translateY(0) scale(1.02);
   }
   100% {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0) scale(1);
   }
+}
+
+/* Ensure fade + slide transitions blend properly */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.35s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
 }
 
 /* ============================================
@@ -1990,12 +2053,12 @@ body {
 =============================================== */
 
 .modal-text {
-  margin-bottom: 22px !important;
+  margin-bottom: 26px !important;
   line-height: 1.45;
 }
 
 .modal-actions {
-  margin-top: 10px !important;
+  margin-top: 12px !important;
   padding-bottom: 4px;
 }
 
@@ -2004,6 +2067,274 @@ body {
   transition-delay: 0.1s;
 }
 
+/* ======================================================
+   PATCH 15C — Fullscreen Loading Overlay (Tinted)
+====================================================== */
+
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.loading-spinner {
+  width: 70px;
+  height: 70px;
+  border-radius: 999px;
+  border: 6px solid rgba(255, 255, 255, 0.4);
+  border-top-color: white;
+  animation: spin 0.9s linear infinite;
+  margin-bottom: 18px;
+}
+
+.loading-text {
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.45);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================
+   PATCH 15H — Screen Transitions
+   ============================ */
+
+.screen-fade-enter-from,
+.screen-fade-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.screen-fade-enter-active,
+.screen-fade-leave-active {
+  transition:
+    opacity 0.42s cubic-bezier(0.17, 0.85, 0.39, 1),
+    transform 0.42s cubic-bezier(0.17, 0.85, 0.39, 1);
+}
+
+.screen-fade-enter-to,
+.screen-fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ============================
+   PATCH 15H — Full Lockout Fade + Lift
+   ============================ */
+
+.lockout-fullscreen {
+  animation: lockoutFade 0.55s cubic-bezier(0.18, 0.74, 0.32, 1);
+}
+
+@keyframes lockoutFade {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.97);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Inner card lift subtle motion */
+.lockout-center {
+  animation: lockoutCard 0.55s cubic-bezier(0.16, 0.8, 0.32, 1);
+}
+
+@keyframes lockoutCard {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ============================================================
+   PATCH 15I — Premium Split-Lockout Entrance Choreography
+   ============================================================ */
+
+/* Ensure parent container creates a staging context */
+.lockout-split {
+  position: relative;
+  overflow: hidden;
+}
+
+/* ---------------------------------------
+   LEFT PANEL — Slide + Fade + Soft Bounce
+---------------------------------------- */
+.left-pane {
+  opacity: 0;
+  transform: translateX(-48px);
+  animation: leftPaneIn 0.58s cubic-bezier(0.17, 0.85, 0.39, 1) forwards;
+}
+
+@keyframes leftPaneIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-48px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(0) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* ---------------------------------------
+   RIGHT PANEL — Drift + Scale Reveal
+---------------------------------------- */
+.right-pane {
+  opacity: 0;
+  transform: translateX(48px) scale(0.96);
+  animation: rightPaneIn 0.64s cubic-bezier(0.16, 0.8, 0.32, 1) forwards;
+  animation-delay: 0.12s;
+}
+
+@keyframes rightPaneIn {
+  0% {
+    opacity: 0;
+    transform: translateX(48px) scale(0.96);
+  }
+  55% {
+    opacity: 1;
+    transform: translateX(0) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* ------------------------------------------------
+   INNER ELEMENTS — Sequential Soft Fade Stagger
+------------------------------------------------- */
+
+/* shared base state */
+.right-pane > * {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: 0.4s cubic-bezier(0.16, 0.8, 0.32, 1);
+}
+
+/* stagger timings */
+.right-pane .mini-logo {
+  transition-delay: 0.08s;
+}
+.right-pane .lockout-title {
+  transition-delay: 0.18s;
+}
+.right-pane .next-label {
+  transition-delay: 0.26s;
+}
+.right-pane .lockout-time {
+  transition-delay: 0.36s;
+}
+.right-pane .lockout-countdown {
+  transition-delay: 0.46s;
+}
+.right-pane .reopen-btn {
+  transition-delay: 0.62s;
+}
+
+/* activate when container animates in */
+.lockout-split.ready .right-pane > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ------------------------------------------------
+   MICRO-HOVER button polish (premium touch)
+------------------------------------------------- */
+
+.reopen-btn {
+  transition:
+    transform 0.22s cubic-bezier(0.18, 0.74, 0.32, 1),
+    opacity 0.22s ease;
+}
+
+.reopen-btn:hover {
+  transform: translateY(-3px) scale(1.03);
+  opacity: 0.92;
+}
+
+/* -----------------------------------------
+   THEME-AWARE parallax effect (subtle)
+------------------------------------------ */
+
+/* Night mode = slightly deeper drift */
+.theme-night .left-pane {
+  animation-duration: 0.66s;
+  transform-origin: left center;
+}
+
+.theme-night .right-pane {
+  animation-duration: 0.74s;
+  transform-origin: right center;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.08));
+}
+
+.midday-pane {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 40px;
+}
+
+.midday-title {
+  font-size: 32px;
+  font-weight: 600;
+  margin-top: 16px;
+  color: #242227;
+}
+
+.midday-sub {
+  margin-top: 24px;
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+.midday-time {
+  font-size: 28px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.midday-countdown {
+  font-size: 14px;
+  margin-top: 4px;
+  opacity: 0.6;
+}
+
+/* Responsive breaks
 /* Mobile-adaptive modal sizing */
 @media (max-width: 500px) {
   .modal.smart-lower {
@@ -2019,6 +2350,194 @@ body {
   .modal-text {
     font-size: 15px !important;
     margin-bottom: 18px !important;
+  }
+}
+
+/* ============================================================
+   PATCH 15J — Final Attempt Replay Motion (premium)
+   ============================================================ */
+
+/* Container effect when last attempt is consumed */
+.final-attempt-replay {
+  pointer-events: none;
+  position: relative;
+  opacity: 1;
+}
+
+/* ------------------------------
+   Sweep bar that glides across
+------------------------------ */
+.final-attempt-replay::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 0;
+  width: 0%;
+  height: 4px;
+  background: #ff3b30; /* red iOS fail colour */
+  border-radius: 6px;
+  opacity: 0;
+  animation: sweepAttempt 1.1s ease-out forwards;
+}
+
+/* sweep animation */
+@keyframes sweepAttempt {
+  0% {
+    width: 0%;
+    opacity: 0.35;
+  }
+  40% {
+    width: 40%;
+    opacity: 0.55;
+  }
+  70% {
+    width: 100%;
+    opacity: 0.65;
+  }
+  100% {
+    width: 100%;
+    opacity: 0;
+  }
+}
+
+/* --------------------------------
+   Incorrect dim one by one
+--------------------------------- */
+.answer-input.replay-dim {
+  animation: replayDim 0.55s forwards ease;
+}
+
+@keyframes replayDim {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.35;
+  }
+}
+
+/* --------------------------------
+   Correct answers pulse lock
+--------------------------------- */
+.answer-input.replay-lock {
+  animation: replayLock 0.45s forwards cubic-bezier(0.16, 0.8, 0.32, 1);
+}
+
+@keyframes replayLock {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0px rgba(0, 0, 0, 0.25);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.35);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0px rgba(0, 0, 0, 0);
+  }
+}
+
+/* -------------------------------------
+   Freeze inputs after replay completes
+-------------------------------------- */
+.final-attempt-replay .answer-input {
+  cursor: default;
+}
+
+/* -----------------------------------------
+   PATCH 15K — BLACK HERO FLASH (first correct)
+------------------------------------------ */
+.hero-flash {
+  position: relative;
+  z-index: 2;
+  animation: heroFlash 0.65s cubic-bezier(0.18, 0.74, 0.32, 1) forwards;
+}
+
+@keyframes heroFlash {
+  0% {
+    box-shadow: 0 0 0px 0 rgba(0, 0, 0, 0);
+    transform: scale(1);
+  }
+  35% {
+    box-shadow: 0 0 22px 6px rgba(0, 0, 0, 0.65);
+    transform: scale(1.04);
+  }
+  65% {
+    box-shadow: 0 0 16px 4px rgba(0, 0, 0, 0.35);
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 0 0 0px 0 rgba(0, 0, 0, 0);
+    transform: scale(1);
+  }
+}
+
+/* ============================================================
+   UNBREAKABLE SANDBOX FOR REVEAL LIST (fix for black bars)
+   ============================================================ */
+
+.reveal-sandbox * {
+  all: unset !important; /* wipe ALL inherited gameplay styles */
+  display: block;
+  font-size: 17px;
+  line-height: 1.45;
+  color: #242227 !important;
+  font-family: -apple-system, Inter, sans-serif;
+}
+
+.reveal-sandbox {
+  all: unset !important;
+  display: block;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.reveal-sandbox .reveal-item {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.reveal-sandbox .reveal-item:last-child {
+  border-bottom: none;
+}
+
+/* -----------------------------------
+   Responsive Layout Adjustments
+-----------------------------------*/
+
+/* Tablet */
+@media (max-width: 900px) {
+  .play-wrapper {
+    padding-top: var(--space-md);
+  }
+  .question-title {
+    font-size: var(--fs-md);
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .question-title {
+    font-size: var(--fs-sm);
+    max-width: 90%;
+  }
+  .stage {
+    font-size: var(--fs-lg) !important;
+  }
+}
+
+/* Very small mobile */
+@media (max-width: 400px) {
+  .answer-input {
+    font-size: var(--fs-sm);
+  }
+  .lock {
+    font-size: var(--fs-sm);
+    padding: 0.6rem 1.6rem;
   }
 }
 </style>
