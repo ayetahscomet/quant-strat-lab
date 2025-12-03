@@ -7,21 +7,23 @@
 <script setup></script>
 
 <style>
-/* ================================
-   PATCH 11 — Route fade/slide transition
-================================ */
+/* =========================================
+   Enhanced route transition (PATCH 14)
+   Smooth fade + gentle upward slide
+   Timing matches app animations
+========================================= */
 
 .route-fade-enter-from,
 .route-fade-leave-to {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(18px); /* was 10px — now smoother */
 }
 
 .route-fade-enter-active,
 .route-fade-leave-active {
   transition:
-    opacity 0.32s cubic-bezier(0.16, 0.8, 0.34, 1),
-    transform 0.32s cubic-bezier(0.16, 0.8, 0.34, 1);
+    opacity 0.45s ease,
+    transform 0.45s cubic-bezier(0.16, 0.84, 0.44, 1); /* premium easing */
 }
 
 .route-fade-enter-to,
