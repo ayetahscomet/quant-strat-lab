@@ -1258,13 +1258,13 @@ body,
 }
 
 .lockout-card {
-  background: white;
-  border-radius: 14px;
-  padding: 48px 28px;
   text-align: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 40px 50px;
+  border-radius: 20px;
   width: 100%;
-  max-width: 420px;
+  max-width: 500px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
   margin-left: auto;
 }
 
