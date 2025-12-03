@@ -2375,6 +2375,10 @@ body {
   opacity: 1;
 }
 
+.play-wrapper.split-lockout .heatmap-block {
+  display: none !important;
+}
+
 /* ------------------------------
    Sweep bar that glides across
 ------------------------------ */
