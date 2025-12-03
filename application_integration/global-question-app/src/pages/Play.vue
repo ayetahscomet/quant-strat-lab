@@ -26,10 +26,11 @@
       <!-- ===================== MASTER UI SWITCH ===================== -->
 
       <!-- 1) SPLIT LOCKOUT -->
+      <!-- 1) SPLIT LOCKOUT -->
       <template v-if="screenState === 'split-lockout'">
         <transition name="split-lock" mode="out-in">
-          <!-- NOTE: .ready added here so right-pane content fades in -->
           <div class="lockout-split ready">
+            <!-- LEFT SIDE -->
             <div class="left-pane">
               <h2 class="attempt-title">Latest Attempt</h2>
 
@@ -42,20 +43,21 @@
                 {{ ans || '—' }}
               </div>
             </div>
+
+            <!-- RIGHT SIDE (THIS MUST BE INSIDE THE SPLIT WRAPPER) -->
+            <div class="right-pane midday-pane">
+              <img src="/logo-800-full.svg" class="mini-logo" />
+
+              <h1 class="midday-title">{{ lockoutHeadline.title }}</h1>
+
+              <p class="midday-sub">Next check-in:</p>
+
+              <p class="midday-time">{{ nextSlotShort }}</p>
+
+              <p class="midday-countdown">Come back in {{ timeRemaining }}</p>
+            </div>
           </div>
         </transition>
-
-        <div class="right-pane midday-pane">
-          <img src="/logo-800-full.svg" class="mini-logo" />
-
-          <h1 class="midday-title">{{ lockoutHeadline.title }}</h1>
-
-          <p class="midday-sub">Next check-in:</p>
-
-          <p class="midday-time">{{ nextSlotShort }}</p>
-
-          <p class="midday-countdown">Come back in {{ timeRemaining }}</p>
-        </div>
       </template>
 
       <!-- 2) FULL LOCKOUT -->
