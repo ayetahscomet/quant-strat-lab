@@ -45,7 +45,7 @@
             </div>
 
             <!-- RIGHT SIDE (THIS MUST BE INSIDE THE SPLIT WRAPPER) -->
-            <div class="right-pane midday-pane">
+            <div class="right-pane midday-pane lockout-card">
               <img src="/logo-800-full.svg" class="mini-logo" />
 
               <h1 class="midday-title">{{ lockoutHeadline.title }}</h1>
@@ -1258,13 +1258,14 @@ body,
 }
 
 .lockout-card {
+  background: white;
+  border-radius: 14px;
+  padding: 48px 28px;
   text-align: center;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 40px 50px;
-  border-radius: 20px;
-  width: 80%;
-  max-width: 500px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 420px;
+  margin-left: auto;
 }
 
 .lockout-card h1 {
