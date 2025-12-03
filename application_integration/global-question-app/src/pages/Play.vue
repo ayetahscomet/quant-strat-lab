@@ -1521,9 +1521,17 @@ input::placeholder {
 }
 
 .lockout-split {
-  display: flex;
-  height: 100vh;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  align-items: start;
+  gap: 40px;
+
   width: 100%;
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 0 40px;
+
+  box-sizing: border-box;
 }
 
 .left-pane {
