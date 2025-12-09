@@ -130,9 +130,9 @@
             </template>
 
             <template v-else-if="modalMode === 'askHint'">
-              <h2 class="modal-title">Not quite yet…</h2>
+              <h2 class="modal-title">Not quite.</h2>
               <p class="modal-text modal-spaced">
-                Some of your answers aren’t quite there. Want a hint?
+                Some of your answers aren’t quite there. />Want a hint.
               </p>
               <div class="modal-actions">
                 <button class="modal-btn secondary" @click="closeModal">No, retry</button>
@@ -1200,12 +1200,12 @@ body,
 .modal-title {
   font-size: 26px !important;
   color: #000;
+  line-height: 2;
 }
 .modal-text {
   font-size: 18px !important;
   color: #000;
-  line-height: 1.5;
-  padding-bottom: 20px;
+  line-height: 1cm;
 }
 .modal-sub {
   font-size: 32px !important;
