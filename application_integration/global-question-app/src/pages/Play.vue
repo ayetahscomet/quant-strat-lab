@@ -13,7 +13,7 @@
       ============================ -->
       <transition name="header-shift">
         <header v-if="screenState !== 'split-lockout'" class="header gameplay-header">
-          <img src="/logo-800-full.svg" class="lockout-logo" />
+          <img src="/logo-800-full.svg" class="logo" />
           <span class="counter">
             <span class="num-light">1</span> /
             <span class="num-bold">1</span>
