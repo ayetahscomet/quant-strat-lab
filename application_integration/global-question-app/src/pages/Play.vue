@@ -71,7 +71,7 @@
               <button class="notif-btn" @click="enableNotifications">Enable Notifications</button>
 
               <button class="exit-btn" @click="showExitConfirm = true">
-                I’ve Had Enough for Today
+                <i>I’ve Had Enough for Today</i>
               </button>
             </div>
           </div>
@@ -143,7 +143,9 @@
               </ul>
             </div>
 
-            <button class="modal-btn primary" @click="closeSuccessSummary">Continue</button>
+            <button class="modal-btn primary" @click="goToSuccessSummary" style="margin-top: 18px">
+              Continue
+            </button>
           </div>
         </div>
 
@@ -1037,6 +1039,26 @@ function nextRollingWindow() {
   const next = new Date()
   next.setHours(Math.floor(nextWindowStart / 60), nextWindowStart % 60, 0, 0)
   return next
+}
+
+function goToSuccessSummary() {
+  // build final summary
+  const summary = buildSessionSummary()
+  summary.completed = true
+  summary.exitRequested = false
+
+  // save analytics row
+  saveAnalytics(summary)
+
+  // store locally so SuccessSummary.vue can read it
+  localStorage.setItem(`${storageKey.value}_summary`, JSON.stringify(summary))
+
+  // close modal
+  showModal.value = false
+  modalMode.value = null
+
+  // navigate to the summary screen
+  router.replace({ name: 'SuccessSummary' })
 }
 
 /* ========== PATCH 15F — Smart Lockout Headline ========== */
@@ -2113,16 +2135,33 @@ body {
 .exit-btn {
   margin-top: 32px;
   padding: 12px 26px;
-  background: #000;
-  color: #fff;
+  background: #bec0bf;
+  color: #bec0bf;
   border-radius: 12px;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  border: 2px solid #000;
+  border: 1.5px solid #bec0bf;
   cursor: pointer;
-  transition: 0.25s;
+  text-decoration: underline #bec0bf;
 }
+
 .exit-btn:hover {
+  transform: translateY(-3px);
+  opacity: 0.88;
+}
+
+.notif-btn {
+  margin-top: 32px;
+  padding: 12px 26px;
+  background: #f2c33d;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 200;
+  border: 1.5px solid #ffa300;
+  cursor: pointer;
+}
+
+.notif-btn:hover {
   transform: translateY(-3px);
   opacity: 0.88;
 }

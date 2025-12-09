@@ -39,9 +39,8 @@ const router = useRouter()
 const summary = ref({})
 
 onMounted(() => {
-  const keys = Object.keys(localStorage).filter((k) => k.endsWith('_summary'))
-  if (keys.length) summary.value = JSON.parse(localStorage.getItem(keys[0]))
-  localStorage.removeItem('akinto_exitToday')
+  const key = Object.keys(localStorage).find((k) => k.endsWith('_summary'))
+  if (key) summary.value = JSON.parse(localStorage.getItem(key))
 })
 
 function goAnalytics() {
