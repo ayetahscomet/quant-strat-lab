@@ -14,6 +14,11 @@ const router = createRouter({
       name: 'FailureSummary',
       component: () => import('@/pages/FailureSummary.vue'),
     },
+    {
+      path: '/success-summary',
+      name: 'SuccessSummary',
+      component: () => import('@/pages/SuccessSummary.vue'),
+    },
   ],
 })
 
