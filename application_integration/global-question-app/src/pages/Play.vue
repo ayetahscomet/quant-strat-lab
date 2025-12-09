@@ -202,6 +202,27 @@ import Airtable from 'airtable'
 import { useRouter } from 'vue-router' // ⬅ Add at top of <script setup>
 const router = useRouter()
 
+import { nextTick } from 'vue'
+
+async function goToSuccessSummary() {
+  const summary = buildSessionSummary()
+  summary.completed = true
+  summary.exitRequested = false
+
+  saveAnalytics(summary)
+
+  localStorage.setItem(`${storageKey.value}_summary`, JSON.stringify(summary))
+
+  // CLOSE MODAL FIRST
+  modalMode.value = null
+  showModal.value = false
+
+  // WAIT FOR DOM UPDATE (modal transition → then navigate)
+  await nextTick()
+
+  router.replace({ name: 'SuccessSummary' })
+}
+
 /* ---------- Airtable set-up ---------- */
 const token = import.meta.env.VITE_AIRTABLE_TOKEN
 const baseID = 'appJruOxLGdiwKrRw'
