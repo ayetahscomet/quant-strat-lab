@@ -8,9 +8,9 @@
       ]"
       :key="screenState"
     >
-      <!-- ===========================
-           GAMEPLAY HEADER (ONLY SHOWS IN PLAY MODE)
-      ============================ -->
+      <!-- =======================================================
+           HEADER (HIDDEN IN LOCKOUT)
+      ======================================================= -->
       <transition name="header-shift">
         <header v-if="screenState !== 'split-lockout'" class="header gameplay-header">
           <img src="/logo-800-full.svg" class="logo" />
@@ -23,7 +23,9 @@
         </header>
       </transition>
 
-      <!-- ATTEMPTS INDICATOR (HIDDEN IN LOCKOUT MODE) -->
+      <!-- =======================================================
+           ATTEMPT DOTS (HIDDEN IN LOCKOUT)
+      ======================================================= -->
       <div v-if="screenState !== 'split-lockout'" class="attempts-row">
         <span class="attempts-label">Attempts this check-in:</span>
         <div class="dots">
@@ -35,13 +37,13 @@
         </div>
       </div>
 
-      <!-- ===========================
-           LOCKOUT MODE — SPLIT PANEL
-      ============================ -->
+      <!-- =======================================================
+           SPLIT LOCKOUT MODE
+      ======================================================= -->
       <template v-if="screenState === 'split-lockout'">
         <transition name="split-lock" mode="out-in">
           <div class="lockout-split ready">
-            <!-- LEFT SIDE: Latest Attempt -->
+            <!-- ============ LEFT PANE: LATEST ATTEMPT ============ -->
             <div class="left-pane">
               <h2 class="attempt-title">Latest Attempt</h2>
 
@@ -55,25 +57,30 @@
               </div>
             </div>
 
-            <!-- RIGHT SIDE: LOCKOUT CARD + HEADER INSIDE -->
+            <!-- ============ RIGHT PANE: LOCKOUT CARD ============ -->
             <div class="right-pane lockout-card">
-              <!-- CLEAN CENTRED LOCKOUT UI -->
               <img src="/logo-800-full.svg" class="lockout-logo" />
 
-              <h2 class="lockout-headline-strong">Strong attempt</h2>
-              <h2 class="lockout-headline-sub">Let’s take a breather.</h2>
+              <h2 class="lockout-headline-strong">{{ lockoutHeadlineStrong }}</h2>
+              <h2 class="lockout-headline-sub">{{ lockoutHeadlineSub }}</h2>
 
-              <p1 class="midday-sub">Next check-in:</p1>
+              <p class="midday-sub">Next window:</p>
               <p class="midday-time">{{ nextSlotShort }}</p>
               <p class="midday-countdown">Come back in {{ timeRemaining }}</p>
+
+              <button class="notif-btn" @click="enableNotifications">Enable Notifications</button>
+
+              <button class="exit-btn" @click="showExitConfirm = true">
+                I’ve Had Enough for Today
+              </button>
             </div>
           </div>
         </transition>
       </template>
 
-      <!-- ===========================
+      <!-- =======================================================
            LOADING SCREEN
-      ============================ -->
+      ======================================================= -->
       <template v-else-if="loading">
         <div class="loading-screen">
           <div class="loading-content">
@@ -83,9 +90,9 @@
         </div>
       </template>
 
-      <!-- ===========================
+      <!-- =======================================================
            NORMAL GAMEPLAY MODE
-      ============================ -->
+      ======================================================= -->
       <template v-else>
         <h1 v-if="!question" class="question-title muted">No question found.</h1>
         <h1 v-else class="question-title">{{ question }}</h1>
@@ -117,40 +124,69 @@
         </div>
       </template>
 
-      <!-- ===========================
-           MODAL SYSTEM
-      ============================ -->
+      <!-- =======================================================
+           MODAL SYSTEM (SUCCESS + HINT + EXIT CONFIRMATION)
+      ======================================================= -->
       <transition name="modal-fade">
-        <div v-if="showModal" class="overlay">
+        <!-- ********** SUCCESS SUMMARY MODAL ********** -->
+        <div v-if="modalMode === 'success'" class="overlay">
           <div class="modal modal-lower-card">
-            <template v-if="modalMode === 'success'">
-              <h2 class="modal-title">Nicely done!</h2>
-              <p class="modal-text">You’ve locked in all {{ answerCount }} answers correctly.</p>
-              <button class="modal-btn primary" @click="closeModal">Continue</button>
-            </template>
+            <h2 class="modal-title">Nicely done!</h2>
+            <p class="modal-text">You’ve locked in all {{ answerCount }} answers correctly.</p>
 
-            <template v-else-if="modalMode === 'askHint'">
-              <h2 class="modal-title">Not quite.</h2>
-              <p class="modal-text modal-spaced">
-                Some of your answers aren’t quite there.<br />Want a hint.
-              </p>
-              <div class="modal-actions">
-                <button class="modal-btn secondary" @click="closeModal">No, retry</button>
-                <button class="modal-btn primary" @click="showHint">Yes, show hint</button>
-              </div>
-            </template>
+            <div v-if="missingAnswers.length" class="reveal-block">
+              <p class="reveal-title">You could also have answered:</p>
+              <ul class="reveal-list">
+                <li v-for="(alt, i) in missingAnswers" :key="i">
+                  {{ alt }}
+                </li>
+              </ul>
+            </div>
 
-            <template v-else-if="modalMode === 'hint'">
-              <div class="hint-wrapper">
-                <h2 class="modal-title">Hint</h2>
-                <p class="modal-text modal-spaced">
-                  {{ hintText || 'Hint coming soon.' }}
-                </p>
-                <button class="modal-btn primary" @click="closeModal" style="margin-top: 14px">
-                  Back
-                </button>
-              </div>
-            </template>
+            <button class="modal-btn primary" @click="closeSuccessSummary">Continue</button>
+          </div>
+        </div>
+
+        <!-- ********** HINT REQUEST MODAL ********** -->
+        <div v-else-if="modalMode === 'askHint'" class="overlay">
+          <div class="modal modal-lower-card">
+            <h2 class="modal-title">Not quite.</h2>
+            <p class="modal-text modal-spaced">Some answers aren’t quite there. Want a hint?</p>
+
+            <div class="modal-actions">
+              <button class="modal-btn secondary" @click="closeModal">No, retry</button>
+              <button class="modal-btn primary" @click="showHint">Yes, show hint</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ********** HINT MODAL ********** -->
+        <div v-else-if="modalMode === 'hint'" class="overlay">
+          <div class="modal modal-card">
+            <h2 class="modal-title">Hint</h2>
+            <p class="modal-text modal-spaced">
+              {{ hintText || 'Hint coming soon.' }}
+            </p>
+            <button class="modal-btn primary" @click="closeModal">Back</button>
+          </div>
+        </div>
+
+        <!-- ********** EXIT CONFIRMATION MODAL ********** -->
+        <div v-else-if="showExitConfirm" class="overlay">
+          <div class="modal modal-card">
+            <h2 class="modal-title">Finish for Today?</h2>
+            <p class="modal-text modal-spaced">
+              You’ll end today’s session early and see the correct answers.<br />
+              You can’t return to the puzzle until the next window.
+            </p>
+
+            <div class="modal-actions">
+              <button class="modal-btn secondary" @click="showExitConfirm = false">
+                No, return
+              </button>
+
+              <button class="modal-btn primary" @click="confirmExitEarly">Yes, I’m Done</button>
+            </div>
           </div>
         </div>
       </transition>
@@ -181,6 +217,7 @@ const correctAnswers = ref([]) // canonical list from Airtable
 const hintText = ref('')
 const loading = ref(true)
 const questionDate = ref('') // Airtable Date field (for key)
+const showConfirmExit = ref(false)
 
 const answers = ref([]) // user inputs
 
@@ -246,6 +283,7 @@ onMounted(() => {
       filterByFormula: `IS_SAME({Date}, TODAY(), 'day')`, // Only pull today's row
       maxRecords: 1,
     })
+
     .firstPage((err, records) => {
       // PATCH 15C — Delay input reveal after question loads
       setTimeout(() => {
@@ -258,6 +296,11 @@ onMounted(() => {
       if (err || !records?.length) {
         console.error(err)
         return
+
+        if (localStorage.getItem('akinto_exitToday') === 'true') {
+          router.replace({ name: 'FailureSummary' })
+          return
+        }
       }
 
       const row = records[0].fields
@@ -502,6 +545,7 @@ function buildSessionSummary() {
     completed: totalCorrect === totalFields,
     hintUsed: answers.value.some((a) => a === '__HINT__'), // optional later
     timestamp: new Date().toISOString(),
+    windowIndex: Math.floor((new Date().getHours() * 60) / 120),
   }
 }
 
@@ -792,7 +836,7 @@ function nextAvailableSlot() {
   return d
 }
 
-const nextSlot = nextAvailableSlot()
+const nextSlot = nextRollingWindow()
 
 /* live countdown */
 const timeRemaining = ref('')
@@ -801,14 +845,26 @@ setInterval(() => updateCountdown(), 1000)
 function updateCountdown() {
   const diff = nextSlot - new Date()
   if (diff <= 0) {
-    timeRemaining.value = 'Available again now'
-    return
+    attemptsRemaining.value = MAX_ATTEMPTS
+    hardLocked.value = false
+    saveState()
+
+    notifyAttemptsRefreshed() // 🔔 (for notifications)
   }
 
   const h = Math.floor(diff / 1000 / 60 / 60)
   const m = Math.floor(diff / 1000 / 60) % 60
   const s = Math.floor(diff / 1000) % 60
   timeRemaining.value = `${h > 0 ? h + 'h ' : ''}${m}m ${s}s`
+}
+
+function notifyAttemptsRefreshed() {
+  if (!notificationsEnabled.value) return
+
+  new Notification('Your Akinto attempts have refreshed!', {
+    body: 'A new window is open. Come back and try again!',
+    icon: logo,
+  })
 }
 
 const nextSlotLabel = computed(() => {
@@ -820,6 +876,13 @@ const nextSlotLabel = computed(() => {
     }) + ` (${timezone})`
   )
 })
+
+const notificationsEnabled = ref(false)
+
+async function enableNotifications() {
+  const permission = await Notification.requestPermission()
+  notificationsEnabled.value = permission === 'granted'
+}
 
 // --- PATCH 2: Keyboard Navigation ---
 
@@ -868,6 +931,30 @@ function onKey(e, index) {
       // ESC does nothing during normal play
       break
   }
+}
+
+const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
+
+async function registerForPush() {
+  // 1. Ask permission
+  const permission = await Notification.requestPermission()
+  if (permission !== 'granted') return
+
+  // 2. Register service worker
+  const reg = await navigator.serviceWorker.register('/sw.js')
+
+  // 3. Subscribe to push
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+  })
+
+  // 4. Send subscription to your backend
+  await fetch('/api/save-subscription', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sub }),
+  })
 }
 
 /* ---------- RESET WHEN TIME UNLOCKS ---------- */
@@ -919,6 +1006,38 @@ function goAnalytics() {
 setTimeout(() => {
   if (inputRefs.value[0]) inputRefs.value[0].focus()
 }, 300)
+
+function exitEarly() {
+  showConfirmExit.value = true
+}
+
+function confirmExit() {
+  showConfirmExit.value = false
+
+  const summary = buildSessionSummary()
+  summary.exitRequested = true
+  summary.completed = false
+
+  hardLocked.value = true
+  localStorage.setItem('akinto_exitToday', 'true')
+
+  saveAnalytics(summary)
+  localStorage.setItem(`${storageKey.value}_summary`, JSON.stringify(summary))
+
+  router.replace({ name: 'FailureSummary' })
+}
+
+function nextRollingWindow() {
+  const now = new Date()
+  const minutes = now.getHours() * 60 + now.getMinutes()
+
+  const currentWindowStart = Math.floor(minutes / 120) * 120
+  const nextWindowStart = currentWindowStart + 120
+
+  const next = new Date()
+  next.setHours(Math.floor(nextWindowStart / 60), nextWindowStart % 60, 0, 0)
+  return next
+}
 
 /* ========== PATCH 15F — Smart Lockout Headline ========== */
 
@@ -1989,6 +2108,23 @@ body {
 
 .play-wrapper.split-lockout-active {
   padding-top: 0 !important;
+}
+
+.exit-btn {
+  margin-top: 32px;
+  padding: 12px 26px;
+  background: #000;
+  color: #fff;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  border: 2px solid #000;
+  cursor: pointer;
+  transition: 0.25s;
+}
+.exit-btn:hover {
+  transform: translateY(-3px);
+  opacity: 0.88;
 }
 
 /* ============================================================
