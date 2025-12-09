@@ -1,18 +1,30 @@
 <template>
   <transition name="screen-fade" mode="out-in">
-    <div :class="['play-wrapper', timeClass]" :key="screenState">
-      <!-- HEADER -->
-      <header class="header">
-        <img src="/logo-800-full.svg" class="logo" />
-        <span class="counter">
-          <span class="num-light">1 </span> / <span class="num-bold"> 1</span>
-        </span>
-        <span class="divider">|</span>
-        <span class="stage">{{ stageLabel }}</span>
-      </header>
+    <div
+      :class="[
+        'play-wrapper',
+        timeClass,
+        { 'split-lockout-active': screenState === 'split-lockout' },
+      ]"
+      :key="screenState"
+    >
+      <!-- ===========================
+           GAMEPLAY HEADER (ONLY SHOWS IN PLAY MODE)
+      ============================ -->
+      <transition name="header-shift">
+        <header v-if="screenState !== 'split-lockout'" class="header gameplay-header">
+          <img src="/logo-800-full.svg" class="lockout-logo" />
+          <span class="counter">
+            <span class="num-light">1</span> /
+            <span class="num-bold">1</span>
+          </span>
+          <span class="divider">|</span>
+          <span class="stage">{{ stageLabel }}</span>
+        </header>
+      </transition>
 
-      <!-- ATTEMPTS INDICATOR -->
-      <div class="attempts-row">
+      <!-- ATTEMPTS INDICATOR (HIDDEN IN LOCKOUT MODE) -->
+      <div v-if="screenState !== 'split-lockout'" class="attempts-row">
         <span class="attempts-label">Attempts this check-in:</span>
         <div class="dots">
           <span
@@ -23,14 +35,13 @@
         </div>
       </div>
 
-      <!-- ===================== MASTER UI SWITCH ===================== -->
-
-      <!-- 1) SPLIT LOCKOUT -->
-      <!-- 1) SPLIT LOCKOUT -->
+      <!-- ===========================
+           LOCKOUT MODE — SPLIT PANEL
+      ============================ -->
       <template v-if="screenState === 'split-lockout'">
         <transition name="split-lock" mode="out-in">
           <div class="lockout-split ready">
-            <!-- LEFT SIDE -->
+            <!-- LEFT SIDE: Latest Attempt -->
             <div class="left-pane">
               <h2 class="attempt-title">Latest Attempt</h2>
 
@@ -44,43 +55,25 @@
               </div>
             </div>
 
-            <!-- RIGHT SIDE (THIS MUST BE INSIDE THE SPLIT WRAPPER) -->
-            <div class="right-pane midday-pane lockout-card">
-              <img src="/logo-800-full.svg" class="mini-logo" />
+            <!-- RIGHT SIDE: LOCKOUT CARD + HEADER INSIDE -->
+            <div class="right-pane lockout-card">
+              <!-- CLEAN CENTRED LOCKOUT UI -->
+              <img src="/logo-800-full.svg" class="lockout-logo" />
 
-              <h1 class="midday-title">{{ lockoutHeadline.title }}</h1>
+              <h2 class="lockout-headline-strong">Strong attempt</h2>
+              <h2 class="lockout-headline-sub">Let’s take a breather.</h2>
 
-              <p class="midday-sub">Next check-in:</p>
-
+              <p1 class="midday-sub">Next check-in:</p1>
               <p class="midday-time">{{ nextSlotShort }}</p>
-
               <p class="midday-countdown">Come back in {{ timeRemaining }}</p>
             </div>
           </div>
         </transition>
       </template>
 
-      <!-- 2) FULL LOCKOUT -->
-      <template v-else-if="screenState === 'full-lockout'">
-        <div class="lockout-fullscreen">
-          <div class="lockout-center">
-            <img src="/logo-800-full.svg" class="lockout-logo" />
-            <h1 class="lockout-title">{{ lockoutHeadline.title }}</h1>
-            <p class="lockout-subtext">{{ lockoutHeadline.sub }}</p>
-
-            <div class="reveal-block" v-if="missingAnswers.length">
-              <p class="reveal-title">Other answers you didn’t find:</p>
-              <ul class="reveal-list reveal-sandbox">
-                <li v-for="a in missingAnswers" :key="a" class="reveal-item">{{ a }}</li>
-              </ul>
-            </div>
-
-            <button class="lockout-btn" @click="goAnalytics">View today’s analytics →</button>
-          </div>
-        </div>
-      </template>
-
-      <!-- 3) LOADING -->
+      <!-- ===========================
+           LOADING SCREEN
+      ============================ -->
       <template v-else-if="loading">
         <div class="loading-screen">
           <div class="loading-content">
@@ -90,7 +83,9 @@
         </div>
       </template>
 
-      <!-- 4) NORMAL GAMEPLAY -->
+      <!-- ===========================
+           NORMAL GAMEPLAY MODE
+      ============================ -->
       <template v-else>
         <h1 v-if="!question" class="question-title muted">No question found.</h1>
         <h1 v-else class="question-title">{{ question }}</h1>
@@ -122,8 +117,9 @@
         </div>
       </template>
 
-      <!-- MODAL (unchanged) -->
-      <!-- ========================================================= -->
+      <!-- ===========================
+           MODAL SYSTEM
+      ============================ -->
       <transition name="modal-fade">
         <div v-if="showModal" class="overlay modal-lower">
           <div class="modal modal-lower-card">
@@ -147,7 +143,9 @@
             <template v-else-if="modalMode === 'hint'">
               <div class="hint-wrapper">
                 <h2 class="modal-title">Hint</h2>
-                <p class="modal-text modal-spaced">{{ hintText || 'Hint coming soon.' }}</p>
+                <p class="modal-text modal-spaced">
+                  {{ hintText || 'Hint coming soon.' }}
+                </p>
                 <button class="modal-btn primary" @click="closeModal" style="margin-top: 14px">
                   Back
                 </button>
@@ -221,17 +219,7 @@ const missingAnswers = computed(() => {
 /* ========== PATCH 15G — Unified Screen State Resolver ========== */
 
 const screenState = computed(() => {
-  // If day completed (after 20:00)
-  if (isDayComplete.value || allPerfect.value) {
-    return 'full-lockout'
-  }
-
-  // Temporary lockout (used all attempts)
-  if (hardLocked.value) {
-    return 'split-lockout'
-  }
-
-  // Normal gameplay
+  if (hardLocked.value) return 'split-lockout'
   return 'play'
 })
 
@@ -988,6 +976,11 @@ body,
   padding-top: var(--space-lg);
 }
 
+.play-wrapper.split-lockout-active {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
 /* BACKGROUNDS */
 .theme-morning {
   background: #9fd5ff;
@@ -1021,7 +1014,6 @@ body,
   color: white;
 }
 
-/* HEADER */
 /* HEADER */
 .header {
   display: flex;
@@ -1257,17 +1249,6 @@ body,
   animation: fadein 0.4s ease-out;
 }
 
-.lockout-card {
-  text-align: center;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 40px 50px;
-  border-radius: 20px;
-  width: 100%;
-  max-width: 500px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-  margin-left: auto;
-}
-
 .lockout-card h1 {
   font-size: 30px;
   font-weight: 800;
@@ -1287,6 +1268,13 @@ body,
 .lockout-card .countdown {
   font-size: 18px;
   margin-top: 2px;
+}
+
+.attempt-title {
+  font-size: 25px;
+  font-weight: 800;
+  margin-top: 85px;
+  margin-bottom: 15px;
 }
 
 .recheck-btn {
@@ -1343,76 +1331,6 @@ body,
   display: flex;
   align-items: flex-end; /* push modal downward */
   padding-bottom: 14vh; /* adjustable bottom offset */
-}
-
-/* 🔥 NEW LOCK-OUT DESIGN */
-
-.lockout-fullscreen {
-  position: fixed;
-  inset: 0;
-  background: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  animation: fadein 0.45s ease-out;
-}
-
-.lockout-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-}
-
-.lockout-logo {
-  width: 80px;
-  margin-bottom: 6px;
-  outline: 1.5px solid #000000;
-}
-
-.lockout-title {
-  font-size: 36px;
-  font-weight: 800;
-  color: #242227;
-  margin: 0;
-}
-
-.lockout-subtext {
-  font-size: 17px;
-  opacity: 0.75;
-  color: #242227;
-  margin-top: 3px;
-}
-
-.lockout-time {
-  font-size: 33px;
-  font-weight: 750;
-  color: #242227;
-  margin: 0;
-}
-
-.lockout-countdown {
-  font-size: 17px;
-  opacity: 0.85;
-  color: #242227;
-  margin-bottom: 15px;
-}
-
-.lockout-btn {
-  background: #000;
-  color: #fff;
-  border-radius: 14px;
-  padding: 14px 32px;
-  font-size: 18px;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  transition: 0.2s;
-}
-
-.lockout-btn:hover {
-  opacity: 0.25;
 }
 
 /* 🌙 NIGHT MODE — TEXT MUST FLIP TO WHITE */
@@ -1473,12 +1391,6 @@ body,
   color: var(--text-color);
 }
 
-/* Ensure lockout is always readable (override theme + vars) */
-.lockout-fullscreen,
-.lockout-fullscreen * {
-  color: #242227 !important;
-}
-
 /* Input default */
 .answer-input {
   background: var(--input-bg);
@@ -1519,37 +1431,6 @@ input::placeholder {
 
 .reveal-list li {
   margin-bottom: 6px;
-}
-
-.lockout-split {
-  display: grid;
-  grid-template-columns: 380px 1fr;
-  align-items: start;
-  gap: 40px;
-
-  width: 100%;
-  max-width: 1200px;
-  margin: 40px auto;
-  padding: 0 40px;
-
-  box-sizing: border-box;
-}
-
-.left-pane {
-  width: 30%;
-  background: rgba(0, 0, 0, 0.05);
-  padding: 2rem;
-  overflow-y: auto;
-  border-right: 2px solid rgba(0, 0, 0, 0.1);
-}
-
-.right-pane {
-  width: 70%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
 }
 
 .locked-result {
@@ -1634,66 +1515,6 @@ input::placeholder {
 /* Slight lift effect */
 .modal-slide > .modal {
   animation: modalPop 0.45s cubic-bezier(0.17, 0.85, 0.39, 1);
-}
-
-@keyframes modalPop {
-  0% {
-    transform: scale(0.94) translateY(12px);
-    opacity: 0.7;
-  }
-  60% {
-    transform: scale(1.02) translateY(0);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* animations */
-
-@keyframes fadein {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-@keyframes fadeOutText {
-  0% {
-    color: #fff;
-  }
-  100% {
-    color: var(--bg-color);
-  }
-}
-@keyframes shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-4px);
-  }
-  50% {
-    transform: translateX(4px);
-  }
-  75% {
-    transform: translateX(-3px);
-  }
-}
-@keyframes pop {
-  0% {
-    transform: scale(0.98);
-  }
-  60% {
-    transform: scale(1.03);
-  }
-  100% {
-    transform: scale(1);
-  }
 }
 
 /* 🔒 MODAL ALWAYS FORMATTED BLACK ON WHITE */
@@ -1846,50 +1667,11 @@ input::placeholder {
 
 /* --- RIGHT GLOBAL --- (COMING NEXT) */
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 html,
 body {
   overflow-x: hidden;
   overflow-y: hidden;
   overscroll-behavior: hidden;
-}
-
-/* ✨ Left side slides in from left edge */
-.left-pane {
-  animation: slide-left 0.6s cubic-bezier(0.18, 0.74, 0.32, 1) forwards;
-  opacity: 0;
-}
-@keyframes slide-left {
-  from {
-    transform: translateX(-50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* ✨ Right panel soft zoom-in with delay */
-.right-pane {
-  animation: pop-in 0.7s cubic-bezier(0.17, 0.85, 0.39, 1) forwards;
-  animation-delay: 0.15s;
-  opacity: 0;
-}
-@keyframes pop-in {
-  from {
-    transform: scale(0.94) translateX(40px);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1) translateX(0);
-    opacity: 1;
-  }
 }
 
 /* Increase space above modal secondary content */
@@ -1907,17 +1689,6 @@ body {
 /* More compact spacing between items inside reveal list */
 .reveal-list li {
   margin-bottom: 4px; /* cleaner rhythm */
-}
-
-/* Increase vertical gap before the analytics button */
-.lockout-btn {
-  margin-top: 28px; /* creates separation from grey box */
-}
-
-/* Make button text white (it was appearing dark depending on inherit) */
-.lockout-btn {
-  background: #000 !important;
-  color: #fff !important;
 }
 
 .reveal-title {
@@ -2033,21 +1804,6 @@ body {
   opacity: 0;
 }
 
-@keyframes modalRise {
-  0% {
-    opacity: 0;
-    transform: translateY(42px) scale(0.95);
-  }
-  55% {
-    opacity: 1;
-    transform: translateY(0) scale(1.02);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 /* Ensure fade + slide transitions blend properly */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
@@ -2117,12 +1873,6 @@ body {
   text-shadow: 0 0 4px rgba(0, 0, 0, 0.45);
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* ============================
    PATCH 15H — Screen Transitions
    ============================ */
@@ -2142,141 +1892,6 @@ body {
 
 .screen-fade-enter-to,
 .screen-fade-leave-from {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* ============================
-   PATCH 15H — Full Lockout Fade + Lift
-   ============================ */
-
-.lockout-fullscreen {
-  animation: lockoutFade 0.55s cubic-bezier(0.18, 0.74, 0.32, 1);
-}
-
-@keyframes lockoutFade {
-  0% {
-    opacity: 0;
-    transform: translateY(22px) scale(0.97);
-  }
-  60% {
-    opacity: 1;
-    transform: translateY(0) scale(1.02);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Inner card lift subtle motion */
-.lockout-center {
-  animation: lockoutCard 0.55s cubic-bezier(0.16, 0.8, 0.32, 1);
-}
-
-@keyframes lockoutCard {
-  from {
-    opacity: 0;
-    transform: scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* ============================================================
-   PATCH 15I — Premium Split-Lockout Entrance Choreography
-   ============================================================ */
-
-/* Ensure parent container creates a staging context */
-.lockout-split {
-  position: relative;
-  overflow: hidden;
-}
-
-/* ---------------------------------------
-   LEFT PANEL — Slide + Fade + Soft Bounce
----------------------------------------- */
-.left-pane {
-  opacity: 0;
-  transform: translateX(-48px);
-  animation: leftPaneIn 0.58s cubic-bezier(0.17, 0.85, 0.39, 1) forwards;
-}
-
-@keyframes leftPaneIn {
-  0% {
-    opacity: 0;
-    transform: translateX(-48px);
-  }
-  60% {
-    opacity: 1;
-    transform: translateX(0) scale(1.02);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-/* ---------------------------------------
-   RIGHT PANEL — Drift + Scale Reveal
----------------------------------------- */
-.right-pane {
-  opacity: 0;
-  transform: translateX(48px) scale(0.96);
-  animation: rightPaneIn 0.64s cubic-bezier(0.16, 0.8, 0.32, 1) forwards;
-  animation-delay: 0.12s;
-}
-
-@keyframes rightPaneIn {
-  0% {
-    opacity: 0;
-    transform: translateX(48px) scale(0.96);
-  }
-  55% {
-    opacity: 1;
-    transform: translateX(0) scale(1.03);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-/* ------------------------------------------------
-   INNER ELEMENTS — Sequential Soft Fade Stagger
-------------------------------------------------- */
-
-/* shared base state */
-.right-pane > * {
-  opacity: 0;
-  transform: translateY(12px);
-  transition: 0.4s cubic-bezier(0.16, 0.8, 0.32, 1);
-}
-
-/* stagger timings */
-.right-pane .mini-logo {
-  transition-delay: 0.08s;
-}
-.right-pane .lockout-title {
-  transition-delay: 0.18s;
-}
-.right-pane .next-label {
-  transition-delay: 0.26s;
-}
-.right-pane .lockout-time {
-  transition-delay: 0.36s;
-}
-.right-pane .lockout-countdown {
-  transition-delay: 0.46s;
-}
-.right-pane .reopen-btn {
-  transition-delay: 0.62s;
-}
-
-/* activate when container animates in */
-.lockout-split.ready .right-pane > * {
   opacity: 1;
   transform: translateY(0);
 }
@@ -2345,57 +1960,41 @@ body {
   opacity: 0.6;
 }
 
-/* Responsive breaks
-/* Mobile-adaptive modal sizing */
-@media (max-width: 500px) {
-  .modal.smart-lower {
-    width: 94%;
-    padding: 18px 16px;
-    border-radius: 14px;
-  }
+/* HEADER SHIFT ANIMATION */
+.header-shift-enter-from,
+.header-shift-leave-to {
+  opacity: 0;
+  transform: translateY(-12px) scale(0.94);
+}
 
-  .modal-title {
-    font-size: 22px !important;
-  }
+.header-shift-enter-active,
+.header-shift-leave-active {
+  transition: 0.35s cubic-bezier(0.18, 0.74, 0.32, 1);
+}
 
-  .modal-text {
-    font-size: 15px !important;
-    margin-bottom: 18px !important;
-  }
+.header-shift-enter-to,
+.header-shift-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Header styling when inside the card */
+.lockout-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.play-wrapper.split-lockout-active {
+  padding-top: 0 !important;
 }
 
 /* ============================================================
-   PATCH 15J — Final Attempt Replay Motion (premium)
+   Keyframes
    ============================================================ */
 
-/* Container effect when last attempt is consumed */
-.final-attempt-replay {
-  pointer-events: none;
-  position: relative;
-  opacity: 1;
-}
-
-.play-wrapper.split-lockout .heatmap-block {
-  display: none !important;
-}
-
-/* ------------------------------
-   Sweep bar that glides across
------------------------------- */
-.final-attempt-replay::after {
-  content: '';
-  position: absolute;
-  top: -6px;
-  left: 0;
-  width: 0%;
-  height: 4px;
-  background: #ff3b30; /* red iOS fail colour */
-  border-radius: 6px;
-  opacity: 0;
-  animation: sweepAttempt 1.1s ease-out forwards;
-}
-
-/* sweep animation */
 @keyframes sweepAttempt {
   0% {
     width: 0%;
@@ -2415,13 +2014,6 @@ body {
   }
 }
 
-/* --------------------------------
-   Incorrect dim one by one
---------------------------------- */
-.answer-input.replay-dim {
-  animation: replayDim 0.55s forwards ease;
-}
-
 @keyframes replayDim {
   0% {
     opacity: 1;
@@ -2429,13 +2021,6 @@ body {
   100% {
     opacity: 0.35;
   }
-}
-
-/* --------------------------------
-   Correct answers pulse lock
---------------------------------- */
-.answer-input.replay-lock {
-  animation: replayLock 0.45s forwards cubic-bezier(0.16, 0.8, 0.32, 1);
 }
 
 @keyframes replayLock {
@@ -2451,22 +2036,6 @@ body {
     transform: scale(1);
     box-shadow: 0 0 0 0px rgba(0, 0, 0, 0);
   }
-}
-
-/* -------------------------------------
-   Freeze inputs after replay completes
--------------------------------------- */
-.final-attempt-replay .answer-input {
-  cursor: default;
-}
-
-/* -----------------------------------------
-   PATCH 15K — BLACK HERO FLASH (first correct)
------------------------------------------- */
-.hero-flash {
-  position: relative;
-  z-index: 2;
-  animation: heroFlash 0.65s cubic-bezier(0.18, 0.74, 0.32, 1) forwards;
 }
 
 @keyframes heroFlash {
@@ -2486,6 +2055,196 @@ body {
     box-shadow: 0 0 0px 0 rgba(0, 0, 0, 0);
     transform: scale(1);
   }
+}
+
+@keyframes modalPop {
+  0% {
+    transform: scale(0.94) translateY(12px);
+    opacity: 0.7;
+  }
+  60% {
+    transform: scale(1.02) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadein {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes fadeOutText {
+  0% {
+    color: #fff;
+  }
+  100% {
+    color: var(--bg-color);
+  }
+}
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.98);
+  }
+  60% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes modalRise {
+  0% {
+    opacity: 0;
+    transform: translateY(42px) scale(0.95);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(0) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* -------------------------------------
+   Freeze inputs after replay completes
+-------------------------------------- */
+.final-attempt-replay .answer-input {
+  cursor: default;
+}
+
+/* -----------------------------------------
+   PATCH 15K — BLACK HERO FLASH (first correct)
+------------------------------------------ */
+.hero-flash {
+  position: relative;
+  z-index: 2;
+  animation: heroFlash 0.65s cubic-bezier(0.18, 0.74, 0.32, 1) forwards;
+}
+
+/* ==========================================================
+   ✔ FIXED SPLIT-LOCKOUT LAYOUT
+   - No transforms
+   - No drift animations
+   - Right card stays perfectly centred
+========================================================== */
+
+.lockout-split {
+  display: grid;
+  grid-template-columns: 25% 75%;
+  width: 100%;
+  height: 100vh; /* full height */
+  padding: 0;
+  margin: 0; /* remove top spacing */
+}
+
+/* LEFT COLUMN */
+.left-pane {
+  width: 100%;
+  height: 100%;
+  padding: 3.5rem 2rem;
+  background: rgba(0, 0, 0, 0.05);
+  border-right: 2px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.lockout-logo {
+  width: 120px;
+  height: 120px;
+  outline: 1.5px solid #000;
+  margin-top: 100px;
+  margin-bottom: 25px;
+}
+
+.lockout-headline-strong {
+  font-size: 32px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.lockout-headline-sub {
+  font-size: 24px;
+  font-weight: 400;
+  margin: 4px 0 2px;
+}
+
+/* RIGHT COLUMN — STABLE AND CENTERED */
+.right-pane {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+}
+
+/* WHITE CARD */
+.lockout-card {
+  width: 100%;
+  height: 100%;
+  background: white; /* no white card */
+  box-shadow: none;
+  padding: 4rem 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start; /* left align text */
+  align-items: center;
+  text-align: center;
+}
+
+/* Typography inside the card */
+.lockout-card .midday-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin-top: 16px;
+  color: #111;
+}
+.lockout-card .midday-sub {
+  font-size: 14px;
+  opacity: 0.6;
+  margin-top: 20px;
+}
+.lockout-card .midday-time {
+  font-size: 28px;
+  margin-top: 6px;
+  font-weight: 700;
+}
+.lockout-card .midday-countdown {
+  margin-top: 4px;
+  font-size: 14px;
+  opacity: 0.6;
 }
 
 /* ============================================================
@@ -2524,7 +2283,6 @@ body {
    Responsive Layout Adjustments
 -----------------------------------*/
 
-/* Tablet */
 @media (max-width: 900px) {
   .play-wrapper {
     padding-top: var(--space-md);
@@ -2534,7 +2292,6 @@ body {
   }
 }
 
-/* Mobile */
 @media (max-width: 600px) {
   .question-title {
     font-size: var(--fs-sm);
@@ -2545,7 +2302,6 @@ body {
   }
 }
 
-/* Very small mobile */
 @media (max-width: 400px) {
   .answer-input {
     font-size: var(--fs-sm);
@@ -2553,6 +2309,23 @@ body {
   .lock {
     font-size: var(--fs-sm);
     padding: 0.6rem 1.6rem;
+  }
+}
+
+@media (max-width: 500px) {
+  .modal.smart-lower {
+    width: 94%;
+    padding: 18px 16px;
+    border-radius: 14px;
+  }
+
+  .modal-title {
+    font-size: 22px !important;
+  }
+
+  .modal-text {
+    font-size: 15px !important;
+    margin-bottom: 18px !important;
   }
 }
 </style>
