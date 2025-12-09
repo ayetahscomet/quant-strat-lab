@@ -1,33 +1,46 @@
 <template>
-  <div class="success-wrapper">
-    <img src="/logo-800-full.svg" class="success-logo" />
+  <div class="summary-wrapper">
+    <!-- TOP LOGO -->
+    <img src="/logo-800-full.svg" class="logo" />
 
-    <h1 class="success-title">Great Work — You Cracked It.</h1>
-    <h2 class="success-sub">
-      You solved all {{ summary.correctAnswers.length }} answers correctly today.
-    </h2>
+    <!-- HEADLINE -->
+    <h1 class="headline">Great Work — You Cracked It.</h1>
+    <p class="subline">You solved all {{ summary.correctCount }} answers correctly today.</p>
 
-    <!-- Show the user’s corrected, final answers -->
-    <div class="result-block">
-      <h3>Your Answers</h3>
-      <div class="attempt-list">
-        <div v-for="(ans, i) in summary.answers" :key="i" class="attempt-item correct">
-          {{ ans }}
+    <!-- ===========================
+         YOUR ANSWERS
+    ============================ -->
+    <div class="card">
+      <h2 class="card-title">Your Answers</h2>
+
+      <div class="answer-list">
+        <div v-for="(a, i) in summary.answers" :key="i" class="answer user">
+          {{ a }}
         </div>
       </div>
     </div>
 
-    <!-- Show all acceptable answers -->
-    <div class="result-block">
-      <h3>All Accepted Answers</h3>
-      <div class="attempt-list">
-        <div v-for="(c, i) in summary.correctAnswers" :key="i" class="correct-item">
-          {{ c }}
+    <!-- ===========================
+         ALL ACCEPTED ANSWERS
+    ============================ -->
+    <div class="card">
+      <h2 class="card-title">All Accepted Answers</h2>
+
+      <div class="answer-list">
+        <div v-for="(a, i) in summary.correctAnswers" :key="i" class="answer accepted">
+          {{ a }}
         </div>
       </div>
     </div>
 
-    <button class="analytics-btn" @click="goAnalytics">View Today’s Analytics</button>
+    <!-- ===========================
+         FOOTER ACTIONS
+    ============================ -->
+    <div class="footer-buttons">
+      <button class="primary" @click="goAnalytics">View Today’s Analytics</button>
+
+      <button class="secondary" @click="finishDay">I’ve Had Enough for Today</button>
+    </div>
   </div>
 </template>
 
@@ -36,76 +49,160 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const summary = ref({})
-
-onMounted(() => {
-  const key = Object.keys(localStorage).find((k) => k.endsWith('_summary'))
-  if (key) summary.value = JSON.parse(localStorage.getItem(key))
+const summary = ref({
+  answers: [],
+  correctAnswers: [],
+  correctCount: 0,
 })
 
+/* --------------------------
+   LOAD SUMMARY FROM STORAGE
+--------------------------- */
+onMounted(() => {
+  const allKeys = Object.keys(localStorage).filter((k) => k.endsWith('_summary'))
+
+  if (!allKeys.length) return
+
+  const latestKey = allKeys.sort().reverse()[0]
+  const raw = JSON.parse(localStorage.getItem(latestKey))
+
+  summary.value = {
+    answers: raw.answers || [],
+    correctAnswers: raw.correctAnswers || [],
+    correctCount: raw.correctCount || 0,
+  }
+})
+
+/* --------------------------
+   ACTION BUTTONS
+--------------------------- */
 function goAnalytics() {
   router.replace({ name: 'DailyAnalytics' })
+}
+
+function finishDay() {
+  localStorage.setItem('akinto_exitToday', 'true')
+  router.replace({ name: 'FailureSummary' }) // re-using your existing screen
 }
 </script>
 
 <style scoped>
-.success-wrapper {
-  width: 100vw;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 3rem 1.5rem;
+.summary-wrapper {
+  max-width: 620px;
+  margin: auto;
+  padding: 60px 22px 90px;
   text-align: center;
-}
-.success-logo {
-  width: 110px;
-  margin-bottom: 20px;
-}
-.success-title {
-  font-size: 28px;
-  font-weight: 800;
-  max-width: 26rem;
-}
-.success-sub {
-  opacity: 0.8;
-  font-size: 18px;
-  margin-top: 6px;
-  max-width: 26rem;
+  font-family: -apple-system, Inter, sans-serif;
 }
 
-.result-block {
-  width: 100%;
-  max-width: 400px;
-  background: #f0f4ff;
-  padding: 16px 20px;
-  border-radius: 12px;
-  margin-top: 28px;
+.logo {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 22px;
 }
-.attempt-list {
-  margin-top: 10px;
-}
-.attempt-item,
-.correct-item {
-  padding: 10px;
-  background: white;
-  border-radius: 10px;
-  border: 2px solid #111;
+
+.headline {
+  font-size: 28px;
+  font-weight: 800;
   margin-bottom: 6px;
 }
-.attempt-item.correct {
-  background: black;
+
+.subline {
+  font-size: 15px;
+  opacity: 0.7;
+  margin-bottom: 34px;
+}
+
+/* ================================
+   Cards
+================================ */
+.card {
+  background: #f6f8ff;
+  padding: 22px 20px 26px;
+  border-radius: 18px;
+  margin-bottom: 32px;
+}
+
+.card-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+/* ================================
+   Answers
+================================ */
+.answer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.answer {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 16px;
+  border: 2px solid #111;
+}
+
+.answer.user {
+  background: #000;
   color: white;
 }
-.analytics-btn {
-  margin-top: 32px;
-  padding: 12px 26px;
-  background: #111;
-  color: #fff;
+
+.answer.accepted {
+  background: white;
+  color: #000;
+}
+
+/* ================================
+   Footer Buttons
+================================ */
+.footer-buttons {
+  margin-top: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.primary {
+  background: #000;
+  color: white;
+  padding: 14px 20px;
+  border-radius: 999px;
+  border: none;
   font-size: 16px;
   font-weight: 600;
-  border-radius: 12px;
-  border: 2px solid #111;
   cursor: pointer;
+}
+
+.secondary {
+  background: #f5f5f5;
+  border: 2px solid #111;
+  padding: 14px 20px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary:hover,
+.secondary:hover {
+  opacity: 0.92;
+  transform: translateY(-2px);
+  transition: 0.22s ease;
+}
+
+/* Mobile tightening */
+@media (max-width: 450px) {
+  .headline {
+    font-size: 23px;
+  }
+  .answer {
+    font-size: 15px;
+  }
+  .card {
+    padding: 20px 16px 24px;
+  }
 }
 </style>
