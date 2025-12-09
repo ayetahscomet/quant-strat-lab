@@ -132,7 +132,7 @@
             <template v-else-if="modalMode === 'askHint'">
               <h2 class="modal-title">Not quite.</h2>
               <p class="modal-text modal-spaced">
-                Some of your answers aren’t quite there. />Want a hint.
+                Some of your answers aren’t quite there.<br />Want a hint.
               </p>
               <div class="modal-actions">
                 <button class="modal-btn secondary" @click="closeModal">No, retry</button>
