@@ -121,7 +121,7 @@
            MODAL SYSTEM
       ============================ -->
       <transition name="modal-fade">
-        <div v-if="showModal" class="overlay modal-lower">
+        <div v-if="showModal" class="overlay">
           <div class="modal modal-lower-card">
             <template v-if="modalMode === 'success'">
               <h2 class="modal-title">Nicely done!</h2>
