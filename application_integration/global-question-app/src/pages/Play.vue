@@ -4,7 +4,7 @@
          GAMEPLAY VIEW
     ============================ -->
     <div
-      v-if="currentView === 'play'"
+      v-if="gameState === 'playing'"
       :class="[
         'play-wrapper',
         timeClass,
@@ -223,30 +223,10 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import SuccessSummary from './SuccessSummary.vue' // Import your summary components
 import FailureSummary from './FailureSummary.vue'
 
-const currentView = ref('play')
+const gameState = ref('playing')
 
 const fetchTimeout = (ms) =>
   new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
-
-onMounted(async () => {
-  try {
-    const res = await Promise.race([fetch('/api/get-today-question'), fetchTimeout(6000)])
-
-    if (!res.ok) throw new Error('API failed')
-
-    const data = await res.json()
-    question.value = data.text
-    answerCount.value = data.count
-    correctAnswers.value = data.correctAnswers
-    answers.value = Array(data.count).fill('')
-    fieldStatus.value = Array(data.count).fill('')
-  } catch (err) {
-    question.value = 'Unable to load today’s question.'
-    console.error(err)
-  } finally {
-    loading.value = false
-  }
-})
 
 /* ---------- Game Logic & State ---------- */
 const question = ref('')
@@ -271,12 +251,16 @@ const timeClass = computed(() => {
 })
 
 /* ---------- API Fetch ---------- */
-onMounted(async () => {
+onMounted(loadTodayQuestion)
+
+async function loadTodayQuestion() {
+  loading.value = true
+
   try {
     const res = await fetch('/api/get-today-question')
 
     if (!res.ok) {
-      throw new Error(`API error: ${res.status}`)
+      throw new Error(`API error ${res.status}`)
     }
 
     const data = await res.json()
@@ -284,15 +268,16 @@ onMounted(async () => {
     question.value = data.text
     answerCount.value = data.count
     correctAnswers.value = data.correctAnswers
+
     answers.value = Array(data.count).fill('')
     fieldStatus.value = Array(data.count).fill('')
   } catch (err) {
-    console.error('Fetch error:', err)
-    question.value = ''
+    console.error('Failed to load question:', err)
+    question.value = 'Unable to load today’s question.'
   } finally {
-    loading.value = false // ✅ ALWAYS RELEASE
+    loading.value = false
   }
-})
+}
 
 /* ---------- The Seamless Transition Logic ---------- */
 async function onLockIn() {
