@@ -8,22 +8,29 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY,
 )
 
-const base = new Airtable({ apiKey: process.env.AIRTABLE_TOKEN }).base('YOUR_BASE_ID')
+const base = new Airtable({
+  apiKey: process.env.AIRTABLE_TOKEN,
+}).base('appJruOxLGdiwKrRw')
 
 export default async function handler(req, res) {
-  const subs = await base('PushSubscriptions').select().all()
+  try {
+    const subs = await base('PushSubscriptions').select().all()
 
-  const payload = JSON.stringify({
-    title: 'Akinto',
-    body: 'Your next window has opened – you have fresh attempts.',
-  })
+    const payload = JSON.stringify({
+      title: 'Akinto',
+      body: 'Your next window has opened – you have fresh attempts.',
+    })
 
-  await Promise.all(
-    subs.map((record) => {
-      const sub = JSON.parse(record.get('SubscriptionJSON'))
-      return webpush.sendNotification(sub, payload).catch(() => null)
-    }),
-  )
+    await Promise.all(
+      subs.map((record) => {
+        const sub = JSON.parse(record.get('SubscriptionJSON'))
+        return webpush.sendNotification(sub, payload).catch(() => null)
+      }),
+    )
 
-  res.status(200).json({ ok: true })
+    res.status(200).json({ ok: true })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Notification send failed' })
+  }
 }
