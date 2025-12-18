@@ -225,6 +225,29 @@ import FailureSummary from './FailureSummary.vue'
 
 const currentView = ref('play')
 
+const fetchTimeout = (ms) =>
+  new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
+
+onMounted(async () => {
+  try {
+    const res = await Promise.race([fetch('/api/get-today-question'), fetchTimeout(6000)])
+
+    if (!res.ok) throw new Error('API failed')
+
+    const data = await res.json()
+    question.value = data.text
+    answerCount.value = data.count
+    correctAnswers.value = data.correctAnswers
+    answers.value = Array(data.count).fill('')
+    fieldStatus.value = Array(data.count).fill('')
+  } catch (err) {
+    question.value = 'Unable to load today’s question.'
+    console.error(err)
+  } finally {
+    loading.value = false
+  }
+})
+
 /* ---------- Game Logic & State ---------- */
 const question = ref('')
 const answerCount = ref(0)
@@ -251,15 +274,23 @@ const timeClass = computed(() => {
 onMounted(async () => {
   try {
     const res = await fetch('/api/get-today-question')
+
+    if (!res.ok) {
+      throw new Error(`API error: ${res.status}`)
+    }
+
     const data = await res.json()
+
     question.value = data.text
     answerCount.value = data.count
     correctAnswers.value = data.correctAnswers
     answers.value = Array(data.count).fill('')
     fieldStatus.value = Array(data.count).fill('')
-    loading.value = false
   } catch (err) {
     console.error('Fetch error:', err)
+    question.value = ''
+  } finally {
+    loading.value = false // ✅ ALWAYS RELEASE
   }
 })
 
