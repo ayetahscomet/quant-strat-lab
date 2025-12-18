@@ -10,7 +10,7 @@ webpush.setVapidDetails(
 
 const base = new Airtable({
   apiKey: process.env.AIRTABLE_TOKEN,
-}).base('appJruOxLGdiwKrRw')
+}).base(process.env.AIRTABLE_BASE_ID)
 
 export default async function handler(req, res) {
   try {
