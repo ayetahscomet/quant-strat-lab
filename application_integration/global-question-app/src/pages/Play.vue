@@ -1,12 +1,15 @@
 <template>
   <transition name="screen-fade" mode="out-in">
+    <!-- ===========================
+         GAMEPLAY VIEW
+    ============================ -->
     <div
+      v-if="currentView === 'play'"
       :class="[
         'play-wrapper',
         timeClass,
         { 'split-lockout-active': screenState === 'split-lockout' },
       ]"
-      :key="screenState"
     >
       <!-- =======================================================
            HEADER (HIDDEN IN LOCKOUT)
@@ -169,7 +172,7 @@
             <p class="modal-text modal-spaced">
               {{ hintText || 'Hint coming soon.' }}
             </p>
-            <button class="modal-btn primary" @click="closeModal">Back</button>
+            <button class="modal-btn primary" @click="closeHint">Back</button>
           </div>
         </div>
 
@@ -193,629 +196,50 @@
         </div>
       </transition>
     </div>
+    <!-- ===========================
+         SUCCESS SUMMARY (NO ROUTE)
+    ============================ -->
+    <SuccessSummary
+      v-else-if="currentView === 'success'"
+      :answers="answers"
+      :correctAnswers="correctAnswers"
+      @continue="currentView = 'play'"
+    />
+
+    <!-- ===========================
+         FAILURE SUMMARY (NO ROUTE)
+    ============================ -->
+    <FailureSummary
+      v-else-if="currentView === 'failure'"
+      :answers="answers"
+      :correctAnswers="correctAnswers"
+      @continue="currentView = 'play'"
+    />
   </transition>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import Airtable from 'airtable'
-import { useRouter } from 'vue-router' // ⬅ Add at top of <script setup>
-const router = useRouter()
+import SuccessSummary from './SuccessSummary.vue' // Import your summary components
+import FailureSummary from './FailureSummary.vue'
 
-import { nextTick } from 'vue'
+const currentView = ref('play')
 
-async function goToSuccessSummary() {
-  const summary = buildSessionSummary()
-  summary.completed = true
-  summary.exitRequested = false
-
-  saveAnalytics(summary)
-
-  localStorage.setItem(`${storageKey.value}_summary`, JSON.stringify(summary))
-
-  // CLOSE MODAL FIRST
-  modalMode.value = null
-  showModal.value = false
-
-  // WAIT FOR DOM UPDATE (modal transition → then navigate)
-  await nextTick()
-
-  router.replace({ name: 'SuccessSummary' })
-}
-
-/* ---------- Airtable set-up ---------- */
-const token = import.meta.env.VITE_AIRTABLE_TOKEN
-const baseID = 'appJruOxLGdiwKrRw'
-const base = new Airtable({ apiKey: token }).base(baseID)
-
-/* ---------- Time-block label (for storage key) ---------- */
-const hour = new Date().getHours()
-const timeBlock =
-  hour < 11 ? 'FirstLook' : hour < 15 ? 'DontWorry' : hour < 20 ? 'Midday' : 'LastChance'
-
-/* ---------- Reactive state ---------- */
+/* ---------- Game Logic & State ---------- */
 const question = ref('')
 const answerCount = ref(0)
-const correctAnswers = ref([]) // canonical list from Airtable
-const hintText = ref('')
+const correctAnswers = ref([])
 const loading = ref(true)
-const questionDate = ref('') // Airtable Date field (for key)
-const showConfirmExit = ref(false)
-
-const answers = ref([]) // user inputs
-
-// --- PATCH 5B: store input element refs ---
-
-const fieldStatus = ref([]) // "correct" | "incorrect" | "" for styling
-// --- PATCH 3A: staggered input reveal ---
-const inputsVisible = ref(false)
-
-// attempts per time-window
+const answers = ref([])
+const fieldStatus = ref([])
+const attemptsRemaining = ref(3)
 const MAX_ATTEMPTS = 3
-const attemptsRemaining = ref(MAX_ATTEMPTS)
-
-// modal state
+const hardLocked = ref(false)
 const showModal = ref(false)
-const modalMode = ref('success') // "success" | "askHint" | "hint" | "lockout"
+const modalMode = ref(null)
 
-// localStorage key (per-day; keep same question across slots)
-const storageKey = computed(() =>
-  questionDate.value
-    ? `dailyApp_${questionDate.value}` // removed timeBlock so state persists all day
-    : null,
-)
-
-const userCorrect = computed(() => answers.value.filter((a) => isAnswerCorrect(a)))
-
-// --- PATCH 1: Alias-aware missing answer detection ---
-const missingAnswers = computed(() => {
-  const userClean = userCorrect.value.map((a) => resolveAlias(normalise(a)))
-  return correctAnswers.value.filter((c) => {
-    const expected = resolveAlias(normalise(c))
-    return !userClean.includes(expected)
-  })
-})
-
-/* ========== PATCH 15G — Unified Screen State Resolver ========== */
-
-const screenState = computed(() => {
-  if (hardLocked.value) return 'split-lockout'
-  return 'play'
-})
-
-const isReplaySequence = ref(false)
-
-// --- PATCH 9B: Remove punctuation + emojis before matching ---
-function cleanAbbrev(str) {
-  return str
-    .toLowerCase()
-    .normalize('NFKD') // strip accents
-    .replace(/\p{Emoji_Presentation}/gu, '') // remove emojis (e.g. 🇬🇧)
-    .replace(/[\.\,\!\?\(\)\[\]\-]/g, '') // remove punctuation
-    .replace(/\s+/g, '') // collapse spaces
-    .replace(/st$/g, 'st_') // handle "st." → saint
-    .replace(/mt$/g, 'mt_') // "mt." → mount
-}
-
-const hardLocked = ref(false) // NEW — true when attempts are 0
-
-/* ---------- Fetch today’s question ---------- */
-onMounted(() => {
-  base('Questions')
-    .select({
-      filterByFormula: `IS_SAME({Date}, TODAY(), 'day')`, // Only pull today's row
-      maxRecords: 1,
-    })
-
-    .firstPage((err, records) => {
-      // PATCH 15C — Delay input reveal after question loads
-      setTimeout(() => {
-        loading.value = false
-        setTimeout(() => {
-          inputsVisible.value = true
-        }, 250)
-      }, 350)
-
-      if (err || !records?.length) {
-        console.error(err)
-        return
-
-        if (localStorage.getItem('akinto_exitToday') === 'true') {
-          router.replace({ name: 'FailureSummary' })
-          return
-        }
-      }
-
-      const row = records[0].fields
-      question.value = row.QuestionText || ''
-      answerCount.value = Number(row.AnswerCount || 1)
-      questionDate.value = row.Date || ''
-
-      // Correct answers stored as comma-separated string
-      correctAnswers.value = (row.CorrectAnswers || '')
-        .split(',')
-        .map((a) => a.trim())
-        .filter(Boolean)
-
-      hintText.value = row.HintText || ''
-
-      // generate empty inputs + statuses
-      answers.value = Array(answerCount.value).fill('')
-      fieldStatus.value = Array(answerCount.value).fill('')
-
-      // try restore from localStorage for this day + block
-      restoreState()
-    })
-})
-
-// --- PATCH 3B: trigger staggered input animation ---
-setTimeout(() => {
-  inputsVisible.value = true
-}, 120) // small delay for clean reveal
-
-/* ---------- Normalisation + fuzzy matching ---------- */
-function normalise(str) {
-  return str.toLowerCase().replace(/\s+/g, '')
-}
-
-// --- PATCH 1: Abbreviation + Alias Dictionary ---
-const ANSWER_ALIASES = {
-  // --- Countries / Regions ---
-  uk: ['unitedkingdom', 'britain', 'greatbritain', 'gb', 'u.k.'],
-  usa: ['unitedstates', 'america', 'us', 'u.s.', 'u.s.a'],
-  uae: ['unitedarabemirates'],
-  drc: ['congo', 'democraticrepublicofcongo'],
-  rsa: ['southafrica', 'sa', 's.a'],
-  ksa: ['saudiarabia'],
-  prc: ['china', 'peoplesrepublicofchina'],
-
-  // --- General geopolitical ---
-  eu: ['europeanunion'],
-  au: ['africanunion'],
-  un: ['unitednations'],
-  nato: ['northatlantictreatyorganization'],
-  asean: ['associationofsoutheastasiannations'],
-
-  // --- Other common alternates ---
-  cotedivoire: ['ivorycoast'],
-  czechia: ['czechrepublic'],
-  timorleste: ['easttimor'],
-  myanmar: ['burma'],
-}
-
-// --- PATCH 9A: Expanded abbreviation + alias map ---
-const ABBREVIATION_EXPANSIONS = {
-  // ——— COUNTRY SHORT FORMS ———
-  uk: 'united kingdom',
-  gb: 'united kingdom',
-  britain: 'united kingdom',
-  nl: 'netherlands',
-  holland: 'netherlands',
-  uae: 'united arab emirates',
-  aus: 'australia',
-  nz: 'new zealand',
-  sa: 'south africa',
-  za: 'south africa',
-  sk: 'south korea',
-  nk: 'north korea',
-  drc: 'democratic republic of the congo',
-  roc: 'republic of the congo',
-  prc: 'china',
-  eu: 'european union',
-  usa: 'united states',
-  us: 'united states',
-  u_s_a: 'united states', // punctuation-protected alias
-  u_s: 'united states',
-
-  // ——— CITY SHORT FORMS ———
-  nyc: 'new york city',
-  la: 'los angeles',
-  sf: 'san francisco',
-  dc: 'washington dc',
-  chi: 'chicago',
-  vegas: 'las vegas',
-  hk: 'hong kong',
-
-  // ——— REGION / COLLOQUIAL ———
-  balkans: 'the balkans',
-  maghreb: 'maghreb region',
-  levante: 'levant',
-  mideast: 'middle east',
-
-  // ——— SAINT / MOUNT PATTERNS ———
-  st: 'saint',
-  st_: 'saint', // “st.” becomes st_
-  mt: 'mount',
-  mt_: 'mount',
-
-  // ——— COMMON EDUCATIONAL SHORT FORMS ———
-  asean: 'association of southeast asian nations',
-  au: 'african union',
-  nato: 'north atlantic treaty organization',
-  un: 'united nations',
-  unesco: 'united nations educational scientific and cultural organization',
-  imf: 'international monetary fund',
-  wb: 'world bank',
-}
-
-// Helper to resolve any known alias → canonical form
-function resolveAlias(normStr) {
-  // check if normStr *is itself* a canonical abbreviation
-  if (ANSWER_ALIASES[normStr]) return normStr
-
-  // check if normStr is one of the alias values for a key
-  for (const [canonical, list] of Object.entries(ANSWER_ALIASES)) {
-    if (list.includes(normStr)) return canonical
-  }
-
-  return normStr // unchanged if no alias applies
-}
-
-function levenshtein(a, b) {
-  const m = a.length
-  const n = b.length
-  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
-
-  for (let i = 0; i <= m; i++) dp[i][0] = i
-  for (let j = 0; j <= n; j++) dp[0][j] = j
-
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1
-      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
-    }
-  }
-  return dp[m][n]
-}
-
-function similar(a, b) {
-  if (a === b) return true
-  if (Math.abs(a.length - b.length) > 2) return false
-  const d = levenshtein(a, b)
-  return d <= 2
-}
-
-// --- PATCH 7: Abbreviation dictionary ---
-const ABBREVIATIONS = {
-  // Countries
-  uk: 'united kingdom',
-  gb: 'united kingdom',
-  usa: 'united states',
-  us: 'united states',
-  uae: 'united arab emirates',
-  drc: 'democratic republic of the congo',
-  congo: 'democratic republic of the congo',
-  roc: 'republic of the congo',
-  eu: 'european union',
-
-  // Regions
-  sa: 'south africa',
-  aus: 'australia',
-  nz: 'new zealand',
-
-  // Common geography abbreviations
-  nyc: 'new york city',
-  la: 'los angeles',
-  dc: 'washington dc',
-
-  // You can freely expand this later
-}
-
-// --- PATCH 1: Abbreviation-aware correctness check ---
-function isAnswerCorrect(userAnswer) {
-  if (!userAnswer) return false
-
-  // normalised user input
-  let nu = cleanAbbrev(normalise(userAnswer))
-
-  // PATCH 9: Abbreviation expansion (extended)
-  if (ABBREVIATIONS[nu]) {
-    nu = normalise(ABBREVIATIONS[nu])
-  }
-  if (ABBREVIATION_EXPANSIONS[nu]) {
-    nu = normalise(ABBREVIATION_EXPANSIONS[nu])
-  }
-
-  nu = resolveAlias(nu) // NEW — apply alias mapping
-
-  return correctAnswers.value.some((c) => {
-    let nc = normalise(c)
-    nc = resolveAlias(nc) // NEW — apply alias mapping for official answers
-
-    // compare after alias resolution
-    return nu === nc || similar(nu, nc)
-  })
-}
-
-// --- PATCH 15A: Fully reliable shake retrigger ---
-function restartShakeAnimation(i) {
-  const el = inputRefs.value[i]
-  if (!el) return
-
-  // Remove class
-  el.classList.remove('incorrect')
-
-  // Force reflow (crucial)
-  void el.offsetHeight
-
-  // Reapply class
-  el.classList.add('incorrect')
-}
-
-/* -----------------------------------------------
-   🧠 SESSION SUMMARY + ANALYTICS EXPORT (FINAL)
-------------------------------------------------*/
-const analyticsTable = base('Analytics') // NEW analytics table
-
-/* ---------- Build analytics object ---------- */
-function buildSessionSummary() {
-  const totalCorrect = fieldStatus.value.filter((s) => s === 'correct').length
-  const totalFields = fieldStatus.value.length
-  const attemptsUsed = MAX_ATTEMPTS - attemptsRemaining.value
-
-  return {
-    userId: localStorage.getItem('akinto_uid') || generateAnonID(), // NEW
-    date: questionDate.value,
-    questionId: questionDate.value, // later switch to Q-ID field from Airtable
-
-    answers: answers.value.slice(),
-    correctAnswers: correctAnswers.value.slice(),
-    fieldStatus: fieldStatus.value.slice(),
-
-    correctCount: totalCorrect,
-    incorrectCount: totalFields - totalCorrect,
-    attemptsUsed,
-    completed: totalCorrect === totalFields,
-    hintUsed: answers.value.some((a) => a === '__HINT__'), // optional later
-    timestamp: new Date().toISOString(),
-    windowIndex: Math.floor((new Date().getHours() * 60) / 120),
-  }
-}
-
-/* ---------- New: Save to Airtable ---------- */
-function saveAnalytics(summary) {
-  analyticsTable.create(
-    [
-      {
-        fields: {
-          UserID: summary.userId,
-          Country: localStorage.getItem('akinto_country') || 'unknown',
-          Date: summary.date,
-          QuestionID: summary.questionId,
-          CorrectCount: summary.correctCount,
-          AttemptCount: summary.attemptsUsed,
-          Completed: summary.completed,
-          HintUsed: summary.hintUsed,
-          Answers: JSON.stringify(summary.answers),
-          CorrectAnswers: JSON.stringify(summary.correctAnswers),
-          FieldStatus: JSON.stringify(summary.fieldStatus),
-          Timestamp: summary.timestamp,
-        },
-      },
-    ],
-    (err) => err && console.error('❌ Analytics write failed:', err),
-  )
-}
-
-/* Helper: generate anonymous user token if none exists */
-function generateAnonID() {
-  const id = 'user-' + Math.random().toString(36).substring(2, 10)
-  localStorage.setItem('akinto_uid', id)
-  return id
-}
-
-/* ---------- Save / restore ---------- */
-function saveState() {
-  if (!storageKey.value) return
-
-  const payload = {
-    answers: answers.value,
-    attemptsRemaining: attemptsRemaining.value,
-    hardLocked: hardLocked.value, // ← add
-  }
-
-  try {
-    localStorage.setItem(storageKey.value, JSON.stringify(payload))
-
-    // 🔥 NEW — Only write summary when today is completed
-    if (allPerfect.value || attemptsRemaining.value <= 0 || isDayComplete.value) {
-      const summaryKey = `${storageKey.value}_summary`
-      const summary = buildSessionSummary()
-      localStorage.setItem(summaryKey, JSON.stringify(summary))
-      saveAnalytics(summary)
-    }
-  } catch (e) {
-    console.error('Failed to save state', e)
-  }
-}
-
-function restoreState() {
-  if (!storageKey.value) return
-
-  try {
-    const raw = localStorage.getItem(storageKey.value)
-    if (!raw) return
-
-    const saved = JSON.parse(raw)
-
-    // Restore answers
-    if (Array.isArray(saved.answers)) {
-      answers.value = saved.answers.slice(0, answerCount.value)
-    }
-
-    // Restore attempts
-    if (typeof saved.attemptsRemaining === 'number') {
-      attemptsRemaining.value = Math.max(0, Math.min(MAX_ATTEMPTS, saved.attemptsRemaining))
-    }
-
-    // Restore lockout state
-    hardLocked.value = !!saved.hardLocked
-
-    // Always rebuild fieldStatus on refresh
-    fieldStatus.value = answers.value.map((a) => (a && isAnswerCorrect(a) ? 'correct' : ''))
-
-    // --- PATCH 15K: Trigger hero flash for first correct input of the day ---
-    if (heroFlashIndex.value === null) {
-      const firstCorrect = fieldStatus.value.findIndex((s) => s === 'correct')
-      if (firstCorrect !== -1) {
-        heroFlashIndex.value = firstCorrect
-        setTimeout(() => {
-          heroFlashIndex.value = null
-        }, 650) // flash duration
-      }
-    }
-
-    // 🔥 Critical — Fix UI positioning upon refresh
-    if (screenState.value === 'split-lockout') {
-      modalMode.value = null
-      showModal.value = false
-      return
-    }
-
-    if (screenState.value === 'full-lockout') {
-      modalMode.value = 'lockout_full'
-      showModal.value = false
-      return
-    }
-
-    // Otherwise → return to gameplay
-    modalMode.value = null
-    showModal.value = false
-  } catch (e) {
-    console.error('Failed to restore state', e)
-  }
-}
-
-/* ---------- Lock-in behaviour ---------- */
-async function onLockIn() {
-  // if already out of attempts → show full lockout page
-  if (attemptsRemaining.value <= 0) {
-    modalMode.value = 'lockout_full'
-    showModal.value = false
-    hardLocked.value = true
-    saveAnalytics(buildSessionSummary())
-    saveState()
-    return
-  }
-
-  // require full input
-  const filled = answers.value.map((a) => a.trim()).filter(Boolean)
-  if (filled.length < answerCount.value) {
-    window.alert('Hazard a guess in every box before locking in.')
-    return
-  }
-
-  // evaluate answers + lock correct ones
-  fieldStatus.value = answers.value.map((a) =>
-    a.trim() && isAnswerCorrect(a.trim()) ? 'correct' : 'incorrect',
-  )
-
-  // PATCH 8A — Re-trigger shake animation for incorrect inputs
-  answers.value.forEach((_, idx) => {
-    if (fieldStatus.value[idx] === 'incorrect') {
-      const el = inputRefs.value[idx]
-      if (el) {
-        el.style.animation = 'none'
-        void el.offsetWidth // force reflow
-        el.style.animation = null // resume default shake class
-      }
-    }
-  })
-
-  // --- PATCH 15A — ensure shake triggers AFTER DOM update ---
-  await nextTick()
-
-  fieldStatus.value.forEach((s, i) => {
-    if (s === 'incorrect') {
-      restartShakeAnimation(i)
-    }
-  })
-
-  const allCorrectNow = fieldStatus.value.every((s) => s === 'correct')
-
-  // pause so colours + animation show before modal (longer so they can read)
-  await new Promise((r) => setTimeout(r, 2200))
-
-  if (allCorrectNow) {
-    modalMode.value = 'success'
-    showModal.value = true
-    saveAnalytics(buildSessionSummary())
-    saveState()
-    return
-  }
-
-  // Wrong answers → lose attempt
-  attemptsRemaining.value--
-
-  if (attemptsRemaining.value <= 0) {
-    // 🔥 PATCH 15J — trigger replay motion
-    isReplaySequence.value = true
-
-    // Step 1: apply class to inputs based on correctness
-    fieldStatus.value.forEach((s, i) => {
-      const el = inputRefs.value[i]
-      if (!el) return
-
-      if (s === 'correct') {
-        el.classList.add('replay-lock')
-      } else if (s === 'incorrect') {
-        el.classList.add('replay-dim')
-      }
-    })
-
-    // Step 2: allow sweep bar + dim sequence to play
-    await new Promise((r) => setTimeout(r, 1150))
-
-    // Step 3: proceed to lockout AFTER replay
-    modalMode.value = 'lockout_full'
-    showModal.value = false
-    hardLocked.value = true
-
-    saveAnalytics(buildSessionSummary())
-    saveState()
-    return
-  } else {
-    // --- PATCH 5D: delay modal so shake animation completes cleanly ---
-    setTimeout(() => {
-      modalMode.value = 'askHint'
-      showModal.value = true
-    }, 350) // matches shake duration
-  }
-
-  saveState()
-}
-
-/* ---------- Modal actions ---------- */
-function closeModal() {
-  // if the success modal is closing, go straight to lockout/analytics screen
-  if (modalMode.value === 'success') {
-    showModal.value = false
-    modalMode.value = 'lockout_full'
-    return
-  }
-  showModal.value = false
-}
-
-// --- PATCH 2: ESC closes fullscreen lockout modal too ---
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && modalMode.value === 'lockout_full') {
-    showModal.value = false
-  }
-})
-
-function showHint() {
-  modalMode.value = 'hint'
-}
-
-/* ---------- Time-of-day theming ---------- */
-const stageLabel = computed(() => {
-  if (hour < 9) return 'Early Bird'
-  if (hour < 12) return 'First Look'
-  if (hour < 15) return 'Don’t Worry We Have All Day'
-  if (hour < 20) return 'Midday Check-In'
-  return 'Last Chance.'
-})
-
+// Theming based on time
+const hour = new Date().getHours()
 const timeClass = computed(() => {
   if (hour < 11) return 'theme-morning'
   if (hour < 15) return 'theme-day'
@@ -823,295 +247,57 @@ const timeClass = computed(() => {
   return 'theme-night'
 })
 
-const nextCheckLabel = computed(() => {
-  if (hour < 9) return '09:00'
-  if (hour < 12) return '12:00'
-  if (hour < 15) return '15:00'
-  if (hour < 20) return '20:00'
-  return 'Tomorrow at 09:00'
+/* ---------- API Fetch ---------- */
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/get-today-question')
+    const data = await res.json()
+    question.value = data.text
+    answerCount.value = data.count
+    correctAnswers.value = data.correctAnswers
+    answers.value = Array(data.count).fill('')
+    fieldStatus.value = Array(data.count).fill('')
+    loading.value = false
+  } catch (err) {
+    console.error('Fetch error:', err)
+  }
 })
 
-/* ==== Lockout timing logic ==== */
-const now = new Date()
-const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+/* ---------- The Seamless Transition Logic ---------- */
+async function onLockIn() {
+  // 1. Validate inputs
+  const filled = answers.value.filter((a) => a.trim()).length
+  if (filled < answerCount.value) return alert('Fill all boxes first.')
 
-function nextAvailableSlot() {
-  const now = new Date()
-  const d = new Date()
-
-  // Local times based on user’s detected timezone
-  const currentHour = now.getHours()
-
-  if (currentHour < 9) {
-    d.setHours(9, 0, 0, 0)
-  } else if (currentHour < 12) {
-    d.setHours(12, 0, 0, 0)
-  } else if (currentHour < 15) {
-    d.setHours(15, 0, 0, 0)
-  } else if (currentHour < 20) {
-    d.setHours(20, 0, 0, 0)
-  } else {
-    // Next day 9am local time
-    d.setDate(d.getDate() + 1)
-    d.setHours(9, 0, 0, 0)
-  }
-
-  return d
-}
-
-const nextSlot = nextRollingWindow()
-
-/* live countdown */
-const timeRemaining = ref('')
-setInterval(() => updateCountdown(), 1000)
-
-function updateCountdown() {
-  const diff = nextSlot - new Date()
-  if (diff <= 0) {
-    attemptsRemaining.value = MAX_ATTEMPTS
-    hardLocked.value = false
-    saveState()
-
-    notifyAttemptsRefreshed() // 🔔 (for notifications)
-  }
-
-  const h = Math.floor(diff / 1000 / 60 / 60)
-  const m = Math.floor(diff / 1000 / 60) % 60
-  const s = Math.floor(diff / 1000) % 60
-  timeRemaining.value = `${h > 0 ? h + 'h ' : ''}${m}m ${s}s`
-}
-
-function notifyAttemptsRefreshed() {
-  if (!notificationsEnabled.value) return
-
-  new Notification('Your Akinto attempts have refreshed!', {
-    body: 'A new window is open. Come back and try again!',
-    icon: logo,
-  })
-}
-
-const nextSlotLabel = computed(() => {
-  return (
-    nextSlot.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: timezone,
-    }) + ` (${timezone})`
+  // 2. Check correctness
+  fieldStatus.value = answers.value.map((a, i) =>
+    a.trim().toLowerCase() === correctAnswers.value[i].toLowerCase() ? 'correct' : 'incorrect',
   )
-})
 
-const notificationsEnabled = ref(false)
+  const isPerfect = fieldStatus.value.every((s) => s === 'correct')
 
-async function enableNotifications() {
-  const permission = await Notification.requestPermission()
-  notificationsEnabled.value = permission === 'granted'
-}
-
-// --- PATCH 2: Keyboard Navigation ---
-
-// Focus management reference array
-const inputRefs = ref([])
-
-// Assign refs dynamically during rendering
-function registerInputRef(el, index) {
-  if (el) inputRefs.value[index] = el
-}
-
-// Move focus up/down between inputs
-function focusInput(index) {
-  const el = inputRefs.value[index]
-  if (el) el.focus()
-}
-
-// Handle key events for navigation + actions
-function onKey(e, index) {
-  if (modalMode.value && showModal.value) {
-    // ESC closes modal
-    if (e.key === 'Escape') {
-      closeModal()
-    }
-    return
-  }
-
-  switch (e.key) {
-    case 'ArrowDown':
-    case 'Tab':
-      e.preventDefault()
-      focusInput(Math.min(index + 1, answers.value.length - 1))
-      break
-
-    case 'ArrowUp':
-      e.preventDefault()
-      focusInput(Math.max(index - 1, 0))
-      break
-
-    case 'Enter':
-      e.preventDefault()
-      onLockIn()
-      break
-
-    case 'Escape':
-      // ESC does nothing during normal play
-      break
-  }
-}
-
-const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
-
-async function registerForPush() {
-  // 1. Ask permission
-  const permission = await Notification.requestPermission()
-  if (permission !== 'granted') return
-
-  // 2. Register service worker
-  const reg = await navigator.serviceWorker.register('/sw.js')
-
-  // 3. Subscribe to push
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-  })
-
-  // 4. Send subscription to your backend
-  await fetch('/api/save-subscription', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sub }),
-  })
-}
-
-/* ---------- RESET WHEN TIME UNLOCKS ---------- */
-function refreshCheck() {
-  if (timeRemaining.value.includes('Available')) {
-    attemptsRemaining.value = MAX_ATTEMPTS
-    // keep fieldStatus as-is so user still sees which were right/wrong
-    fieldStatus.value = fieldStatus.value.slice()
-    modalMode.value = null
-    saveState()
-    return
-  }
-  updateCountdown()
-}
-
-function unlockReturn() {
-  hardLocked.value = false
-  attemptsRemaining.value = MAX_ATTEMPTS
-  modalMode.value = null // return to play screen
-  saveState()
-}
-
-const nextSlotShort = computed(() => {
-  return nextSlot.toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: timezone,
-    timeZoneName: 'short',
-  })
-})
-
-const isDayComplete = computed(() => hour >= 20) // no more check-ins tonight
-const allPerfect = computed(
-  () => fieldStatus.value.length > 0 && fieldStatus.value.every((s) => s === 'correct'),
-)
-
-const heroFlashIndex = ref(null) // null = no flash yet
-
-const analyticsLoading = ref(false)
-
-function goAnalytics() {
-  analyticsLoading.value = true
-  setTimeout(() => {
-    router.replace({ name: 'DailyAnalytics' })
-  }, 1800)
-}
-
-setTimeout(() => {
-  if (inputRefs.value[0]) inputRefs.value[0].focus()
-}, 300)
-
-function exitEarly() {
-  showConfirmExit.value = true
-}
-
-function confirmExit() {
-  showConfirmExit.value = false
-
-  const summary = buildSessionSummary()
-  summary.exitRequested = true
-  summary.completed = false
-
-  hardLocked.value = true
-  localStorage.setItem('akinto_exitToday', 'true')
-
-  saveAnalytics(summary)
-  localStorage.setItem(`${storageKey.value}_summary`, JSON.stringify(summary))
-
-  router.replace({ name: 'FailureSummary' })
-}
-
-function nextRollingWindow() {
-  const now = new Date()
-  const minutes = now.getHours() * 60 + now.getMinutes()
-
-  const currentWindowStart = Math.floor(minutes / 120) * 120
-  const nextWindowStart = currentWindowStart + 120
-
-  const next = new Date()
-  next.setHours(Math.floor(nextWindowStart / 60), nextWindowStart % 60, 0, 0)
-  return next
-}
-
-function goToSuccessSummary() {
-  // build final summary
-  const summary = buildSessionSummary()
-  summary.completed = true
-  summary.exitRequested = false
-
-  // save analytics row
-  saveAnalytics(summary)
-
-  // store locally so SuccessSummary.vue can read it
-  localStorage.setItem(`${storageKey.value}_summary`, JSON.stringify(summary))
-
-  // close modal
-  showModal.value = false
-  modalMode.value = null
-
-  // navigate to the summary screen
-  router.replace({ name: 'SuccessSummary' })
-}
-
-/* ========== PATCH 15F — Smart Lockout Headline ========== */
-
-const lockoutHeadline = computed(() => {
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
-  const completed = allPerfect.value || isDayComplete.value
-
-  // If day fully complete → stronger reflection message
-  if (completed) {
-    return {
-      title: allPerfect.value
-        ? 'You absolutely nailed today!'
-        : 'You learn something new every day!',
-      sub: `See how your thinking compares globally (${zone})`,
+  if (isPerfect) {
+    // Instead of router.push('/success'), we just switch the internal view
+    currentView.value = 'success'
+  } else {
+    attemptsRemaining.value--
+    if (attemptsRemaining.value <= 0) {
+      hardLocked.value = true
+      currentView.value = 'failure'
+    } else {
+      modalMode.value = 'askHint'
+      showModal.value = true
     }
   }
+}
 
-  // If locked out temporarily (attempts used up)
-  if (hardLocked.value && !completed) {
-    return {
-      title: 'Strong attempt — let’s take a breather',
-      sub: `You can try again at ${nextSlotShort.value} (${zone})`,
-    }
-  }
-
-  // fallback
-  return {
-    title: 'Let’s take a quick breather',
-    sub: `Back at ${nextSlotShort.value} (${zone})`,
-  }
-})
+// Helpers for Template
+function registerInputRef(el, i) {
+  /* ref logic */
+}
+function onKey(e, i) {
+  if (e.key === 'Enter') onLockIn()
+}
 </script>
 
 <style>

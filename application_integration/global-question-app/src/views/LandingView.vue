@@ -1,5 +1,6 @@
 <template>
-  <div class="landing">
+  <!-- LANDING SCREEN -->
+  <div v-if="currentView === 'landing'" class="landing">
     <div class="landing-inner">
       <!-- Logo + Title -->
       <div class="brand-row">
@@ -10,15 +11,11 @@
         </div>
       </div>
 
-      <!-- Play Button -->
       <button class="play-btn" @click="goToGame">Play</button>
-
-      <!-- DATE -->
       <p class="date">{{ today }}</p>
 
-      <!-- 🌍 COUNTRY SELECTOR -->
+      <!-- Country selector (unchanged) -->
       <div class="country-row" @click="showDropdown = !showDropdown">
-        <!-- shows blank white circle until country is chosen -->
         <div class="flag-circle" :class="{ empty: !country }">
           <img v-if="country" :src="getFlag(country)" />
         </div>
@@ -26,11 +23,9 @@
         <span class="country-text">
           {{ country ? getName(country) : 'Select your country' }}
         </span>
-
         <span class="chevron">▼</span>
       </div>
 
-      <!-- Dropdown -->
       <div v-if="showDropdown" class="dropdown-list">
         <div
           v-for="c in countries"
@@ -44,18 +39,22 @@
       </div>
     </div>
   </div>
+
+  <!-- ✅ PLAY SCREEN -->
+  <Play v-else-if="currentView === 'play'" @exit="currentView = 'landing'" />
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-import { ref, computed } from 'vue'
-import { countries } from '../data/countries.js' // ⬅ full global list here
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import Play from '../pages/Play.vue'
+import { countries } from '../data/countries.js'
 
-/* Routing */
-const router = useRouter()
-const goToGame = () => router.push('/play')
+const currentView = ref('landing')
 
-/* Date shown under button */
+function goToGame() {
+  currentView.value = 'play'
+}
+
 const today = computed(() =>
   new Date().toLocaleDateString('en-GB', {
     weekday: 'long',
@@ -65,58 +64,29 @@ const today = computed(() =>
   }),
 )
 
-/* Country state + persistence */
 const country = ref(localStorage.getItem('akinto_country') || '')
 const showDropdown = ref(false)
+
 const getFlag = (code) => `https://flagcdn.com/${code}.svg`
 const getName = (code) => countries.find((c) => c.code === code)?.name
-
-/* ========== PATCH 15E — "Press Enter to Play" UX ========== */
-
-import { onMounted, onBeforeUnmount } from 'vue'
-
-function handleLandingKey(e) {
-  // If dropdown is open → Enter selects first filtered result
-  if (showDropdown.value) {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      if (filteredCountries.value.length > 0) {
-        const first = filteredCountries.value[0]
-        selectCountry(first.code)
-        showDropdown.value = false
-      } else {
-        showDropdown.value = false
-      }
-      return
-    }
-
-    if (e.key === 'Escape') {
-      showDropdown.value = false
-      return
-    }
-    return
-  }
-
-  // If dropdown is NOT open → Enter triggers Play
-  if (e.key === 'Enter') {
-    e.preventDefault()
-    goToGame()
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', handleLandingKey)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', handleLandingKey)
-})
 
 function selectCountry(code) {
   country.value = code
   localStorage.setItem('akinto_country', code)
   showDropdown.value = false
 }
+
+function handleLandingKey(e) {
+  if (currentView.value !== 'landing') return
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    goToGame()
+  }
+  if (e.key === 'Escape') showDropdown.value = false
+}
+
+onMounted(() => window.addEventListener('keydown', handleLandingKey))
+onBeforeUnmount(() => window.removeEventListener('keydown', handleLandingKey))
 </script>
 
 <style scoped>
