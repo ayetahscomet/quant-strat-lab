@@ -826,10 +826,10 @@ body,
 }
 
 .theme-night.play-wrapper {
-  --text-color: #0000;
+  --text-color: #ffffff;
   --text-muted: #ffffff 0.6;
   --input-bg: #111;
-  --input-text: #0000;
+  --input-text: #fffff;
   --correct-text: #fff;
 }
 
@@ -841,11 +841,13 @@ body,
 /* Answer Input Adaptations */
 
 .answer-input {
-  background: var(--input-bg);
+  background-color: #ffffff;
+  color: #000000;
   color: var(--input-text);
 }
 
 .answer-input.correct {
+  background: var(--input-bg);
   background: #000;
   color: var(--correct-text) !important;
 }
