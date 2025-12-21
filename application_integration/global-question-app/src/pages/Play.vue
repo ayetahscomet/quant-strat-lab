@@ -566,7 +566,7 @@ body,
   opacity: 0.45;
 }
 
-/* Answer Inputs */
+/* Answer Input-Box Formatting */
 
 .input-group {
   width: min(80%, 450px);
@@ -574,5 +574,14 @@ body,
   flex-direction: column;
   gap: 16px;
   margin-bottom: var(--space-md);
+}
+
+.answer-input {
+  font-size: var(--fs-md);
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 2px solid #111;
+  outline: none;
+  transition: 0.18s ease;
 }
 </style>
