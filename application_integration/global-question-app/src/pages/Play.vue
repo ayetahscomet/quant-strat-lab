@@ -646,17 +646,12 @@ body,
 
 .modal {
   width: 30%;
-  background-color: #ffffff; /* Explicitly set background color */
-  opacity: 1; /* Standard value for 100% visibility */
+  background: #ffffff;
+  opacity: 100% !important;
   border-radius: 16px;
   padding: 24px 22px;
   text-align: center;
-  /* This creates a soft dark glow instead of a broken line */
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
-
-  /* Critical for visibility: */
-  position: relative;
-  z-index: 100;
+  box-shadow: 0 16px 40px #000000;
 }
 
 .modal-title {
