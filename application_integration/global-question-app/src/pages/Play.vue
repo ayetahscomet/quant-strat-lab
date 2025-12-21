@@ -446,6 +446,10 @@ body,
   cursor: default;
 }
 
+input::placeholder {
+  color: var(--text-muted) !important;
+}
+
 /* Changing Themes */
 
 .theme-morning {
@@ -846,7 +850,7 @@ body,
   color: var(--input-text);
 }
 
-.theme-night .answer-input {
+.answer-input .theme-night {
   background-color: #ffffff;
   color: #000000;
 }
@@ -865,4 +869,22 @@ body,
 }
 
 /* Revelation Adaptions*/
+
+.reveal-block {
+  margin-top: 20px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 14px 18px;
+  border-radius: 10px;
+}
+
+.reveal-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.reveal-list li {
+  margin-bottom: 6px;
+}
 </style>
