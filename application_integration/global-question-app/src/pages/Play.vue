@@ -649,7 +649,8 @@ body,
   background: #ffffff;
   opacity: 1 !important;
   border-radius: 16px;
-  padding: 24px 22px;
+  padding-top: 22px;
+  padding-bottom: 10px;
   text-align: center;
   box-shadow: 0 16px 40px #000000;
 }
