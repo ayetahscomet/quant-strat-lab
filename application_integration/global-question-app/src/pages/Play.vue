@@ -647,7 +647,7 @@ body,
 .modal {
   width: 30%;
   background: #ffffff;
-  opacity: 100% !important;
+  opacity: 1 !important;
   border-radius: 16px;
   padding: 24px 22px;
   text-align: center;
