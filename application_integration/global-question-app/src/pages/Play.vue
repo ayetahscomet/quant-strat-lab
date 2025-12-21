@@ -637,7 +637,8 @@ body,
   position: fixed;
   inset: 0;
   backdrop-filter: blur(8px);
-  background: rgba(0, 0, 0, 0.35);
+  background: #000000;
+  opacity: 0.3;
   display: flex;
   align-items: center;
   justify-content: center;
