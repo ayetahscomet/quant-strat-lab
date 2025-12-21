@@ -585,4 +585,13 @@ body,
   outline: 0.5px;
   transition: 0.18s ease;
 }
+
+.answer-input.correct {
+  animation: fadeOutText 0.8s forwards;
+  background: #000;
+  border-color: #000;
+  color: var(--bg-color);
+  font-weight: 600;
+  transition: 0.25s;
+}
 </style>
