@@ -845,4 +845,9 @@ body,
   color: #000000;
   color: var(--input-text);
 }
+
+.answer-input .theme-night {
+  background-color: #ffffff;
+  color: #000000;
+}
 </style>
