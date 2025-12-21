@@ -238,8 +238,16 @@ const fieldStatus = ref([])
 const attemptsRemaining = ref(3)
 const MAX_ATTEMPTS = 3
 const hardLocked = ref(false)
-const showModal = ref(false)
+
 const modalMode = ref(null)
+const inputRefs = ref([])
+
+// -------------------------------
+// TIME WINDOW HELPERS
+// -------------------------------
+function minutesSinceMidnight(date = new Date()) {
+  return date.getHours() * 60 + date.getMinutes()
+}
 
 // Theming based on time
 const hour = new Date().getHours()
@@ -266,7 +274,18 @@ const heroFlashIndex = ref(null)
 // -------------------------------
 // STAGE LABEL (header text)
 // -------------------------------
-const stageLabel = computed(() => 'Answer')
+
+const stageLabel = computed(() => {
+  const mins = minutesSinceMidnight()
+
+  if (mins >= 0 && mins < 270) return 'Night Owl' // 00:00 – 04:30
+  if (mins >= 270 && mins < 600) return 'Early Bird' // 04:30 – 10:00
+  if (mins >= 600 && mins < 720) return 'Mid-Morning Check-In' // 10:00 – 12:00
+  if (mins >= 720 && mins < 900) return 'Midday Check-In' // 12:00 – 15:00
+  if (mins >= 900 && mins < 1200) return 'Evening Check-In' // 15:00 – 20:00
+  if (mins >= 1200 && mins < 1260) return 'Late Evening' // 20:00 – 21:00
+  return 'Last Chance' // 21:00 – 00:00
+})
 
 /* ---------- API Fetch ---------- */
 onMounted(loadTodayQuestion)
@@ -326,17 +345,39 @@ async function onLockIn() {
       currentView.value = 'failure'
     } else {
       modalMode.value = 'askHint'
-      showModal.value = true
     }
   }
 }
 
 // Helpers for Template
 function registerInputRef(el, i) {
-  /* ref logic */
+  if (el) inputRefs.value[i] = el
 }
+
 function onKey(e, i) {
-  if (e.key === 'Enter') onLockIn()
+  const inputs = inputRefs.value
+
+  if (e.key === 'ArrowDown' || e.key === 'Enter') {
+    e.preventDefault()
+    inputs[i + 1]?.focus()
+  }
+
+  if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    inputs[i - 1]?.focus()
+  }
+
+  if (e.key === 'Backspace' && !answers.value[i]) {
+    inputs[i - 1]?.focus()
+  }
+}
+
+function closeModal() {
+  modalMode.value = null
+}
+
+function showHint() {
+  modalMode.value = 'hint'
 }
 </script>
 
