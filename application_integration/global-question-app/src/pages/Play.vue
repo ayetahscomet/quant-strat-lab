@@ -677,4 +677,19 @@ body,
   font-size: var(--fs-xl) !important;
   font-weight: 1000;
 }
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.modal-btn {
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 2px solid #111;
+  cursor: pointer;
+}
 </style>
