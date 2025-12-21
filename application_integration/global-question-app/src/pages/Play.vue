@@ -643,4 +643,14 @@ body,
   align-items: center;
   justify-content: center;
 }
+
+.modal {
+  max-width: 420px;
+  width: 90%;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px 22px;
+  text-align: center;
+  box-shadow: 0 16px 40px #000000 30%;
+}
 </style>
