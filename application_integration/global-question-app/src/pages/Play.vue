@@ -757,4 +757,34 @@ body,
   font-size: 18px;
   cursor: pointer;
 }
+
+/* Overlay and Pop-Up Animations for Smoothness*/
+
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: 0.45s cubic-bezier(0.18, 0.74, 0.32, 1);
+}
+
+.modal-slide .modal,
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+  transform: translateY(45vh);
+}
+
+.modal-fade-enter-to,
+.modal-fade-leave-from {
+  opacity: 1;
+  transform: translateY(30vh);
+}
+
+.overlay.modal-slide {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 14vh;
+}
+
+.modal-spaced {
+  margin-bottom: 22px !important;
+}
 </style>
