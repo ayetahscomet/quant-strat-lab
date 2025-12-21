@@ -220,136 +220,44 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import SuccessSummary from './SuccessSummary.vue' // Import your summary components
+import SuccessSummary from './SuccessSummary.vue'
 import FailureSummary from './FailureSummary.vue'
 
+/* ======================================================
+   CORE GAME STATE
+====================================================== */
 const gameState = ref('playing')
-
-const fetchTimeout = (ms) =>
-  new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
-
-/* ---------- Game Logic & State ---------- */
-const question = ref('')
-const answerCount = ref(0)
-const correctAnswers = ref([])
-const loading = ref(true)
-const answers = ref([])
-const fieldStatus = ref([])
-const attemptsRemaining = ref(3)
-const MAX_ATTEMPTS = 3
-const hardLocked = ref(false)
-
-const modalMode = ref(null)
-const inputRefs = ref([])
-
-// -------------------------------
-// TIME WINDOW HELPERS
-// -------------------------------
-function minutesSinceMidnight(date = new Date()) {
-  return date.getHours() * 60 + date.getMinutes()
-}
-
-// Theming based on time
-const hour = new Date().getHours()
-const timeClass = computed(() => {
-  if (hour < 11) return 'theme-morning'
-  if (hour < 15) return 'theme-day'
-  if (hour < 20) return 'theme-evening'
-  return 'theme-night'
-})
-
-// -------------------------------
-// VIEW + SCREEN STATE
-// -------------------------------
 const currentView = ref('play') // 'play' | 'success' | 'failure'
 const screenState = ref('normal') // 'normal' | 'split-lockout'
 
-// -------------------------------
-// INPUT VISIBILITY + FX
-// -------------------------------
+const loading = ref(true)
+const question = ref('')
+const answerCount = ref(0)
+const correctAnswers = ref([])
+const hintText = ref('')
+
+const answers = ref([])
+const fieldStatus = ref([])
+
+const MAX_ATTEMPTS = 3
+const attemptsRemaining = ref(MAX_ATTEMPTS)
+const hardLocked = ref(false)
+
+/* ======================================================
+   UI + FX FLAGS (these were missing / duplicated)
+====================================================== */
 const inputsVisible = ref(false)
 const isReplaySequence = ref(false)
 const heroFlashIndex = ref(null)
 
-// -------------------------------
-// STAGE LABEL (header text)
-// -------------------------------
+const modalMode = ref(null) // null | 'askHint' | 'hint' | 'success'
+const showExitConfirm = ref(false)
 
-const stageLabel = computed(() => {
-  const mins = minutesSinceMidnight()
+/* ======================================================
+   INPUT REFERENCES (arrow navigation)
+====================================================== */
+const inputRefs = ref([])
 
-  if (mins >= 0 && mins < 270) return 'Night Owl' // 00:00 – 04:30
-  if (mins >= 270 && mins < 600) return 'Early Bird' // 04:30 – 10:00
-  if (mins >= 600 && mins < 720) return 'Mid-Morning Check-In' // 10:00 – 12:00
-  if (mins >= 720 && mins < 900) return 'Midday Check-In' // 12:00 – 15:00
-  if (mins >= 900 && mins < 1200) return 'Evening Check-In' // 15:00 – 20:00
-  if (mins >= 1200 && mins < 1260) return 'Late Evening' // 20:00 – 21:00
-  return 'Last Chance' // 21:00 – 00:00
-})
-
-/* ---------- API Fetch ---------- */
-onMounted(loadTodayQuestion)
-
-async function loadTodayQuestion() {
-  loading.value = true
-
-  try {
-    const res = await fetch('/api/get-today-question')
-
-    if (!res.ok) {
-      throw new Error(`API error ${res.status}`)
-    }
-
-    const data = await res.json()
-
-    question.value = data.text
-    answerCount.value = data.answerCount
-    correctAnswers.value = data.correctAnswers
-
-    answers.value = Array(answerCount.value).fill('')
-    fieldStatus.value = Array(answerCount.value).fill('')
-  } catch (err) {
-    console.error('Failed to load question:', err)
-    question.value = 'Unable to load today’s question.'
-  } finally {
-    loading.value = false
-
-    await nextTick()
-    inputsVisible.value = true
-  }
-}
-
-/* ---------- The Seamless Transition Logic ---------- */
-async function onLockIn() {
-  // 1. Validate inputs
-  const filled = answers.value.filter((a) => a.trim()).length
-  if (filled < answerCount.value) return alert('Fill all boxes first.')
-
-  // 2. Check correctness
-  fieldStatus.value = answers.value.map((a, i) =>
-    a.trim().toLowerCase() === correctAnswers.value[i].toLowerCase() ? 'correct' : 'incorrect',
-  )
-
-  const isPerfect = fieldStatus.value.every((s) => s === 'correct')
-
-  if (isPerfect) {
-    // Instead of router.push('/success'), we just switch the internal view
-    currentView.value = 'success'
-    if (!answerCount.value || !Array.isArray(correctAnswers.value)) {
-      console.error('Malformed question payload', data)
-    }
-  } else {
-    attemptsRemaining.value--
-    if (attemptsRemaining.value <= 0) {
-      hardLocked.value = true
-      currentView.value = 'failure'
-    } else {
-      modalMode.value = 'askHint'
-    }
-  }
-}
-
-// Helpers for Template
 function registerInputRef(el, i) {
   if (el) inputRefs.value[i] = el
 }
@@ -372,12 +280,131 @@ function onKey(e, i) {
   }
 }
 
+/* ======================================================
+   TIME WINDOW / STAGE LABEL
+====================================================== */
+function minutesSinceMidnight(date = new Date()) {
+  return date.getHours() * 60 + date.getMinutes()
+}
+
+const stageLabel = computed(() => {
+  const mins = minutesSinceMidnight()
+
+  if (mins < 270) return 'Night Owl' // 00:00–04:30
+  if (mins < 600) return 'Early Bird' // 04:30–10:00
+  if (mins < 720) return 'Mid-Morning Check-In' // 10:00–12:00
+  if (mins < 900) return 'Midday Check-In' // 12:00–15:00
+  if (mins < 1200) return 'Evening Check-In' // 15:00–20:00
+  if (mins < 1260) return 'Late Evening' // 20:00–21:00
+  return 'Last Chance' // 21:00–00:00
+})
+
+/* ======================================================
+   BACKGROUND THEME
+====================================================== */
+const hour = new Date().getHours()
+const timeClass = computed(() => {
+  if (hour < 11) return 'theme-morning'
+  if (hour < 15) return 'theme-day'
+  if (hour < 20) return 'theme-evening'
+  return 'theme-night'
+})
+
+/* ======================================================
+   FETCH TODAY’S QUESTION (Airtable)
+====================================================== */
+onMounted(loadTodayQuestion)
+
+async function loadTodayQuestion() {
+  loading.value = true
+
+  try {
+    const res = await fetch('/api/get-today-question')
+    const data = await res.json()
+
+    question.value = data.text
+    answerCount.value = data.answerCount
+    correctAnswers.value = data.correctAnswers
+    hintText.value = data.hint || ''
+
+    answers.value = Array(answerCount.value).fill('')
+    fieldStatus.value = Array(answerCount.value).fill('')
+
+    attemptsRemaining.value = MAX_ATTEMPTS
+    hardLocked.value = false
+    isReplaySequence.value = false
+
+    await nextTick()
+    inputsVisible.value = true
+  } catch (err) {
+    console.error('Failed to load question', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+/* ======================================================
+   LOCK-IN LOGIC
+====================================================== */
+async function onLockIn() {
+  if (hardLocked.value) return
+
+  const filled = answers.value.filter((a) => a.trim()).length
+  if (filled < answerCount.value) return alert('Fill all boxes first.')
+
+  fieldStatus.value = answers.value.map((a, i) =>
+    a.trim().toLowerCase() === correctAnswers.value[i]?.toLowerCase() ? 'correct' : 'incorrect',
+  )
+
+  const isPerfect = fieldStatus.value.every((s) => s === 'correct')
+
+  if (isPerfect) {
+    modalMode.value = 'success'
+    return
+  }
+
+  attemptsRemaining.value--
+
+  if (attemptsRemaining.value === 1) {
+    isReplaySequence.value = true
+  }
+
+  if (attemptsRemaining.value <= 0) {
+    hardLocked.value = true
+    currentView.value = 'failure'
+  } else {
+    modalMode.value = 'askHint'
+  }
+}
+
+/* ======================================================
+   MODALS
+====================================================== */
 function closeModal() {
   modalMode.value = null
 }
 
 function showHint() {
   modalMode.value = 'hint'
+}
+
+function closeHint() {
+  modalMode.value = null
+}
+
+/* ======================================================
+   EXIT EARLY
+====================================================== */
+function confirmExitEarly() {
+  hardLocked.value = true
+  currentView.value = 'failure'
+}
+
+/* ======================================================
+   SUCCESS CONTINUE
+====================================================== */
+function goToSuccessSummary() {
+  currentView.value = 'success'
 }
 </script>
 
