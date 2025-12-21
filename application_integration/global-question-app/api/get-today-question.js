@@ -1,6 +1,7 @@
 // api/get-today-question.js
 import Airtable from 'airtable'
 
+// Safety check so the function fails loudly in logs, not silently
 if (!process.env.AIRTABLE_TOKEN || !process.env.AIRTABLE_BASE_ID) {
   throw new Error('Missing Airtable environment variables')
 }
@@ -12,27 +13,16 @@ const base = new Airtable({
 export default async function handler(req, res) {
   try {
     // ─────────────────────────────────────────────
-    // Calculate today's date window
+    // Build today's DateKey (YYYY-MM-DD)
     // ─────────────────────────────────────────────
-    const startOfToday = new Date()
-    startOfToday.setHours(0, 0, 0, 0)
+    const todayKey = new Date().toISOString().slice(0, 10)
 
-    const startOfTomorrow = new Date(startOfToday)
-    startOfTomorrow.setDate(startOfToday.getDate() + 1)
-
-    const filterByFormula = `
-      AND(
-        OR(
-          IS_AFTER({Date}, "${startOfToday.toISOString()}"),
-          IS_SAME({Date}, "${startOfToday.toISOString()}", 'day')
-        ),
-        IS_BEFORE({Date}, "${startOfTomorrow.toISOString()}")
-      )
-    `
-
+    // ─────────────────────────────────────────────
+    // Query Airtable by DateKey (bulletproof)
+    // ─────────────────────────────────────────────
     const records = await base('Questions')
       .select({
-        filterByFormula,
+        filterByFormula: `{DateKey} = "${todayKey}"`,
         maxRecords: 1,
       })
       .firstPage()
@@ -43,6 +33,9 @@ export default async function handler(req, res) {
 
     const fields = records[0].fields
 
+    // ─────────────────────────────────────────────
+    // Return only what the frontend needs
+    // ─────────────────────────────────────────────
     res.status(200).json({
       text: fields.QuestionText || '',
       count: Number(fields.AnswerCount || 1),
