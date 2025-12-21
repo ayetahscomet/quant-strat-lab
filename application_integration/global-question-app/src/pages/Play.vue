@@ -656,7 +656,8 @@ body,
 .modal-title {
   font-size: 26px !important;
   color: #000;
-  line-height: 2;
-  padding: 0px;
+  line-height: 1;
+  padding-top: 0.5px;
+  padding-bottom: 0.5px;
 }
 </style>
