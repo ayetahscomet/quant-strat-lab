@@ -561,7 +561,7 @@ body,
 .question-title {
   font-size: var(--fs-lg);
   font-weight: 550;
-  max-width: 36rem;
+  max-width: 90%;
   text-align: center;
   color: #242227;
   margin-bottom: var(--space-md);
@@ -651,5 +651,12 @@ body,
   padding: 24px 22px;
   text-align: center;
   box-shadow: 0 16px 40px #000000 30%;
+}
+
+.modal-title {
+  font-size: 26px !important;
+  color: #000;
+  line-height: 2;
+  padding: 1px;
 }
 </style>
