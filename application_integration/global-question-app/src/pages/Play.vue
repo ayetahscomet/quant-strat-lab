@@ -407,3 +407,399 @@ function goToSuccessSummary() {
   currentView.value = 'success'
 }
 </script>
+
+<style>
+/* ===========================
+   GLOBAL RESET (APP-WIDE)
+   =========================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+</style>
+
+<style scoped>
+/* =========================================================
+   1. ROOT LAYOUT
+   ========================================================= */
+
+.play-wrapper {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: var(--space-lg);
+  overflow: hidden;
+
+  /* THEME VARIABLES (DEFAULT) */
+  --text-color: #242227;
+  --text-muted: rgba(36, 34, 39, 0.6);
+  --input-bg: #ffffff;
+  --input-text: #000000;
+  --correct-text: var(--bg-color);
+}
+
+/* Lockout mode removes top spacing */
+.play-wrapper.split-lockout-active {
+  padding-top: 0;
+}
+
+/* =========================================================
+   2. TIME THEMES
+   ========================================================= */
+
+.theme-morning,
+.theme-day {
+  --bg-color: #9fd5ff;
+  background: #9fd5ff;
+}
+
+.theme-evening {
+  --bg-color: #6ec04d;
+  background: #6ec04d;
+}
+
+.theme-night {
+  --bg-color: #0e0c24;
+  background: #0e0c24;
+
+  --text-color: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.75);
+  --input-bg: #111;
+  --input-text: #ffffff;
+  --correct-text: #ffffff;
+}
+
+/* Apply theme colours globally */
+.play-wrapper,
+.play-wrapper * {
+  color: var(--text-color);
+}
+
+/* =========================================================
+   3. HEADER
+   ========================================================= */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+}
+
+.logo {
+  width: 60px;
+  height: 60px;
+  outline: 1.5px solid #000;
+}
+
+.counter {
+  font-size: var(--fs-lg);
+}
+
+.num-light {
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.num-bold {
+  font-weight: 800;
+}
+
+.stage {
+  font-size: var(--fs-xl);
+  font-weight: 900;
+}
+
+.divider {
+  opacity: 0.5;
+}
+
+/* =========================================================
+   4. ATTEMPTS INDICATOR
+   ========================================================= */
+
+.attempts-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.attempts-label {
+  font-size: var(--fs-sm);
+  opacity: 0.85;
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.1;
+}
+
+.dot.active {
+  opacity: 0.8;
+}
+
+/* Night mode refinement */
+.theme-night .dot {
+  opacity: 0.25;
+}
+
+.theme-night .dot.active {
+  opacity: 1;
+}
+
+/* =========================================================
+   5. QUESTION
+   ========================================================= */
+
+.question-title {
+  max-width: 36rem;
+  text-align: center;
+  font-weight: 550;
+  margin-bottom: var(--space-md);
+}
+
+.question-title.muted {
+  opacity: 0.45;
+}
+
+/* =========================================================
+   6. INPUT GROUP
+   ========================================================= */
+
+.input-group {
+  width: min(90%, 450px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: var(--space-md);
+
+  opacity: 0;
+  transform: translateY(8px);
+  transition: 0.35s ease;
+}
+
+.input-group.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.answer-input {
+  padding: 0.55rem 0.9rem;
+  border-radius: 10px;
+  border: 2px solid #111;
+  background: var(--input-bg);
+  color: var(--input-text);
+  transition: 0.25s ease;
+
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.input-group.visible .answer-input {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger */
+.stagger-0 {
+  transition-delay: 0.05s;
+}
+.stagger-1 {
+  transition-delay: 0.12s;
+}
+.stagger-2 {
+  transition-delay: 0.19s;
+}
+.stagger-3 {
+  transition-delay: 0.26s;
+}
+.stagger-4 {
+  transition-delay: 0.33s;
+}
+
+/* States */
+.answer-input.correct {
+  background: #000;
+  border-color: #000;
+  color: var(--correct-text);
+  animation: fadeOutText 0.8s forwards;
+}
+
+.answer-input.incorrect {
+  animation: shake 0.35s ease;
+}
+
+/* =========================================================
+   7. ACTION BUTTONS
+   ========================================================= */
+
+.button-row {
+  display: flex;
+  gap: 22px;
+}
+
+.lock {
+  padding: 0.75rem 2.1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  border: 2px solid #111;
+  background: #83b54c;
+  cursor: pointer;
+}
+
+.lock:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* =========================================================
+   8. MODALS
+   ========================================================= */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  width: 90%;
+  max-width: 420px;
+  padding: 24px 22px;
+  border-radius: 16px;
+  background: #fff;
+  text-align: center;
+  color: #000;
+  animation: modalRise 0.48s cubic-bezier(0.16, 0.8, 0.32, 1);
+}
+
+.modal-title {
+  font-size: 26px;
+  margin-bottom: 10px;
+}
+
+.modal-text {
+  font-size: 18px;
+  margin-bottom: 22px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.modal-btn {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 2px solid #111;
+  font-weight: 600;
+}
+
+.modal-btn.primary {
+  background: #111;
+  color: #fff;
+}
+
+.modal-btn.secondary {
+  background: #f5f5f5;
+}
+
+/* =========================================================
+   9. SPLIT LOCKOUT
+   ========================================================= */
+
+.lockout-split {
+  display: grid;
+  grid-template-columns: 25% 75%;
+  width: 100%;
+  height: 100vh;
+}
+
+.left-pane {
+  padding: 3.5rem 2rem;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.right-pane {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* =========================================================
+   10. ANIMATIONS
+   ========================================================= */
+
+@keyframes shake {
+  25% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+}
+
+@keyframes fadeOutText {
+  from {
+    color: #fff;
+  }
+  to {
+    color: var(--bg-color);
+  }
+}
+
+@keyframes modalRise {
+  from {
+    opacity: 0;
+    transform: translateY(42px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+</style>
