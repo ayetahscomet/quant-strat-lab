@@ -645,7 +645,6 @@ body,
 }
 
 .modal {
-  max-width: 420px;
   width: 90%;
   background: #ffffff;
   border-radius: 16px;
