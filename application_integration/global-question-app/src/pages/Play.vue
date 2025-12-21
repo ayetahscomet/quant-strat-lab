@@ -657,6 +657,6 @@ body,
   font-size: 26px !important;
   color: #000;
   line-height: 2;
-  padding: 1px;
+  padding: 0px;
 }
 </style>
