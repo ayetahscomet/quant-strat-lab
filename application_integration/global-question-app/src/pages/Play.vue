@@ -651,7 +651,7 @@ body,
   border-radius: 16px;
   padding: 24px 22px;
   text-align: center;
-  box-shadow: 0 16px 40px #000000 1%;
+  box-shadow: 0 16px 40px #000000;
 }
 
 .modal-title {
