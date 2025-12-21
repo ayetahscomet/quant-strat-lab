@@ -284,16 +284,19 @@ async function loadTodayQuestion() {
     const data = await res.json()
 
     question.value = data.text
-    answerCount.value = data.count
+    answerCount.value = data.answerCount
     correctAnswers.value = data.correctAnswers
 
-    answers.value = Array(data.count).fill('')
-    fieldStatus.value = Array(data.count).fill('')
+    answers.value = Array(answerCount.value).fill('')
+    fieldStatus.value = Array(answerCount.value).fill('')
   } catch (err) {
     console.error('Failed to load question:', err)
     question.value = 'Unable to load today’s question.'
   } finally {
     loading.value = false
+
+    await nextTick()
+    inputsVisible.value = true
   }
 }
 
@@ -313,6 +316,9 @@ async function onLockIn() {
   if (isPerfect) {
     // Instead of router.push('/success'), we just switch the internal view
     currentView.value = 'success'
+    if (!answerCount.value || !Array.isArray(correctAnswers.value)) {
+      console.error('Malformed question payload', data)
+    }
   } else {
     attemptsRemaining.value--
     if (attemptsRemaining.value <= 0) {
