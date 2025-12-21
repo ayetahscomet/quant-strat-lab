@@ -250,6 +250,24 @@ const timeClass = computed(() => {
   return 'theme-night'
 })
 
+// -------------------------------
+// VIEW + SCREEN STATE
+// -------------------------------
+const currentView = ref('play') // 'play' | 'success' | 'failure'
+const screenState = ref('normal') // 'normal' | 'split-lockout'
+
+// -------------------------------
+// INPUT VISIBILITY + FX
+// -------------------------------
+const inputsVisible = ref(false)
+const isReplaySequence = ref(false)
+const heroFlashIndex = ref(null)
+
+// -------------------------------
+// STAGE LABEL (header text)
+// -------------------------------
+const stageLabel = computed(() => 'Answer')
+
 /* ---------- API Fetch ---------- */
 onMounted(loadTodayQuestion)
 
