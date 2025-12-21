@@ -829,7 +829,7 @@ body,
   --text-color: #ffffff;
   --text-muted: #ffffff 0.6;
   --input-bg: #111;
-  --input-text: #fff;
+  --input-text: #0000;
   --correct-text: #fff;
 }
 
