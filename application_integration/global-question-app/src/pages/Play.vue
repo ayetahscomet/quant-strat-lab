@@ -703,4 +703,58 @@ body,
   background: #f5f5f5;
   color: #111;
 }
+
+/* Lockout Screen Formatting */
+
+.lockout-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: inherit;
+  animation: fadein 0.4s ease-out;
+}
+
+.lockout-card h1 {
+  font-size: 30px;
+  font-weight: 800;
+  color: #111;
+  margin-bottom: 10px;
+}
+
+.lockout-card .next {
+  font-size: 20px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.lockout-card .time {
+  font-size: 26px;
+  font-weight: 600;
+  margin: 2px 0 2px;
+}
+
+.lockout-card .countdown {
+  font-size: 18px;
+  margin-top: 2px;
+}
+
+.attempt-title {
+  font-size: 25px;
+  font-weight: 700;
+  margin-top: 85px;
+  margin-bottom: 15px;
+}
+
+.recheck-btn {
+  margin-top: 25px;
+  padding: 12px 40px;
+  background: #111;
+  color: #fff;
+  border-radius: 10px;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+}
 </style>
