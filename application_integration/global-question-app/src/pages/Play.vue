@@ -672,4 +672,9 @@ body,
   font-size: 32px !important;
   color: #444;
 }
+
+.stage {
+  font-size: var(--fs-xl) !important;
+  font-weight: 1000;
+}
 </style>
