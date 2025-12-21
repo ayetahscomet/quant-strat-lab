@@ -660,4 +660,15 @@ body,
   padding-top: 0.5px;
   padding-bottom: 0.5px;
 }
+
+.modal-text {
+  font-size: 18px !important;
+  color: #000;
+  line-height: 1cm;
+}
+
+.modal-sub {
+  font-size: 32px !important;
+  color: #444;
+}
 </style>
