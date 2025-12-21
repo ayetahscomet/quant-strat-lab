@@ -434,11 +434,16 @@ body,
   padding-bottom: var(--space-lg);
 }
 
-/*n/a*/
+/*n/a (for things we are not sure about)*/
 
 .play-wrapper.split-lockout-active {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
+}
+
+.lock:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* Changing Themes */
@@ -615,12 +620,26 @@ body,
 }
 
 .lock {
-  background: var(--bg-color);
-  border: 2px solid #111;
-  padding: 0.75rem 2.1rem;
+  background: #000000;
+  border: 2px solid #ffffff;
+  width: 100%;
+  padding: 0.5rem 2.5rem;
   font-size: var(--fs-md);
-  font-weight: 600;
+  font-weight: 500;
+  color: #fff;
   border-radius: 10px;
   cursor: pointer;
+}
+
+/* Overlays and Triggered Pop-Ups */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
