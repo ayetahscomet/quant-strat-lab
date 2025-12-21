@@ -846,6 +846,11 @@ body,
   color: var(--input-text);
 }
 
+.theme-night .answer-input {
+  background-color: #ffffff;
+  color: #000000;
+}
+
 .answer-input.correct {
   background: var(--input-bg);
   background: #000;
