@@ -689,13 +689,18 @@ body,
   padding: 9px 18px;
   border-radius: 999px;
   font-size: 14px;
-  font-weight: 600;
-  border: 2px solid #111;
+  font-weight: 500;
+  border: 1px solid #111;
   cursor: pointer;
 }
 
 .modal-btn.primary {
   background: #111;
   color: #fff;
+}
+
+.modal-btn.secondary {
+  background: #f5f5f5;
+  color: #111;
 }
 </style>
