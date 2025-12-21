@@ -556,6 +556,33 @@ body,
   color: white !important;
 }
 
+.theme-night {
+  color: white !important;
+}
+
+.theme-night .question-title,
+.theme-night .attempts-label,
+.theme-night .stage,
+.theme-night .counter,
+.theme-night .divider {
+  color: white !important;
+}
+
+.theme-night input::placeholder {
+  color: #ffffff 75% !important;
+}
+
+.theme-night .answer-input {
+  background: #ffffff;
+  color: #0000;
+}
+
+.theme-night .answer-input.correct {
+  background: #000000;
+  color: #ffffff !important;
+  border-color: #ffffff;
+}
+
 /* Question Title */
 
 .question-title {
@@ -787,4 +814,48 @@ body,
 .modal-spaced {
   margin-bottom: 22px !important;
 }
+
+/* Playwrapper Adaptations and Input Changes in Accordance with Correctness */
+
+.play-wrapper {
+  --text-color: #242227;
+  --text-muted: #24222799;
+  --input-bg: #ffffff;
+  --input-text: #000000;
+  --correct-text: var(--bg-color);
+}
+
+.theme-night.play-wrapper {
+  --text-color: #ffffff;
+  --text-muted: #ffffff 0.6;
+  --input-bg: #111;
+  --input-text: #fff;
+  --correct-text: #fff;
+}
+
+.play-wrapper,
+.play-wrapper * {
+  color: var(--text-color);
+}
+
+/* Answer Input Adaptations */
+
+.answer-input {
+  background: var(--input-bg);
+  color: var(--input-text);
+}
+
+.answer-input.correct {
+  background: #000;
+  color: var(--correct-text) !important;
+}
+
+.answer-input:focus {
+  outline: none;
+  border-color: #000;
+  box-shadow: 0 0 0 2px #000000 15%;
+  transition: 0.18s ease;
+}
+
+/* Revelation Adaptions*/
 </style>
