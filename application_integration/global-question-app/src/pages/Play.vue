@@ -419,4 +419,160 @@ body,
 }
 </style>
 
-<style scoped></style>
+<style scoped>
+/** Main Layout **/
+
+.play-wrapper {
+  width: 100vw;
+  height: 100vh;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: var(--space-lg);
+  padding-bottom: var(--space-lg);
+}
+
+/*n/a*/
+
+.play-wrapper.split-lockout-active {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Changing Themes */
+
+.theme-morning {
+  --bg-color: #9fd5ff;
+  background: var(--bg-color);
+}
+
+.theme-day {
+  --bg-color: #9fd5ff;
+  background: var(--bg-color);
+}
+
+.theme-evening {
+  --bg-color: #6ec04d;
+  background: var(--bg-color);
+}
+
+.theme-night {
+  --bg-color: #0e0c24;
+  background: var(--bg-color);
+  color: white;
+}
+
+/** Playscreen Layouts **/
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+}
+
+.logo {
+  width: 60px;
+  height: 60px;
+  outline: 1.5px solid #000000;
+}
+
+.divider {
+  opacity: 0.5;
+}
+
+.counter {
+  font-size: var(--fs-lg);
+  display: flex;
+  align-items: center;
+}
+
+.num-light {
+  font-weight: 400;
+  opacity: 1;
+}
+
+.num-bold {
+  font-weight: 600;
+}
+
+.attempts-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.attempts-label {
+  font-size: var(--fs-sm);
+  color: #242227;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #242227;
+  opacity: 0.1; /* base faint */
+}
+
+.dot.active {
+  opacity: 0.8; /* remaining attempts */
+}
+
+/* Playscreen Layouts continued, but catering for dark mode*/
+
+.theme-night .dot {
+  background: rgba(255, 255, 255, 0.18) !important;
+  opacity: 1 !important;
+}
+
+.theme-night .dot.active {
+  background: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.theme-night .dots {
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.45));
+}
+
+.theme-night .attempts-label {
+  color: white !important;
+}
+
+/* Question Title */
+
+.question-title {
+  font-size: var(--fs-lg);
+  font-weight: 550;
+  max-width: 36rem;
+  text-align: center;
+  color: #242227;
+  margin-bottom: var(--space-md);
+}
+
+.muted {
+  opacity: 0.45;
+}
+
+/* Answer Inputs */
+
+.input-group {
+  width: min(80%, 450px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: var(--space-md);
+}
+</style>
