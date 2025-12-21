@@ -867,24 +867,4 @@ input::placeholder {
   box-shadow: 0 0 0 2px #000000 15%;
   transition: 0.18s ease;
 }
-
-/* Revelation Adaptions*/
-
-.reveal-block {
-  margin-top: 20px;
-  background: rgba(0, 0, 0, 0.05);
-  padding: 14px 18px;
-  border-radius: 10px;
-}
-
-.reveal-list {
-  list-style: none;
-  padding: 0;
-  margin: 10px 0;
-  font-size: 16px;
-}
-
-.reveal-list li {
-  margin-bottom: 6px;
-}
 </style>
