@@ -17,18 +17,10 @@
 
 <script setup>
 import { ref } from 'vue'
-import Airtable from 'airtable'
-
-// reused credentials 🚀
-const token = 'pat6N4vuWuCScUcFH.8be9e6fa54c2cdbd4a83e7844993861a431b48d8fb4b4c6f3d503101386905bb'
-const baseID = 'appJruOxLGdiwKrRw'
-
-const base = new Airtable({ apiKey: token }).base(baseID)
 
 const answer = ref('')
 const submitted = ref(false)
 
-// Replace the Airtable import and logic with this:
 async function submitAnswer() {
   try {
     const response = await fetch('/api/save-answer', {
@@ -36,7 +28,7 @@ async function submitAnswer() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         answerText: answer.value,
-        userId: localStorage.getItem('user_id'), // Strategy for tracking
+        userId: localStorage.getItem('user_id'),
       }),
     })
 
