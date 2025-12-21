@@ -446,10 +446,6 @@ body,
   cursor: default;
 }
 
-input::placeholder {
-  color: var(--text-muted) !important;
-}
-
 /* Changing Themes */
 
 .theme-morning {
