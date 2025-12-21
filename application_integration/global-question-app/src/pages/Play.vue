@@ -682,7 +682,7 @@ body,
 .modal-actions {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 15px;
 }
 
 .modal-btn {
@@ -692,5 +692,10 @@ body,
   font-weight: 600;
   border: 2px solid #111;
   cursor: pointer;
+}
+
+.modal-btn.primary {
+  background: #111;
+  color: #fff;
 }
 </style>
