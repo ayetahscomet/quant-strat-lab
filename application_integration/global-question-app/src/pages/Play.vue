@@ -594,4 +594,18 @@ body,
   font-weight: 600;
   transition: 0.25s;
 }
+
+/* Answer Input-Box Formatting continued, but dark mode */
+
+.theme-night .answer-input.correct {
+  color: black;
+}
+
+.answer-input.incorrect {
+  background: #ffffff;
+  border-color: #242227;
+  animation-name: shake !important;
+  animation-duration: 0.35s !important;
+  animation-timing-function: ease !important;
+}
 </style>
