@@ -608,4 +608,9 @@ body,
   animation-duration: 0.35s !important;
   animation-timing-function: ease !important;
 }
+
+.button-row {
+  display: flex;
+  gap: 22px;
+}
 </style>
