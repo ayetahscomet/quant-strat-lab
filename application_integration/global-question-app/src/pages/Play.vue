@@ -826,7 +826,7 @@ body,
 }
 
 .theme-night.play-wrapper {
-  --text-color: #ffffff;
+  --text-color: #0000;
   --text-muted: #ffffff 0.6;
   --input-bg: #111;
   --input-text: #0000;
