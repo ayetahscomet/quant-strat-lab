@@ -1,47 +1,34 @@
-// api/get-today-question.js
 import Airtable from 'airtable'
-
-if (!process.env.AIRTABLE_TOKEN || !process.env.AIRTABLE_BASE_ID) {
-  throw new Error('Missing Airtable environment variables')
-}
-
-const base = new Airtable({
-  apiKey: process.env.AIRTABLE_TOKEN,
-}).base(process.env.AIRTABLE_BASE_ID)
 
 export default async function handler(req, res) {
   try {
-    // ─────────────────────────────────────────────
-    // Build TODAY key in *local time*
-    // ─────────────────────────────────────────────
-    const now = new Date()
-    const todayKey = now.toLocaleDateString('en-CA') // YYYY-MM-DD
+    const base = new Airtable({
+      apiKey: process.env.AIRTABLE_TOKEN,
+    }).base(process.env.AIRTABLE_BASE_ID)
+
+    const today = new Date().toISOString().slice(0, 10)
 
     const records = await base('Questions')
       .select({
-        filterByFormula: `{DateKey} = "${todayKey}"`,
         maxRecords: 1,
+        filterByFormula: `{DateKey} = '${today}'`,
       })
       .firstPage()
 
     if (!records || records.length === 0) {
-      return res.status(404).json({ error: 'No question found for today.' })
+      return res.status(404).json({ error: 'No question found for today' })
     }
 
-    const fields = records[0].fields
+    const q = records[0].fields
 
-    res.status(200).json({
-      text: fields.QuestionText || '',
-      count: Number(fields.AnswerCount || 1),
-      date: fields.Date || '',
-      hint: fields.HintText || '',
-      correctAnswers: String(fields.CorrectAnswers || '')
-        .split(',')
-        .map((a) => a.trim())
-        .filter(Boolean),
+    return res.status(200).json({
+      text: q.QuestionText,
+      answerCount: q.AnswerCount,
+      correctAnswers: q.CorrectAnswers,
+      date: q.DateKey,
     })
-  } catch (error) {
-    console.error('get-today-question error:', error)
-    res.status(500).json({ error: 'Internal Server Error' })
+  } catch (err) {
+    console.error('get-today-question error:', err)
+    return res.status(500).json({ error: 'Internal Server Error' })
   }
 }
