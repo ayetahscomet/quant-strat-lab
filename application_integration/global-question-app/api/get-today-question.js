@@ -7,9 +7,28 @@ const base = new Airtable({
 
 export default async function handler(req, res) {
   try {
+    // ─────────────────────────────────────────────
+    // Calculate today's date window (timezone-safe)
+    // ─────────────────────────────────────────────
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+
+    const startOfTomorrow = new Date(startOfToday)
+    startOfTomorrow.setDate(startOfToday.getDate() + 1)
+
+    const filterByFormula = `
+      AND(
+        IS_AFTER({Date}, "${startOfToday.toISOString()}"),
+        IS_BEFORE({Date}, "${startOfTomorrow.toISOString()}")
+      )
+    `
+
+    // ─────────────────────────────────────────────
+    // Fetch today's question
+    // ─────────────────────────────────────────────
     const records = await base('Questions')
       .select({
-        filterByFormula: `IS_SAME({Date}, TODAY(), 'day')`,
+        filterByFormula,
         maxRecords: 1,
       })
       .firstPage()
@@ -20,19 +39,23 @@ export default async function handler(req, res) {
 
     const fields = records[0].fields
 
-    // Send only what the frontend needs.
-    // This keeps your full "CorrectAnswers" list hidden from inspect element!
+    // ─────────────────────────────────────────────
+    // Return only what the frontend needs
+    // ─────────────────────────────────────────────
     res.status(200).json({
       text: fields.QuestionText || '',
       count: Number(fields.AnswerCount || 1),
       date: fields.Date || '',
       hint: fields.HintText || '',
-      // We pass the answers for the frontend to check,
-      // but in a production version, we'd do the checking here on the server.
-      correctAnswers: (fields.CorrectAnswers || '').split(',').map((a) => a.trim()),
+      correctAnswers: Array.isArray(fields.CorrectAnswers)
+        ? fields.CorrectAnswers
+        : String(fields.CorrectAnswers || '')
+            .split(',')
+            .map((a) => a.trim())
+            .filter(Boolean),
     })
   } catch (error) {
-    console.error(error)
+    console.error('get-today-question error:', error)
     res.status(500).json({ error: 'Internal Server Error' })
   }
 }
