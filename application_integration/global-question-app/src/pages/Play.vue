@@ -578,10 +578,11 @@ body,
 
 .answer-input {
   font-size: var(--fs-md);
+  display: flex;
   padding: 0.5rem 1rem;
   border-radius: 10px;
   border: 2px solid #111;
-  outline: 1px;
+  outline: 0.5px;
   transition: 0.18s ease;
 }
 </style>
