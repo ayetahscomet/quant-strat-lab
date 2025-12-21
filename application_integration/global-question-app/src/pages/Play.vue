@@ -613,4 +613,14 @@ body,
   display: flex;
   gap: 22px;
 }
+
+.lock {
+  background: var(--bg-color);
+  border: 2px solid #111;
+  padding: 0.75rem 2.1rem;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+}
 </style>
