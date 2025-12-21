@@ -574,7 +574,7 @@ body,
 /* Answer Input-Box Formatting */
 
 .input-group {
-  width: min(80%, 450px);
+  width: 35%;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -645,7 +645,7 @@ body,
 }
 
 .modal {
-  width: 30%;
+  width: 35%;
   background: #ffffff;
   border-radius: 16px;
   padding: 24px 22px;
