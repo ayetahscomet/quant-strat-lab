@@ -818,7 +818,7 @@ body,
 /* Playwrapper Adaptations and Input Changes in Accordance with Correctness */
 
 .play-wrapper {
-  --text-color: #242227;
+  --text-color: #ffffff;
   --text-muted: #24222799;
   --input-bg: #ffffff;
   --input-text: #000000;
