@@ -833,11 +833,6 @@ body,
   --correct-text: #fff;
 }
 
-.play-wrapper,
-.play-wrapper * {
-  color: var(--text-color);
-}
-
 /* Answer Input Adaptations */
 
 .answer-input {
@@ -849,5 +844,11 @@ body,
 .answer-input .theme-night {
   background-color: #ffffff;
   color: #000000;
+}
+
+.answer-input.correct {
+  background: var(--input-bg);
+  background: #000;
+  color: var(--correct-text) !important;
 }
 </style>
