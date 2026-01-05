@@ -851,4 +851,11 @@ body,
   background: #000;
   color: var(--correct-text) !important;
 }
+
+.answer-input:focus {
+  outline: none;
+  border-color: #000;
+  box-shadow: 0 0 0 2px #000000 15%;
+  transition: 0.18s ease;
+}
 </style>
