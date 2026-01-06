@@ -918,14 +918,14 @@ body,
 
 .modal-fade-enter-from,
 .modal-fade-leave-to {
-  opacity: 0;
+  opacity: 1;
   transform: translateY(20px);
 }
 
 .modal-slide .modal,
 .modal-fade-enter-from,
 .modal-fade-leave-to {
-  opacity: 0;
+  opacity: 1;
   transform: translateY(45vh);
 }
 
