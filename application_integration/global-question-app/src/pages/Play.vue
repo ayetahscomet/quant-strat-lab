@@ -731,6 +731,15 @@ body,
   color: #111;
 }
 
+/* Correct versus Incorrect Answer Appearances */
+
+.reveal-block {
+  margin-top: 20px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 14px 18px;
+  border-radius: 10px;
+}
+
 /* Lockout Screen Formatting */
 
 .lockout-screen {
