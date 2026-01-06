@@ -658,6 +658,27 @@ body,
   cursor: pointer;
 }
 
+/* Locking in Answers */
+
+.locked-result {
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 18px;
+  border: 2px solid #111;
+}
+
+.locked-result.correct {
+  background: #000;
+  color: white;
+  border-color: #000;
+}
+
+.locked-result.incorrect {
+  opacity: 0.4;
+}
+
 /* Overlays and Triggered Pop-Ups */
 
 .overlay {
@@ -729,15 +750,6 @@ body,
 .modal-btn.secondary {
   background: #f5f5f5;
   color: #111;
-}
-
-/* Correct versus Incorrect Answer Appearances */
-
-.reveal-block {
-  margin-top: 20px;
-  background: rgba(0, 0, 0, 0.05);
-  padding: 14px 18px;
-  border-radius: 10px;
 }
 
 /* Lockout Screen Formatting */
@@ -866,5 +878,25 @@ body,
   border-color: #000;
   box-shadow: 0 0 0 2px #000000 15%;
   transition: 0.18s ease;
+}
+
+/* End of Game, Possible Answers Revelation */
+
+.reveal-block {
+  margin-top: 20px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 14px 18px;
+  border-radius: 10px;
+}
+
+.reveal-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.reveal-list li {
+  margin-bottom: 6px;
 }
 </style>
