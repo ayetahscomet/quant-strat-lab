@@ -773,7 +773,7 @@ body,
   inset: 0;
   backdrop-filter: blur(8px);
   background: #000000;
-  opacity: 1;
+  opacity: 0.1;
   display: flex;
   align-items: center;
   justify-content: center;
