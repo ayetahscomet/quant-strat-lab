@@ -779,17 +779,6 @@ body,
   justify-content: center;
 }
 
-.modal {
-  width: 30%;
-  background: #ffffff;
-  opacity: 1 !important;
-  border-radius: 16px;
-  padding-top: 22px;
-  padding-bottom: 10px;
-  text-align: center;
-  box-shadow: 0 16px 40px #000000;
-}
-
 .modal-title {
   font-size: 26px !important;
   color: #000;
