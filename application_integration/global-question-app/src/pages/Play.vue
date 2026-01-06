@@ -446,6 +446,16 @@ body,
   cursor: default;
 }
 
+.reopen-btn {
+  margin-top: 20px;
+  background: #000;
+  color: #fff;
+  padding: 12px 28px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 17px;
+}
+
 /* Changing Themes */
 
 .theme-morning {
@@ -752,6 +762,13 @@ body,
   color: #111;
 }
 
+.overlay.modal-lower {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 14vh; /* controls how high modal appears */
+}
+
 /* Lockout Screen Formatting */
 
 .lockout-screen {
@@ -810,7 +827,13 @@ body,
 
 .modal-fade-enter-active,
 .modal-fade-leave-active {
-  transition: 0.45s cubic-bezier(0.18, 0.74, 0.32, 1);
+  transition: all 0.45s cubic-bezier(0.18, 0.74, 0.32, 1);
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 .modal-slide .modal,
@@ -834,6 +857,12 @@ body,
 
 .modal-spaced {
   margin-bottom: 22px !important;
+}
+
+.modal-lower-card {
+  transform-origin: bottom center;
+  animation: modalRise 0.48s cubic-bezier(0.16, 0.8, 0.32, 1) forwards;
+  opacity: 0;
 }
 
 /* Playwrapper Adaptations and Input Changes in Accordance with Correctness */
@@ -897,6 +926,213 @@ body,
 }
 
 .reveal-list li {
+  margin-bottom: 6px;
+}
+
+/* Split-Lockout Page Formatting and Animations */
+
+.split-lock-enter-from {
+  opacity: 0;
+  transform: translateY(30px) scale(0.97);
+}
+
+.split-lock-enter-active {
+  transition: 0.55s cubic-bezier(0.16, 0.8, 0.32, 1);
+}
+
+.split-lock-enter-to {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.split-lock-leave-from {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.split-lock-leave-active {
+  transition: 0.45s cubic-bezier(0.16, 0.8, 0.32, 1);
+}
+
+.split-lock-leave-to {
+  opacity: 0;
+  transform: scale(0.97);
+}
+
+/* Page to Page Transitions via Spinners */
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 6px solid #000;
+  border-top-color: transparent;
+  animation: spin 0.85s linear infinite;
+  margin-bottom: 14px;
+}
+
+/* --- Personal and Global Analytics Formatting --- */
+
+.analytics-loading {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #000;
+}
+
+.analytics-root {
+  display: grid;
+  grid-template-columns: 48% 52%;
+  height: 100vh;
+  overflow: hidden;
+  font-family: -apple-system, Inter, sans-serif;
+}
+
+/* Personal Analytics Formatting */
+
+.personal-panel {
+  background: #0d0f11;
+  color: white;
+  padding: 48px 50px;
+  overflow-y: auto;
+}
+
+.section-title {
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.section-sub {
+  opacity: 0.7;
+  margin-top: -4px;
+}
+
+.hero-container {
+  margin: 28px 0;
+  background: #161a1f;
+  border-radius: 18px;
+  padding: 22px 26px;
+}
+
+.hero-headline {
+  font-size: 22px;
+  margin: 0 0 6px;
+}
+
+.hero-sub {
+  opacity: 0.8;
+  font-size: 14px;
+}
+
+/* Visual Statistics Formatting */
+
+.stats-grid {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.vis-card {
+  background: #14181d;
+  border-radius: 18px;
+  padding: 18px;
+  text-align: center;
+}
+
+.vis-title {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-bottom: 12px;
+}
+
+/* Circle Gauge */
+
+.circle-meter svg {
+  width: 90px;
+  height: 90px;
+}
+.meter-bg {
+  fill: none;
+  stroke: #2a2f35;
+  stroke-width: 3.5;
+}
+.meter-fg {
+  fill: none;
+  stroke: #1ee38c;
+  stroke-width: 4.6;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: 0.4s;
+}
+.meter-fg-2 {
+  fill: none;
+  stroke: #4f8bff;
+  stroke-width: 4.6;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: 0.4s;
+}
+.circle-value {
+  position: relative;
+  top: -66px;
+  font-size: 17px;
+  font-weight: bold;
+}
+
+/* Speed Bar */
+
+.bar-meter {
+  background: #2d3237;
+  height: 10px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: #6cf088;
+  border-radius: 14px 0 0 14px;
+  transition: 0.3s;
+}
+.bar-label {
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+/* Global Analytics Formatting */
+
+html,
+body {
+  overflow-x: hidden;
+  overflow-y: hidden;
+  overscroll-behavior: hidden;
+}
+
+.lockout-subtext {
+  margin-top: 12px !important; /* was too tight */
+}
+
+.reveal-block {
+  margin-top: 22px; /* slightly increased to breathe */
+  padding: 10px 16px; /* reduced from 14px 18px */
+  border-radius: 12px;
+}
+
+.reveal-list li {
+  margin-bottom: 4px; /* cleaner rhythm */
+}
+
+.reveal-title {
+  font-size: 17px;
+  font-weight: 650; /* increased from 500-ish default */
+  letter-spacing: 0.15px;
+  color: #111; /* rich contrast */
   margin-bottom: 6px;
 }
 </style>
