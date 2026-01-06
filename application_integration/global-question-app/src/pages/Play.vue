@@ -608,6 +608,88 @@ body,
   opacity: 0.45;
 }
 
+/*Button Formatting */
+
+.button-row {
+  display: flex;
+  gap: 22px;
+}
+
+.modal-btn {
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid #111;
+  cursor: pointer;
+}
+
+.modal-btn.primary {
+  background: #111;
+  color: #fff;
+}
+
+.modal-btn.secondary {
+  background: #f5f5f5;
+  color: #111;
+}
+
+.recheck-btn {
+  margin-top: 25px;
+  padding: 12px 40px;
+  background: #111;
+  color: #fff;
+  border-radius: 10px;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.reopen-btn {
+  transition:
+    transform 0.22s cubic-bezier(0.18, 0.74, 0.32, 1),
+    opacity 0.22s ease;
+}
+
+.reopen-btn:hover {
+  transform: translateY(-3px) scale(1.03);
+  opacity: 0.92;
+}
+
+.exit-btn {
+  margin-top: 32px;
+  padding: 12px 26px;
+  background: #bec0bf;
+  color: #bec0bf;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1.5px solid #bec0bf;
+  cursor: pointer;
+  text-decoration: underline #bec0bf;
+}
+
+.exit-btn:hover {
+  transform: translateY(-3px);
+  opacity: 0.88;
+}
+
+.notif-btn {
+  margin-top: 32px;
+  padding: 12px 26px;
+  background: #f2c33d;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 200;
+  border: 1.5px solid #ffa300;
+  cursor: pointer;
+}
+
+.notif-btn:hover {
+  transform: translateY(-3px);
+  opacity: 0.88;
+}
+
 /* Answer Input-Box Formatting */
 
 .input-group {
@@ -651,11 +733,6 @@ body,
   animation-timing-function: ease !important;
 }
 
-.button-row {
-  display: flex;
-  gap: 22px;
-}
-
 .lock {
   background: #000000;
   border: 2px solid #ffffff;
@@ -689,7 +766,7 @@ body,
   opacity: 0.4;
 }
 
-/* Overlays and Triggered Pop-Ups */
+/* Overlays/Modal and Triggered Pop-Ups */
 
 .overlay {
   position: fixed;
@@ -743,30 +820,21 @@ body,
   gap: 15px;
 }
 
-.modal-btn {
-  padding: 9px 18px;
-  border-radius: 999px;
-  font-size: 14px;
-  font-weight: 500;
-  border: 1px solid #111;
-  cursor: pointer;
-}
-
-.modal-btn.primary {
-  background: #111;
-  color: #fff;
-}
-
-.modal-btn.secondary {
-  background: #f5f5f5;
-  color: #111;
-}
-
 .overlay.modal-lower {
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding-bottom: 14vh; /* controls how high modal appears */
+}
+
+.modal-text {
+  margin-bottom: 26px !important;
+  line-height: 1.45;
+}
+
+.modal-actions {
+  margin-top: 12px !important;
+  padding-bottom: 4px;
 }
 
 /* Lockout Screen Formatting */
@@ -812,15 +880,33 @@ body,
   margin-bottom: 15px;
 }
 
-.recheck-btn {
-  margin-top: 25px;
-  padding: 12px 40px;
-  background: #111;
-  color: #fff;
-  border-radius: 10px;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
+.header-shift-enter-from,
+.header-shift-leave-to {
+  opacity: 0;
+  transform: translateY(-12px) scale(0.94);
+}
+
+.header-shift-enter-active,
+.header-shift-leave-active {
+  transition: 0.35s cubic-bezier(0.18, 0.74, 0.32, 1);
+}
+
+.header-shift-enter-to,
+.header-shift-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.lockout-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.play-wrapper.split-lockout-active {
+  padding-top: 0 !important;
 }
 
 /* Overlay and Pop-Up Animations for Smoothness*/
@@ -863,6 +949,10 @@ body,
   transform-origin: bottom center;
   animation: modalRise 0.48s cubic-bezier(0.16, 0.8, 0.32, 1) forwards;
   opacity: 0;
+}
+
+.modal-fade-enter-active {
+  transition-delay: 0.1s;
 }
 
 /* Playwrapper Adaptations and Input Changes in Accordance with Correctness */
@@ -959,7 +1049,7 @@ body,
   transform: scale(0.97);
 }
 
-/* Page to Page Transitions via Spinners */
+/* Page to Page Transitions via Spinners and Loading Displays */
 
 .spinner {
   width: 60px;
@@ -969,6 +1059,62 @@ body,
   border-top-color: transparent;
   animation: spin 0.85s linear infinite;
   margin-bottom: 14px;
+}
+
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.loading-spinner {
+  width: 70px;
+  height: 70px;
+  border-radius: 999px;
+  border: 6px solid rgba(255, 255, 255, 0.4);
+  border-top-color: white;
+  animation: spin 0.9s linear infinite;
+  margin-bottom: 18px;
+}
+
+.loading-text {
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.45);
+}
+
+/* Screen Transitions for Better Game Play */
+
+.screen-fade-enter-from,
+.screen-fade-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.screen-fade-enter-active,
+.screen-fade-leave-active {
+  transition:
+    opacity 0.42s cubic-bezier(0.17, 0.85, 0.39, 1),
+    transform 0.42s cubic-bezier(0.17, 0.85, 0.39, 1);
+}
+
+.screen-fade-enter-to,
+.screen-fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* --- Personal and Global Analytics Formatting --- */
@@ -1134,5 +1280,92 @@ body {
   letter-spacing: 0.15px;
   color: #111; /* rich contrast */
   margin-bottom: 6px;
+}
+
+/* ---Cleaning Game Play Features and Formatting --- */
+
+/* Utilising Parallax effects to Improve Game Play */
+
+.theme-night .left-pane {
+  animation-duration: 0.66s;
+  transform-origin: left center;
+}
+
+.theme-night .right-pane {
+  animation-duration: 0.74s;
+  transform-origin: right center;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.08));
+}
+
+.midday-pane {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 40px;
+}
+
+.midday-title {
+  font-size: 32px;
+  font-weight: 600;
+  margin-top: 16px;
+  color: #242227;
+}
+
+.midday-sub {
+  margin-top: 24px;
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+.midday-time {
+  font-size: 28px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.midday-countdown {
+  font-size: 14px;
+  margin-top: 4px;
+  opacity: 0.6;
+}
+
+@keyframes slideFromLeft {
+  from {
+    transform: translateX(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideFromRight {
+  from {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.left-pane {
+  animation: slideFromLeft cubic-bezier(0.18, 0.74, 0.32, 1) both;
+  animation-duration: 0.5s; /* Standard speed */
+}
+
+.right-pane {
+  animation: slideFromRight cubic-bezier(0.18, 0.74, 0.32, 1) both;
+  animation-duration: 0.6s; /* Slightly slower to create parallax */
+}
+
+.theme-night .left-pane {
+  animation-duration: 0.66s;
+}
+.theme-night .right-pane {
+  animation-duration: 0.74s;
 }
 </style>
