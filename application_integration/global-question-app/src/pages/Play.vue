@@ -777,6 +777,8 @@ body,
   padding: 22px 22px 18px;
   text-align: center;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  background: #fff;
+  opacity: 1;
 }
 
 .modal-title {
