@@ -128,12 +128,12 @@
       </template>
 
       <!-- =======================================================
-           MODAL SYSTEM (SUCCESS + HINT + EXIT CONFIRMATION)
-      ======================================================= -->
+     MODAL SYSTEM (SINGLE OVERLAY, CLEAN TRANSITIONS)
+======================================================= -->
       <transition name="modal-fade">
-        <!-- ********** SUCCESS SUMMARY MODAL ********** -->
-        <div v-if="modalMode === 'success'" class="overlay">
-          <div class="modal modal-lower-card">
+        <div v-if="modalMode || showExitConfirm" class="overlay modal-lower">
+          <!-- SUCCESS -->
+          <div v-if="modalMode === 'success'" class="modal">
             <h2 class="modal-title">Nicely done!</h2>
             <p class="modal-text">You’ve locked in all {{ answerCount }} answers correctly.</p>
 
@@ -146,15 +146,11 @@
               </ul>
             </div>
 
-            <button class="modal-btn primary" @click="goToSuccessSummary" style="margin-top: 18px">
-              Continue
-            </button>
+            <button class="modal-btn primary" @click="goToSuccessSummary">Continue</button>
           </div>
-        </div>
 
-        <!-- ********** HINT REQUEST MODAL ********** -->
-        <div v-else-if="modalMode === 'askHint'" class="overlay">
-          <div class="modal modal-lower-card">
+          <!-- ASK HINT -->
+          <div v-else-if="modalMode === 'askHint'" class="modal">
             <h2 class="modal-title">Not quite.</h2>
             <p class="modal-text modal-spaced">Some answers aren’t quite there. Want a hint?</p>
 
@@ -163,33 +159,28 @@
               <button class="modal-btn primary" @click="showHint">Yes, show hint</button>
             </div>
           </div>
-        </div>
 
-        <!-- ********** HINT MODAL ********** -->
-        <div v-else-if="modalMode === 'hint'" class="overlay">
-          <div class="modal modal-card">
+          <!-- HINT -->
+          <div v-else-if="modalMode === 'hint'" class="modal">
             <h2 class="modal-title">Hint</h2>
             <p class="modal-text modal-spaced">
               {{ hintText || 'Hint coming soon.' }}
             </p>
             <button class="modal-btn primary" @click="closeHint">Back</button>
           </div>
-        </div>
 
-        <!-- ********** EXIT CONFIRMATION MODAL ********** -->
-        <div v-else-if="showExitConfirm" class="overlay">
-          <div class="modal modal-card">
+          <!-- EXIT -->
+          <div v-else-if="showExitConfirm" class="modal">
             <h2 class="modal-title">Finish for Today?</h2>
             <p class="modal-text modal-spaced">
               You’ll end today’s session early and see the correct answers.<br />
-              You can’t return to the puzzle until the next window.
+              You can’t return until the next window.
             </p>
 
             <div class="modal-actions">
               <button class="modal-btn secondary" @click="showExitConfirm = false">
                 No, return
               </button>
-
               <button class="modal-btn primary" @click="confirmExitEarly">Yes, I’m Done</button>
             </div>
           </div>
@@ -821,10 +812,8 @@ body,
 }
 
 .overlay.modal-lower {
-  display: flex;
   align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 14vh; /* controls how high modal appears */
+  padding-bottom: 14vh;
 }
 
 .modal-text {
@@ -916,23 +905,14 @@ body,
   transition: all 0.45s cubic-bezier(0.18, 0.74, 0.32, 1);
 }
 
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-  opacity: 1;
-  transform: translateY(20px);
-}
-
-.modal-slide .modal,
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-  opacity: 1;
-  transform: translateY(45vh);
-}
-
-.modal-fade-enter-to,
-.modal-fade-leave-from {
-  opacity: 1;
-  transform: translateY(30vh);
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55); /* dim only */
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  z-index: 9999;
 }
 
 .overlay.modal-slide {
