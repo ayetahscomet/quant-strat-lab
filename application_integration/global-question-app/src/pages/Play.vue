@@ -826,14 +826,24 @@ body,
   padding-bottom: 4px;
 }
 
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+  transition-delay: 0.1s;
+}
+
 .modal-fade-enter-from,
 .modal-fade-leave-to {
   opacity: 0;
+  transform: scale(0.96) translateY(8px);
 }
 
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-  transition: opacity 0.35s ease;
+.modal-fade-enter-to,
+.modal-fade-leave-from {
+  opacity: 1;
+  transform: scale(1) translateY(0);
 }
 
 /* Lockout Screen Formatting */
@@ -913,6 +923,7 @@ body,
 .modal-fade-enter-active,
 .modal-fade-leave-active {
   transition: all 0.45s cubic-bezier(0.18, 0.74, 0.32, 1);
+  transition-delay: 0.1s;
 }
 
 .overlay {
@@ -941,10 +952,6 @@ body,
   transform-origin: bottom center;
   animation: modalRise 0.48s cubic-bezier(0.16, 0.8, 0.32, 1) forwards;
   opacity: 0;
-}
-
-.modal-fade-enter-active {
-  transition-delay: 0.1s;
 }
 
 /* Playwrapper Adaptations and Input Changes in Accordance with Correctness */
