@@ -764,7 +764,7 @@ body,
   inset: 0;
   backdrop-filter: blur(8px);
   background: #000000;
-  opacity: 0.1;
+  opacity: 1 !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -778,7 +778,7 @@ body,
   text-align: center;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
   background: #fff;
-  opacity: 1 !important;
+  opacity: 1;
 }
 
 .modal-title {
