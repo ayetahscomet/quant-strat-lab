@@ -152,6 +152,19 @@
           </div>
         </div>
 
+        <!-- ********** HINT REQUEST MODAL ********** -->
+        <div v-else-if="modalMode === 'askHint'" class="overlay">
+          <div class="modal modal-lower-card">
+            <h2 class="modal-title">Not quite.</h2>
+            <p class="modal-text modal-spaced">Some answers aren’t quite there. Want a hint?</p>
+
+            <div class="modal-actions">
+              <button class="modal-btn secondary" @click="closeModal">No, retry</button>
+              <button class="modal-btn primary" @click="showHint">Yes, show hint</button>
+            </div>
+          </div>
+        </div>
+
         <!-- ********** HINT MODAL ********** -->
         <div v-else-if="modalMode === 'hint'" class="overlay">
           <div class="modal modal-card">
