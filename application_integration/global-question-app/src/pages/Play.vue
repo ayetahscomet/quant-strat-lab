@@ -932,6 +932,12 @@ body,
   margin-bottom: 22px !important;
 }
 
+.modal-lower-card {
+  transform-origin: bottom center;
+  animation: modalRise 0.48s cubic-bezier(0.16, 0.8, 0.32, 1) forwards;
+  opacity: 0;
+}
+
 .modal-fade-enter-active {
   transition-delay: 0.1s;
 }
