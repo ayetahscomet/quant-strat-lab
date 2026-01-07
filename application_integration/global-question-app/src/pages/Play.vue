@@ -773,12 +773,10 @@ body,
 .modal {
   width: 30%;
   background: #ffffff;
-  opacity: 1 !important;
   border-radius: 16px;
-  padding-top: 22px;
-  padding-bottom: 10px;
+  padding: 22px 22px 18px;
   text-align: center;
-  box-shadow: 0 16px 40px #000000;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
 }
 
 .modal-title {
@@ -824,6 +822,16 @@ body,
 .modal-actions {
   margin-top: 12px !important;
   padding-bottom: 4px;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.35s ease;
 }
 
 /* Lockout Screen Formatting */
