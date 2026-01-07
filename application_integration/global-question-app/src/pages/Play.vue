@@ -101,7 +101,7 @@
         <h1 v-else class="question-title">{{ question }}</h1>
 
         <div
-          class="input-group"
+          class="input-group stagger-on"
           v-if="answers.length"
           :class="{ visible: inputsVisible, 'final-attempt-replay': isReplaySequence }"
         >
@@ -697,8 +697,17 @@ body,
   padding: 0.5rem 1rem;
   border-radius: 10px;
   border: 2px solid #111;
-  outline: 0.5px;
-  transition: 0.18s ease;
+  background: #ffffff;
+  color: #000000;
+  outline: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.answer-input:focus {
+  border-color: #000;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.15);
 }
 
 .answer-input.correct {
@@ -707,22 +716,58 @@ body,
   border-color: #000;
   color: var(--bg-color);
   font-weight: 600;
-  transition: 0.25s;
-}
-
-/* Answer Input-Box Formatting continued, but dark mode */
-
-.theme-night .answer-input.correct {
-  color: black;
 }
 
 .answer-input.incorrect {
   background: #ffffff;
   border-color: #242227;
-  animation-name: shake !important;
-  animation-duration: 0.35s !important;
-  animation-timing-function: ease !important;
+  animation: shake 0.35s ease;
 }
+
+/* Answer Input-Box Formatting continued, but dark mode */
+
+.theme-night .answer-input {
+  background: #ffffff;
+  color: #000000;
+}
+
+.theme-night .answer-input.correct {
+  background: #000000;
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+/* Staggering Input Boxes */
+
+.stagger-on .answer-input {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.stagger-on.visible .answer-input {
+  opacity: 1;
+  transform: translateY(0);
+  transition: 0.45s cubic-bezier(0.18, 0.74, 0.32, 1);
+}
+
+/* Stagger timing helpers */
+.stagger-0 {
+  transition-delay: 0.05s;
+}
+.stagger-1 {
+  transition-delay: 0.12s;
+}
+.stagger-2 {
+  transition-delay: 0.19s;
+}
+.stagger-3 {
+  transition-delay: 0.26s;
+}
+.stagger-4 {
+  transition-delay: 0.33s;
+}
+
+/* Locking in Answers */
 
 .lock {
   background: #000000;
@@ -731,12 +776,10 @@ body,
   padding: 0.5rem 2.5rem;
   font-size: var(--fs-md);
   font-weight: 500;
-  color: #fff;
+  color: #ffffff;
   border-radius: 10px;
   cursor: pointer;
 }
-
-/* Locking in Answers */
 
 .locked-result {
   padding: 0.75rem 1rem;
@@ -757,13 +800,18 @@ body,
   opacity: 0.4;
 }
 
+.lock:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* Overlays/Modal and Triggered Pop-Ups */
 
 .overlay {
   position: fixed;
   inset: 0;
   backdrop-filter: blur(8px);
-  background: #000000;
+  background: rgba(0, 0, 0, 0.55);
   opacity: 1 !important;
   display: flex;
   align-items: center;
@@ -824,14 +872,6 @@ body,
 .modal-actions {
   margin-top: 12px !important;
   padding-bottom: 4px;
-}
-
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-  transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
-  transition-delay: 0.1s;
 }
 
 .modal-fade-enter-from,
@@ -922,7 +962,7 @@ body,
 
 .modal-fade-enter-active,
 .modal-fade-leave-active {
-  transition: all 0.45s cubic-bezier(0.18, 0.74, 0.32, 1);
+  transition: all 0.35s cubic-bezier(0.18, 0.74, 0.32, 1);
   transition-delay: 0.1s;
 }
 
@@ -944,12 +984,16 @@ body,
   padding-bottom: 14vh;
 }
 
+.modal-slide > .modal {
+  animation: modalPop 0.45s cubic-bezier(0.17, 0.85, 0.39, 1);
+}
+
 .modal-spaced {
   margin-bottom: 22px !important;
 }
 
 .modal-lower-card {
-  transform-origin: bottom center;
+  transform-origin: center;
   animation: modalRise 0.48s cubic-bezier(0.16, 0.8, 0.32, 1) forwards;
   opacity: 0;
 }
@@ -1040,12 +1084,12 @@ body,
 }
 
 .split-lock-leave-active {
-  transition: 0.45s cubic-bezier(0.16, 0.8, 0.32, 1);
+  transition: all 0.3s cubic-bezier(0.16, 0.8, 0.32, 1);
 }
 
 .split-lock-leave-to {
   opacity: 0;
-  transform: scale(0.97);
+  transform: translateY(20px) scale(0.95);
 }
 
 /* Page to Page Transitions via Spinners and Loading Displays */
