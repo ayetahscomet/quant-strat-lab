@@ -916,9 +916,11 @@ body,
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55); /* dim only */
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.35);
   display: flex;
+  align-items: center;
   justify-content: center;
   z-index: 9999;
 }
