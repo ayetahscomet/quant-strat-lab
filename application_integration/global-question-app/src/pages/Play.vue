@@ -1042,6 +1042,16 @@ body,
   transition: 0.18s ease;
 }
 
+.final-attempt-replay .answer-input {
+  cursor: default;
+}
+
+.hero-flash {
+  position: relative;
+  z-index: 2;
+  animation: heroFlash 0.65s cubic-bezier(0.18, 0.74, 0.32, 1) forwards;
+}
+
 /* End of Game, Possible Answers Revelation */
 
 .reveal-block {
