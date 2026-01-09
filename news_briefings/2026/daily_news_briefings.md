@@ -1,6 +1,6 @@
 # Daily News Briefings
 
-This project summarises two news stories per day, and one market data observarion. These stories focus on the macro and general market environment. Specialty interests include emerging markets, commodities, and currencies. Stories are supplied by the Financial Times, Wall Street Journal, Washington Post, Le Monde, etc.
+This project summarises (two) news stories per day, and one market data observarion. These stories focus on the macro and general market environment. Specialty interests include emerging markets, commodities, and currencies. Stories are supplied by the Financial Times, Wall Street Journal, Washington Post, Le Monde, etc.
 
 Inception:      01-Jan-2026
 
@@ -10,6 +10,9 @@ Termination:       -
 
 ##  Article Summaries
 
+### Date:       09-Jan-2026
+
+****
 
 ### Date:       08-Jan-2026
 
