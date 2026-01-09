@@ -69,7 +69,7 @@
 
               <p class="midday-sub">Next window:</p>
               <p class="midday-time">{{ nextSlotShort }}</p>
-              <p class="midday-countdown">Come back in {{ timeRemaining }}</p>
+              <p class="midday-countdown">Come back in {{ countdown }}</p>
 
               <button class="notif-btn" @click="enableNotifications">Enable Notifications</button>
 
@@ -255,9 +255,17 @@ const userCountry = localStorage.getItem('akinto_country') || 'XX' // XX = Unkno
 const tz = ref(getTimezone())
 const currentWindow = ref(getCurrentWindow(tz.value))
 const nextWindow = ref(getNextWindow(tz.value))
-const countdown = ref(getTimeRemainingToNextWindow(tz.value))
+const t0 = getTimeRemainingToNextWindow(tz.value)
+const countdown = ref(t0.formatted)
+
 const dateKey = ref(todayKey(tz.value))
 const curWin = computed(() => getCurrentWindow(tz.value))
+
+let countdownTimer = null
+
+onUnmounted(() => {
+  clearInterval(countdownTimer)
+})
 
 /* ======================================================
    UI + FX FLAGS (these were missing / duplicated)
@@ -322,17 +330,22 @@ const stageLabel = computed(() => {
   return windowLabels[w.id] || 'Check-In'
 })
 
-let countdownTimer = null
+const lockoutHeadlineStrong = computed(() => 'Locked Out')
+const lockoutHeadlineSub = computed(() => 'You used all your attempts.')
+
+const nextSlotShort = computed(() => {
+  const next = getNextWindow(tz.value)
+  return next.id.toUpperCase()
+})
 
 function startCountdown() {
-  // ensure no double timers
   if (countdownTimer) clearInterval(countdownTimer)
 
   countdownTimer = setInterval(() => {
-    countdown.value = getTimeRemainingToNextWindow(tz.value)
+    const t = getTimeRemainingToNextWindow(tz.value)
+    countdown.value = t.formatted
 
-    // If countdown hits zero -> refresh window state
-    if (countdown.value.total <= 0) {
+    if (t.total <= 0) {
       currentWindow.value = getCurrentWindow(tz.value)
       nextWindow.value = getNextWindow(tz.value)
     }
