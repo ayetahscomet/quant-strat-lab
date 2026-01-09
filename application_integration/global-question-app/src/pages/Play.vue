@@ -461,7 +461,7 @@ function goToSuccessSummary() {
 ====================================================== */
 
 function goHome() {
-  router.push('/')
+  router.push('/play')
 }
 </script>
 
