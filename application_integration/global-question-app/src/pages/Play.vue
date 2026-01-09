@@ -171,10 +171,10 @@
 
           <!-- EXIT -->
           <div v-else-if="showExitConfirm" class="modal">
-            <h2 class="modal-title">Finish for Today?</h2>
+            <h2 class="modal-title">Finished for Today?</h2>
             <p class="modal-text modal-spaced">
               You’ll end today’s session early and see the correct answers.<br />
-              You can’t return until the next window.
+              You can’t return until tomorrow.
             </p>
 
             <div class="modal-actions">
@@ -1500,6 +1500,164 @@ body {
   margin-top: 4px;
   opacity: 0.6;
   color: #242227;
+}
+
+/* Ingame-Animations Using KeyFrames */
+
+@keyframes sweepAttempt {
+  0% {
+    width: 0%;
+    opacity: 0.35;
+  }
+  40% {
+    width: 40%;
+    opacity: 0.55;
+  }
+  70% {
+    width: 100%;
+    opacity: 0.65;
+  }
+  100% {
+    width: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes replayDim {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes replayLock {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0px rgba(0, 0, 0, 0.25);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.35);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0px rgba(0, 0, 0, 0);
+  }
+}
+
+@keyframes heroFlash {
+  0% {
+    box-shadow: 0 0 0px 0 rgba(0, 0, 0, 0);
+    transform: scale(1);
+  }
+  35% {
+    box-shadow: 0 0 22px 6px rgba(0, 0, 0, 0.65);
+    transform: scale(1.04);
+  }
+  65% {
+    box-shadow: 0 0 16px 4px rgba(0, 0, 0, 0.35);
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 0 0 0px 0 rgba(0, 0, 0, 0);
+    transform: scale(1);
+  }
+}
+
+@keyframes modalPop {
+  0% {
+    transform: scale(0.94) translateY(12px);
+    opacity: 0.7;
+  }
+  60% {
+    transform: scale(1.02) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadein {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes fadeOutText {
+  0% {
+    color: #fff;
+  }
+  100% {
+    color: var(--bg-color);
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.98);
+  }
+  60% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes modalRise {
+  0% {
+    opacity: 0;
+    transform: translateY(42px) scale(0.95);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(0) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes heroFlash {
+  0% {
+    opacity: 0;
+    transform: scale(1.1);
+    filter: brightness(2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
 }
 
 @keyframes slideFromLeft {
