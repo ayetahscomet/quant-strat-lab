@@ -572,25 +572,6 @@ async function logPlay(result) {
    MAKINT LOCKOUT ATTEMPTS PERSIST
 ====================================================== */
 
-const STORAGE_KEY = computed(() => `akinto_${userId}_${dateKey.value}_${curWin.value.id}`)
-
-function saveSessionState(resultOverride = null) {
-  try {
-    const payload = {
-      attemptsRemaining: attemptsRemaining.value,
-      answers: answers.value,
-      fieldStatus: fieldStatus.value,
-      hardLocked: hardLocked.value,
-      screenState: screenState.value,
-      result: resultOverride,
-      timestamp: Date.now(),
-    }
-    localStorage.setItem(STORAGE_KEY.value, JSON.stringify(payload))
-  } catch (err) {
-    console.error('Failed to save session state', err)
-  }
-}
-
 function loadSessionState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY.value)
