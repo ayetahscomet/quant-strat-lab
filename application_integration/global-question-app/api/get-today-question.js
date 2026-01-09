@@ -24,7 +24,6 @@ export default async function handler(req, res) {
     // --- Normalise correct answers ---
     let correct = q.CorrectAnswers || q.correctAnswers || []
 
-    // If Airtable stored as a single comma-separated string
     if (typeof correct === 'string') {
       correct = correct
         .split(',')
@@ -32,11 +31,10 @@ export default async function handler(req, res) {
         .filter(Boolean)
     }
 
-    // Fallback for answerCount if not explicitly set
+    // --- Normalise answer count ---
     const answerCount = q.AnswerCount || (Array.isArray(correct) ? correct.length : 0)
 
-    // Hint normalisation (handles Hint / hint)
-    const hint = q.Hint || q.hint || ''
+    const hint = q.HintText || q.hint || ''
 
     return res.status(200).json({
       text: q.QuestionText || '',
