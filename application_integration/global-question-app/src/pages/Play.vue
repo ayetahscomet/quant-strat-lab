@@ -691,7 +691,7 @@ body,
   margin-top: 32px;
   padding: 12px 26px;
   background: #bec0bf;
-  color: #bec0bf;
+  color: #000000;
   border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
