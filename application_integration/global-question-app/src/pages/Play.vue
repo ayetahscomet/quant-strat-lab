@@ -221,6 +221,14 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import SuccessSummary from './SuccessSummary.vue'
 import FailureSummary from './FailureSummary.vue'
 import { useRouter } from 'vue-router'
+import {
+  getTimezone,
+  getCurrentWindow,
+  getNextWindow,
+  getTimeRemainingToNextWindow,
+  todayKey,
+} from '../utils/windows.js'
+import { onUnmounted } from 'vue'
 
 /* ======================================================
    CORE GAME STATE
@@ -240,6 +248,16 @@ const fieldStatus = ref([])
 const MAX_ATTEMPTS = 3
 const attemptsRemaining = ref(MAX_ATTEMPTS)
 const hardLocked = ref(false)
+
+const userId = getOrCreateUUID()
+const userCountry = localStorage.getItem('akinto_country') || 'XX' // XX = Unknown
+
+const tz = ref(getTimezone())
+const currentWindow = ref(getCurrentWindow(tz.value))
+const nextWindow = ref(getNextWindow(tz.value))
+const countdown = ref(getTimeRemainingToNextWindow(tz.value))
+const dateKey = ref(todayKey(tz.value))
+const curWin = computed(() => getCurrentWindow(tz.value))
 
 /* ======================================================
    UI + FX FLAGS (these were missing / duplicated)
@@ -288,21 +306,38 @@ function onKey(e, i) {
 /* ======================================================
    TIME WINDOW / STAGE LABEL
 ====================================================== */
-function minutesSinceMidnight(date = new Date()) {
-  return date.getHours() * 60 + date.getMinutes()
+
+const windowLabels = {
+  nightowl: 'Night Owl',
+  early: 'Early Bird',
+  midmorning: 'Mid-Morning',
+  midday: 'Midday',
+  evening: 'Evening',
+  late: 'Late Evening',
+  last: 'Last Chance',
 }
 
 const stageLabel = computed(() => {
-  const mins = minutesSinceMidnight()
-
-  if (mins < 270) return 'Night Owl' // 00:00–04:30
-  if (mins < 600) return 'Early Bird' // 04:30–10:00
-  if (mins < 720) return 'Mid-Morning Check-In' // 10:00–12:00
-  if (mins < 900) return 'Midday Check-In' // 12:00–15:00
-  if (mins < 1200) return 'Evening Check-In' // 15:00–20:00
-  if (mins < 1260) return 'Late Evening' // 20:00–21:00
-  return 'Last Chance' // 21:00–00:00
+  const w = curWin.value
+  return windowLabels[w.id] || 'Check-In'
 })
+
+let countdownTimer = null
+
+function startCountdown() {
+  // ensure no double timers
+  if (countdownTimer) clearInterval(countdownTimer)
+
+  countdownTimer = setInterval(() => {
+    countdown.value = getTimeRemainingToNextWindow(tz.value)
+
+    // If countdown hits zero -> refresh window state
+    if (countdown.value.total <= 0) {
+      currentWindow.value = getCurrentWindow(tz.value)
+      nextWindow.value = getNextWindow(tz.value)
+    }
+  }, 1000)
+}
 
 /* ======================================================
    BACKGROUND THEME
@@ -318,7 +353,14 @@ const timeClass = computed(() => {
 /* ======================================================
    FETCH TODAY’S QUESTION (Airtable)
 ====================================================== */
-onMounted(loadTodayQuestion)
+onMounted(() => {
+  loadTodayQuestion()
+  startCountdown()
+})
+
+onUnmounted(() => {
+  if (countdownTimer) clearInterval(countdownTimer)
+})
 
 async function loadTodayQuestion() {
   loading.value = true
@@ -408,6 +450,7 @@ async function onLockIn() {
 
   if (isPerfect) {
     modalMode.value = 'success'
+    logPlay('success')
     return
   }
 
@@ -421,9 +464,30 @@ async function onLockIn() {
     hardLocked.value = true
     modalMode.value = null
     screenState.value = 'split-lockout'
+    logPlay('lockout')
   } else {
     modalMode.value = 'askHint'
   }
+}
+
+/* ======================================================
+   PUSH WINDOW TIMING TO AIRTABLE (ANALYTICS)
+====================================================== */
+
+async function logPlay(result) {
+  await fetch('/api/log-play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      country: userCountry,
+      dateKey: dateKey.value,
+      windowId: curWin.value.id,
+      answers: answers.value,
+      correctAnswers: correctAnswers.value,
+      result,
+    }),
+  })
 }
 
 /* ======================================================
@@ -446,6 +510,7 @@ function closeHint() {
 ====================================================== */
 function confirmExitEarly() {
   hardLocked.value = true
+  logPlay('exit-early')
   currentView.value = 'failure'
 }
 
@@ -462,6 +527,19 @@ function goToSuccessSummary() {
 
 function goHome() {
   router.push('/')
+}
+
+/* ======================================================
+   CAPTURING UUID + COUNTRY IN PLAY.VIEW
+====================================================== */
+
+function getOrCreateUUID() {
+  let id = localStorage.getItem('akinto_uuid')
+  if (!id) {
+    id = crypto.randomUUID()
+    localStorage.setItem('akinto_uuid', id)
+  }
+  return id
 }
 </script>
 
