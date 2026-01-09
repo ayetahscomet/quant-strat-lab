@@ -1,7 +1,3 @@
-// =====================================================
-//  TIME WINDOW DEFINITIONS
-// =====================================================
-
 export const WINDOWS = [
   { id: 'nightowl', label: 'Night Owl', start: '00:00', end: '04:30' },
   { id: 'early', label: 'Early Bird', start: '04:30', end: '10:00' },
@@ -11,10 +7,6 @@ export const WINDOWS = [
   { id: 'late', label: 'Late Evening', start: '20:00', end: '21:00' },
   { id: 'last', label: 'Last Chance', start: '21:00', end: '24:00' },
 ]
-
-// =====================================================
-//  TIME HELPERS
-// =====================================================
 
 export function getTimezone() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -26,13 +18,8 @@ export function getMinutesNow(tz) {
   return d.getHours() * 60 + d.getMinutes()
 }
 
-// =====================================================
-//  CURRENT WINDOW
-// =====================================================
-
 export function getCurrentWindow(tz = getTimezone()) {
   const mins = getMinutesNow(tz)
-
   for (const w of WINDOWS) {
     const [sh, sm] = w.start.split(':').map(Number)
     const [eh, em] = w.end.split(':').map(Number)
@@ -40,38 +27,24 @@ export function getCurrentWindow(tz = getTimezone()) {
     const end = eh * 60 + em
     if (mins >= start && mins < end) return w
   }
-
-  // fallback
   return WINDOWS[WINDOWS.length - 1]
 }
 
-// =====================================================
-//  NEXT WINDOW (IMPORTANT FOR LOCKOUT)
-// =====================================================
-
 export function getNextWindow(tz = getTimezone()) {
   const mins = getMinutesNow(tz)
-
   for (const w of WINDOWS) {
     const [eh, em] = w.end.split(':').map(Number)
     const end = eh * 60 + em
     if (mins < end) return w
   }
-
-  // rollover next day
-  return WINDOWS[0]
+  return WINDOWS[0] // rollover next day
 }
-
-// =====================================================
-//  COUNTDOWN TO NEXT WINDOW START
-// =====================================================
 
 export function getTimeRemainingToNextWindow(tz = getTimezone()) {
   const now = new Date()
   const curr = getCurrentWindow(tz)
   const next = getNextWindow(tz)
 
-  // If next is same as current, countdown to current end
   const target = next.id === curr.id ? curr.end : next.start
 
   const [th, tm] = target.split(':').map(Number)
@@ -79,7 +52,6 @@ export function getTimeRemainingToNextWindow(tz = getTimezone()) {
   const targetDate = new Date(local)
   targetDate.setHours(th, tm, 0, 0)
 
-  // handle rollover to next day
   if (targetDate.getTime() <= local.getTime()) {
     targetDate.setDate(targetDate.getDate() + 1)
   }
@@ -99,10 +71,6 @@ export function getTimeRemainingToNextWindow(tz = getTimezone()) {
   }
 }
 
-// =====================================================
-//  END OF CURRENT WINDOW (for analytics)
-// =====================================================
-
 export function getTimeRemainingToEndOfCurrent(tz = getTimezone()) {
   const curr = getCurrentWindow(tz)
   const mins = getMinutesNow(tz)
@@ -117,10 +85,6 @@ export function getTimeRemainingToEndOfCurrent(tz = getTimezone()) {
     mins: diff % 60,
   }
 }
-
-// =====================================================
-//  FORMATTED DATE KEY FOR STORAGE
-// =====================================================
 
 export function todayKey(tz = getTimezone()) {
   return new Date().toLocaleDateString('en-CA', { timeZone: tz })

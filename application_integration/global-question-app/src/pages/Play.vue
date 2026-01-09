@@ -330,13 +330,28 @@ const stageLabel = computed(() => {
   return windowLabels[w.id] || 'Check-In'
 })
 
-const lockoutHeadlineStrong = computed(() => 'Locked Out')
-const lockoutHeadlineSub = computed(() => 'You used all your attempts.')
+const lockoutHeadlineStrong = computed(() => {
+  const w = curWin.value
+  if (!w) return 'Check-In Locked'
+  if (w.id === 'last') return 'That’s All For Today'
+  return 'Check-In Locked For Now'
+})
+
+const lockoutHeadlineSub = computed(() => {
+  const w = curWin.value
+  if (!w) return 'You’ve used all your attempts for this check-in.'
+  return `You’ve used all attempts in the ${w.label} window.`
+})
 
 const nextSlotShort = computed(() => {
-  const next = getNextWindow(tz.value)
-  return next.id.toUpperCase()
+  const w = nextWindow.value
+  if (!w) return 'Next window soon'
+  return `${w.start} – ${w.end}`
 })
+
+function enableNotifications() {
+  alert('Notifications are coming soon. For now, add Akinto to your bookmarks!')
+}
 
 function startCountdown() {
   if (countdownTimer) clearInterval(countdownTimer)
@@ -391,11 +406,9 @@ async function loadTodayQuestion() {
     // NORMALISE CORRECT ANSWERS
     // ===============================
     let CA = data.correctAnswers
-
     if (typeof CA === 'string') {
       CA = CA.split(',').map((s) => s.trim())
     }
-
     correctAnswers.value = Array.isArray(CA) ? CA : []
 
     // ===============================
@@ -415,11 +428,17 @@ async function loadTodayQuestion() {
     hintText.value = Array.isArray(data.hint) ? data.hint[0] || '' : data.hint || ''
 
     // ===============================
-    // RESET STATE
+    // DEFAULT STATE
     // ===============================
     attemptsRemaining.value = MAX_ATTEMPTS
     hardLocked.value = false
     isReplaySequence.value = false
+    screenState.value = 'normal'
+
+    // ===============================
+    // HYDRATE FROM LOCALSTORAGE (if any)
+    // ===============================
+    loadSessionState()
 
     await nextTick()
     inputsVisible.value = true
@@ -462,8 +481,10 @@ async function onLockIn() {
   const isPerfect = fieldStatus.value.every((s) => s === 'correct')
 
   if (isPerfect) {
+    hardLocked.value = true // treat success as “done” for this window
     modalMode.value = 'success'
-    logPlay('success')
+    saveSessionState('success')
+    await logPlay('success')
     return
   }
 
@@ -477,9 +498,11 @@ async function onLockIn() {
     hardLocked.value = true
     modalMode.value = null
     screenState.value = 'split-lockout'
-    logPlay('lockout')
+    saveSessionState('lockout')
+    await logPlay('lockout')
   } else {
     modalMode.value = 'askHint'
+    saveSessionState('attempt')
   }
 }
 
@@ -504,6 +527,61 @@ async function logPlay(result) {
 }
 
 /* ======================================================
+   MAKINT LOCKOUT ATTEMPTS PERSIST
+====================================================== */
+
+const STORAGE_KEY = computed(() => `akinto_${userId}_${dateKey.value}_${curWin.value.id}`)
+
+function saveSessionState(resultOverride = null) {
+  try {
+    const payload = {
+      attemptsRemaining: attemptsRemaining.value,
+      answers: answers.value,
+      fieldStatus: fieldStatus.value,
+      hardLocked: hardLocked.value,
+      screenState: screenState.value,
+      result: resultOverride,
+      timestamp: Date.now(),
+    }
+    localStorage.setItem(STORAGE_KEY.value, JSON.stringify(payload))
+  } catch (err) {
+    console.error('Failed to save session state', err)
+  }
+}
+
+function loadSessionState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY.value)
+    if (!raw) return
+
+    const data = JSON.parse(raw)
+
+    // Attempts
+    if (typeof data.attemptsRemaining === 'number') {
+      attemptsRemaining.value = data.attemptsRemaining
+    }
+
+    // Answers/field status (only if lengths match current question)
+    if (Array.isArray(data.answers) && data.answers.length === answerCount.value) {
+      answers.value = data.answers
+    }
+    if (Array.isArray(data.fieldStatus) && data.fieldStatus.length === answerCount.value) {
+      fieldStatus.value = data.fieldStatus
+    }
+
+    // Lock state
+    if (data.hardLocked) {
+      hardLocked.value = true
+    }
+    if (data.screenState) {
+      screenState.value = data.screenState
+    }
+  } catch (err) {
+    console.error('Failed to load session state', err)
+  }
+}
+
+/* ======================================================
    MODALS
 ====================================================== */
 function closeModal() {
@@ -523,6 +601,8 @@ function closeHint() {
 ====================================================== */
 function confirmExitEarly() {
   hardLocked.value = true
+  screenState.value = 'split-lockout'
+  saveSessionState('exit-early')
   logPlay('exit-early')
   currentView.value = 'failure'
 }
