@@ -16,7 +16,7 @@
       ======================================================= -->
       <transition name="header-shift">
         <header v-if="screenState !== 'split-lockout'" class="header gameplay-header">
-          <img src="/logo-800-full.svg" class="logo" />
+          <img src="/logo-800-full.svg" class="logo" @click="goHome" />
           <span class="counter">
             <span class="num-light">1</span> /
             <span class="num-bold">1</span>
@@ -130,8 +130,15 @@
       <!-- =======================================================
      MODAL SYSTEM (SINGLE OVERLAY, CLEAN TRANSITIONS)
 ======================================================= -->
+
       <transition name="modal-fade">
-        <div v-if="modalMode || showExitConfirm" class="overlay modal-lower">
+        <div v-if="modalMode || showExitConfirm || showFillWarning" class="overlay modal-lower">
+          <!-- FILL WARNING -->
+          <div v-if="showFillWarning" class="modal">
+            <h2 class="modal-title">Almost there!</h2>
+            <p class="modal-text">Fill all boxes first.</p>
+            <button class="modal-btn primary" @click="showFillWarning = false">OK</button>
+          </div>
           <!-- SUCCESS -->
           <div v-if="modalMode === 'success'" class="modal">
             <h2 class="modal-title">Nicely done!</h2>
@@ -239,6 +246,7 @@ const hardLocked = ref(false)
 const inputsVisible = ref(false)
 const isReplaySequence = ref(false)
 const heroFlashIndex = ref(null)
+const showFillWarning = ref(false)
 
 const modalMode = ref(null) // null | 'askHint' | 'hint' | 'success'
 const showExitConfirm = ref(false)
@@ -255,7 +263,7 @@ function registerInputRef(el, i) {
 function onKey(e, i) {
   const inputs = inputRefs.value
 
-  if (e.key === 'ArrowDown' || e.key === 'Enter') {
+  if (e.key === 'ArrowDown') {
     e.preventDefault()
     inputs[i + 1]?.focus()
   }
@@ -267,6 +275,11 @@ function onKey(e, i) {
 
   if (e.key === 'Backspace' && !answers.value[i]) {
     inputs[i - 1]?.focus()
+  }
+
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    onLockIn()
   }
 }
 
@@ -374,7 +387,10 @@ async function onLockIn() {
   if (hardLocked.value) return
 
   const filled = answers.value.filter((a) => a.trim()).length
-  if (filled < answerCount.value) return alert('Fill all boxes first.')
+  if (filled < answerCount.value) {
+    showFillWarning.value = true
+    return
+  }
 
   const canon = correctAnswers.value.map(normalise)
   const used = new Set()
@@ -436,6 +452,18 @@ function confirmExitEarly() {
 ====================================================== */
 function goToSuccessSummary() {
   currentView.value = 'success'
+}
+
+/* ======================================================
+   GO HOME WHEN LOGO IS CLICKED
+====================================================== */
+
+function goHome() {
+  currentView.value = 'play'
+  screenState.value = 'normal'
+  modalMode.value = null
+  showExitConfirm.value = false
+  showFillWarning.value = false
 }
 </script>
 
