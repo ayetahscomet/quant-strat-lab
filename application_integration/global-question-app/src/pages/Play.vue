@@ -195,7 +195,7 @@
       </transition>
     </div>
     <!-- ===========================
-         SUCCESS SUMMARY (NO ROUTE)
+         SUCCESS SUMMARY (NO ROUTE). 
     ============================ -->
     <SuccessSummary
       v-else-if="currentView === 'success'"
