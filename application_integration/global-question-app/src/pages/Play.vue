@@ -1485,18 +1485,21 @@ body {
   margin-top: 24px;
   font-size: 14px;
   opacity: 0.6;
+  color: #242227;
 }
 
 .midday-time {
   font-size: 28px;
   font-weight: 700;
   margin-top: 6px;
+  color: #242227;
 }
 
 .midday-countdown {
   font-size: 14px;
   margin-top: 4px;
   opacity: 0.6;
+  color: #242227;
 }
 
 @keyframes slideFromLeft {
