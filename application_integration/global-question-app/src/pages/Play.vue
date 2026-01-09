@@ -220,6 +220,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import SuccessSummary from './SuccessSummary.vue'
 import FailureSummary from './FailureSummary.vue'
+import { useRouter } from 'vue-router'
 
 /* ======================================================
    CORE GAME STATE
@@ -250,6 +251,7 @@ const showFillWarning = ref(false)
 
 const modalMode = ref(null) // null | 'askHint' | 'hint' | 'success'
 const showExitConfirm = ref(false)
+const router = useRouter()
 
 /* ======================================================
    INPUT REFERENCES (arrow navigation)
@@ -459,11 +461,7 @@ function goToSuccessSummary() {
 ====================================================== */
 
 function goHome() {
-  currentView.value = 'play'
-  screenState.value = 'normal'
-  modalMode.value = null
-  showExitConfirm.value = false
-  showFillWarning.value = false
+  router.push('/')
 }
 </script>
 
@@ -553,6 +551,7 @@ body,
   width: 60px;
   height: 60px;
   outline: 1.5px solid #000000;
+  cursor: pointer;
 }
 
 .divider {
