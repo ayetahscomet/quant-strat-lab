@@ -525,7 +525,6 @@ async function onLockIn() {
   if (isPerfect) {
     hardLocked.value = true // treat success as “done” for this window
     modalMode.value = 'success'
-    saveSessionState('success')
     await logPlay('success')
     return
   }
@@ -540,11 +539,9 @@ async function onLockIn() {
     hardLocked.value = true
     modalMode.value = null
     screenState.value = 'split-lockout'
-    saveSessionState('lockout')
     await logPlay('lockout')
   } else {
     modalMode.value = 'askHint'
-    saveSessionState('attempt')
   }
 }
 
@@ -569,42 +566,6 @@ async function logPlay(result) {
 }
 
 /* ======================================================
-   MAKINT LOCKOUT ATTEMPTS PERSIST
-====================================================== */
-
-function loadSessionState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY.value)
-    if (!raw) return
-
-    const data = JSON.parse(raw)
-
-    // Attempts
-    if (typeof data.attemptsRemaining === 'number') {
-      attemptsRemaining.value = data.attemptsRemaining
-    }
-
-    // Answers/field status (only if lengths match current question)
-    if (Array.isArray(data.answers) && data.answers.length === answerCount.value) {
-      answers.value = data.answers
-    }
-    if (Array.isArray(data.fieldStatus) && data.fieldStatus.length === answerCount.value) {
-      fieldStatus.value = data.fieldStatus
-    }
-
-    // Lock state
-    if (data.hardLocked) {
-      hardLocked.value = true
-    }
-    if (data.screenState) {
-      screenState.value = data.screenState
-    }
-  } catch (err) {
-    console.error('Failed to load session state', err)
-  }
-}
-
-/* ======================================================
    MODALS
 ====================================================== */
 function closeModal() {
@@ -625,7 +586,6 @@ function closeHint() {
 function confirmExitEarly() {
   hardLocked.value = true
   screenState.value = 'split-lockout'
-  saveSessionState('exit-early')
   logPlay('exit-early')
   currentView.value = 'failure'
 }
