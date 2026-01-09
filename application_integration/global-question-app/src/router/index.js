@@ -5,7 +5,7 @@ import DailyAnalytics from '../pages/DailyAnalytics.vue'
 export default createRouter({
   history: createWebHistory('/'),
   routes: [
-    { path: '/play', component: LandingView },
+    { path: '/', component: LandingView },
     { path: '/analytics', component: DailyAnalytics },
   ],
 })
