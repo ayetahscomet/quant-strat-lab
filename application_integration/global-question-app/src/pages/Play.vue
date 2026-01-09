@@ -381,8 +381,9 @@ const timeClass = computed(() => {
 /* ======================================================
    FETCH TODAY’S QUESTION (Airtable)
 ====================================================== */
-onMounted(() => {
-  loadTodayQuestion()
+onMounted(async () => {
+  await loadTodayQuestion()
+  await loadSessionState()
   startCountdown()
 })
 
@@ -449,6 +450,32 @@ async function loadTodayQuestion() {
   }
 }
 
+async function loadSessionState() {
+  const res = await fetch('/api/load-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      dateKey: dateKey.value,
+      windowId: curWin.value.id,
+    }),
+  })
+
+  const data = await res.json()
+
+  if (!data.attempts.length) return
+
+  const latest = data.attempts[data.attempts.length - 1]
+
+  answers.value = latest.answers
+  attemptsRemaining.value = MAX_ATTEMPTS - data.attempts.length
+
+  if (attemptsRemaining.value <= 0) {
+    hardLocked.value = true
+    screenState.value = 'split-lockout'
+  }
+}
+
 /* ======================================================
    LOCK-IN LOGIC
 ====================================================== */
@@ -479,6 +506,21 @@ async function onLockIn() {
   })
 
   const isPerfect = fieldStatus.value.every((s) => s === 'correct')
+
+  await fetch('/api/log-attempt', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      country: userCountry,
+      dateKey: dateKey.value,
+      windowId: curWin.value.id,
+      attemptIndex: MAX_ATTEMPTS - attemptsRemaining.value + 1,
+      answers: answers.value,
+      correctAnswers: correctAnswers.value,
+      result: isPerfect ? 'success' : 'fail',
+    }),
+  })
 
   if (isPerfect) {
     hardLocked.value = true // treat success as “done” for this window
