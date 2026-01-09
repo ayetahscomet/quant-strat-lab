@@ -315,8 +315,7 @@ async function loadTodayQuestion() {
     question.value = data.text
     answerCount.value = data.answerCount
     correctAnswers.value = data.correctAnswers
-    hintText.value = data.hint || ''
-
+    hintText.value = Array.isArray(data.hint) ? data.hint[0] || '' : data.hint || ''
     answers.value = Array(answerCount.value).fill('')
     fieldStatus.value = Array(answerCount.value).fill('')
 
