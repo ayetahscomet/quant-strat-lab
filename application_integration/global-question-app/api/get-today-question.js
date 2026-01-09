@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       text: q.QuestionText || '',
       answerCount,
       correctAnswers: correct,
-      hint,
+      hint: q.HintText,
       date: q.DateKey || '',
     })
   } catch (err) {
