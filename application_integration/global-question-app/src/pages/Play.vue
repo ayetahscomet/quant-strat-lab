@@ -336,15 +336,28 @@ async function loadTodayQuestion() {
 /* ======================================================
    LOCK-IN LOGIC
 ====================================================== */
+function normalise(s) {
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
 async function onLockIn() {
   if (hardLocked.value) return
 
   const filled = answers.value.filter((a) => a.trim()).length
   if (filled < answerCount.value) return alert('Fill all boxes first.')
 
-  fieldStatus.value = answers.value.map((a, i) =>
-    a.trim().toLowerCase() === correctAnswers.value[i]?.toLowerCase() ? 'correct' : 'incorrect',
-  )
+  const canon = correctAnswers.value.map(normalise)
+  const used = new Set()
+
+  fieldStatus.value = answers.value.map((a) => {
+    const v = normalise(a)
+    const ok = canon.includes(v) && !used.has(v)
+    if (ok) used.add(v)
+    return ok ? 'correct' : 'incorrect'
+  })
 
   const isPerfect = fieldStatus.value.every((s) => s === 'correct')
 
@@ -361,7 +374,8 @@ async function onLockIn() {
 
   if (attemptsRemaining.value <= 0) {
     hardLocked.value = true
-    currentView.value = 'failure'
+    modalMode.value = null
+    screenState.value = 'split-lockout'
   } else {
     modalMode.value = 'askHint'
   }
