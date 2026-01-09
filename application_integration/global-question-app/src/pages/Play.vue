@@ -312,13 +312,41 @@ async function loadTodayQuestion() {
     const res = await fetch('/api/get-today-question')
     const data = await res.json()
 
-    question.value = data.text
-    answerCount.value = data.answerCount
-    correctAnswers.value = data.correctAnswers
-    hintText.value = Array.isArray(data.hint) ? data.hint[0] || '' : data.hint || ''
+    // ===============================
+    // NORMALISE QUESTION TEXT
+    // ===============================
+    question.value = data.text || ''
+
+    // ===============================
+    // NORMALISE CORRECT ANSWERS
+    // ===============================
+    let CA = data.correctAnswers
+
+    if (typeof CA === 'string') {
+      CA = CA.split(',').map((s) => s.trim())
+    }
+
+    correctAnswers.value = Array.isArray(CA) ? CA : []
+
+    // ===============================
+    // NORMALISE ANSWER COUNT
+    // ===============================
+    answerCount.value = data.answerCount || correctAnswers.value.length || 0
+
+    // ===============================
+    // SET EMPTY INPUTS + STATUS
+    // ===============================
     answers.value = Array(answerCount.value).fill('')
     fieldStatus.value = Array(answerCount.value).fill('')
 
+    // ===============================
+    // NORMALISE HINT
+    // ===============================
+    hintText.value = Array.isArray(data.hint) ? data.hint[0] || '' : data.hint || ''
+
+    // ===============================
+    // RESET STATE
+    // ===============================
     attemptsRemaining.value = MAX_ATTEMPTS
     hardLocked.value = false
     isReplaySequence.value = false
