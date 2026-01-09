@@ -4,7 +4,7 @@
          GAMEPLAY VIEW
     ============================ -->
     <div
-      v-if="gameState === 'playing'"
+      v-if="currentView === 'play'"
       :class="[
         'play-wrapper',
         timeClass,
