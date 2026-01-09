@@ -217,7 +217,6 @@ import FailureSummary from './FailureSummary.vue'
 /* ======================================================
    CORE GAME STATE
 ====================================================== */
-const gameState = ref('playing')
 const currentView = ref('play') // 'play' | 'success' | 'failure'
 const screenState = ref('normal') // 'normal' | 'split-lockout'
 
