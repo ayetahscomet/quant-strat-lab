@@ -822,12 +822,13 @@ body,
 .overlay {
   position: fixed;
   inset: 0;
-  backdrop-filter: blur(8px);
-  background: rgba(0, 0, 0, 0.55);
-  opacity: 1 !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 9999;
 }
 
 .modal {
@@ -976,18 +977,6 @@ body,
 .modal-fade-leave-active {
   transition: all 0.35s cubic-bezier(0.18, 0.74, 0.32, 1);
   transition-delay: 0.1s;
-}
-
-.overlay {
-  position: fixed;
-  inset: 0;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
 }
 
 .overlay.modal-slide {
