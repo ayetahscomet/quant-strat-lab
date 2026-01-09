@@ -1131,6 +1131,93 @@ body,
   transform: translateY(20px) scale(0.95);
 }
 
+.lockout-split {
+  display: grid;
+  grid-template-columns: 25% 75%;
+  width: 100%;
+  height: 100vh;
+  padding: 0;
+  margin: 0;
+}
+
+.left-pane {
+  width: 100%;
+  height: 100%;
+  padding: 3.5rem 2rem;
+  background: rgba(0, 0, 0, 0.05);
+  border-right: 2px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.right-pane {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+}
+
+.lockout-logo {
+  width: 120px;
+  height: 120px;
+  outline: 1.5px solid #000;
+  margin-top: 100px;
+  margin-bottom: 25px;
+}
+
+.lockout-headline-strong {
+  font-size: 32px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.lockout-headline-sub {
+  font-size: 24px;
+  font-weight: 400;
+  margin: 4px 0 2px;
+}
+
+.lockout-card {
+  width: 100%;
+  height: 100%;
+  background: white; /* no white card */
+  box-shadow: none;
+  padding: 4rem 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start; /* left align text */
+  align-items: center;
+  text-align: center;
+}
+
+.lockout-card .midday-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin-top: 16px;
+  color: #111;
+}
+
+.lockout-card .midday-sub {
+  font-size: 14px;
+  opacity: 0.6;
+  margin-top: 20px;
+}
+
+.lockout-card .midday-time {
+  font-size: 28px;
+  margin-top: 6px;
+  font-weight: 700;
+}
+
+.lockout-card .midday-countdown {
+  margin-top: 4px;
+  font-size: 14px;
+  opacity: 0.6;
+}
+
 /* Page to Page Transitions via Spinners and Loading Displays */
 
 .spinner {
