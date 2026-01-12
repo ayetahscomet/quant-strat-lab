@@ -1,4 +1,4 @@
-import { base } from '../lib/airtable'
+import { base } from '../lib/airtable.js'
 
 export default async function handler(req, res) {
   try {
