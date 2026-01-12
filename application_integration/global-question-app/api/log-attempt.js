@@ -29,7 +29,7 @@ export default async function handler(req, res) {
           Result: result || 'attempt',
           AnswersJSON: JSON.stringify(answers),
           CorrectAnswersJSON: JSON.stringify(correctAnswers || []),
-          IncorrectJSON: JSON.stringify(incorrect),
+          IncorrectAnswersJSON: JSON.stringify(incorrect),
           CreatedAt: new Date().toISOString(),
         },
       },
