@@ -3,31 +3,23 @@ import { base } from '../lib/airtable.js'
 
 export default async function handler(req, res) {
   try {
-    // Accept POST only (so we can receive dateKey cleanly)
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'POST only' })
-    }
-
-    const { dateKey } = req.body || {}
-
-    if (!dateKey) {
-      return res.status(400).json({ error: 'Missing dateKey' })
-    }
+    const today = new Date().toISOString().slice(0, 10)
 
     const records = await base('Questions')
       .select({
         maxRecords: 1,
-        filterByFormula: `{DateKey} = '${dateKey}'`,
+        filterByFormula: `{DateKey} = '${today}'`,
       })
       .firstPage()
 
     if (!records || records.length === 0) {
-      return res.status(404).json({ error: 'No question found for this date' })
+      return res.status(404).json({ error: 'No question found for today' })
     }
 
     const q = records[0].fields
 
-    let correct = q.CorrectAnswers || q.correctAnswers || []
+    // Normalise correct answers
+    let correct = q.CorrectAnswers || []
     if (typeof correct === 'string') {
       correct = correct
         .split(',')
