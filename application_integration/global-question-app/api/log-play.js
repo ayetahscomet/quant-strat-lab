@@ -1,4 +1,4 @@
-import Airtable from 'airtable'
+import { base } from '../../lib/airtable'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -6,25 +6,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const base = new Airtable({
-      apiKey: process.env.AIRTABLE_TOKEN,
-    }).base(process.env.AIRTABLE_BASE_ID)
-
     const { userId, country, dateKey, windowId, answers, correctAnswers, result } = req.body
 
-    // Validate minimally so we don't store empty/undefined rows
     if (!userId || !dateKey || !windowId) {
-      return res.status(400).json({
-        error: 'Missing required fields (userId, dateKey, windowId)',
-      })
+      return res.status(400).json({ error: 'Missing required fields (userId, dateKey, windowId)' })
     }
 
     await base('UserPlays').create({
       UserID: userId,
-      Country: country || 'XX', // fallback if unknown
+      Country: country || 'XX',
       DateKey: dateKey,
       WindowID: windowId,
-      Result: result, // 'success' | 'lockout' | 'exit-early' | 'attempt'
+      Result: result || 'attempt',
       AnswersJSON: JSON.stringify(answers || []),
       CorrectAnswersJSON: JSON.stringify(correctAnswers || []),
       CreatedAt: new Date().toISOString(),

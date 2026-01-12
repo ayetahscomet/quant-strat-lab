@@ -1,4 +1,4 @@
-import Airtable from 'airtable'
+import { base } from '../../lib/airtable'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -13,19 +13,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
-    const base = new Airtable({ apiKey: process.env.AIRTABLE_TOKEN }).base(
-      process.env.AIRTABLE_BASE_ID,
-    )
-
     await base('UserPlays').create({
       UserID: userId,
       Country: country || 'XX',
       DateKey: dateKey,
       WindowID: windowId,
       AttemptIndex: attemptIndex || 1,
-      Answers: answers.join(', '),
-      CorrectAnswers: correctAnswers.join(', '),
+      AnswersJSON: JSON.stringify(answers),
+      CorrectAnswersJSON: JSON.stringify(correctAnswers || []),
       Result: result || 'fail',
+      CreatedAt: new Date().toISOString(),
     })
 
     return res.status(200).json({ ok: true })
