@@ -260,6 +260,7 @@ const countdown = ref(t0.formatted)
 
 const dateKey = ref(todayKey(tz.value))
 const curWin = computed(() => getCurrentWindow(tz.value))
+const currentHistory = ref(null)
 
 let countdownTimer = null
 
@@ -386,7 +387,7 @@ onMounted(async () => {
   await loadTodayQuestion() // pulls question + correctAnswers
   await Promise.all([
     loadSessionState(), // per-window attempts
-    loadHistory(), // cross-window correct answers
+    LoadHistory(), // cross-window correct answers
   ])
   applyHydratedState() // merge both into answers + fieldStatus
   startCountdown()
@@ -489,29 +490,26 @@ async function loadSessionState() {
     }
   } catch (err) {
     console.error('Failed to load session', err)
+
+    recomputeFieldStatusFromAnswers()
   }
 }
 
-async function loadHistory() {
-  try {
-    const res = await fetch('/api/load-history', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId,
-        dateKey: dateKey.value,
-      }),
-    })
+async function LoadHistory() {
+  const res = await fetch('/api/load-history', { method: 'POST' })
+  if (!res.ok) return
+  const data = await res.json()
 
-    if (!res.ok) {
-      console.error('load-history failed', await res.text())
-      return
-    }
+  currentHistory.value = data // <-- store it
 
-    const data = await res.json()
-    historicalCorrect.value = Array.isArray(data.correctGiven) ? data.correctGiven : []
-  } catch (err) {
-    console.error('Failed to load history', err)
+  if (data.answers?.length) {
+    answers.value = [...data.answers]
+    attemptsRemaining.value = data.remainingAttempts
+    modalMode.value = data.modal
+    hardLocked.value = data.hardLocked
+    currentWindow.value = data.windowId
+
+    recomputeFieldStatusFromAnswers()
   }
 }
 
@@ -555,6 +553,20 @@ function applyHydratedState() {
     hardLocked.value = false
     screenState.value = 'normal'
   }
+}
+
+function recomputeFieldStatusFromAnswers() {
+  fieldStatus.value = answers.value.map((a) => {
+    if (!a) return { locked: false, correct: false }
+
+    const canonical = a.trim().toLowerCase()
+    const isCorrect = correctAnswers.value.some((c) => c.trim().toLowerCase() === canonical)
+
+    return {
+      locked: isCorrect,
+      correct: isCorrect,
+    }
+  })
 }
 
 /* ======================================================
