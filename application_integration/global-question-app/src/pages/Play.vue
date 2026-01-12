@@ -381,9 +381,14 @@ const timeClass = computed(() => {
 /* ======================================================
    FETCH TODAY’S QUESTION (Airtable)
 ====================================================== */
+
 onMounted(async () => {
-  await loadTodayQuestion()
-  await loadSessionState()
+  await loadTodayQuestion() // pulls question + correctAnswers
+  await Promise.all([
+    loadSessionState(), // per-window attempts
+    loadHistory(), // cross-window correct answers
+  ])
+  applyHydratedState() // merge both into answers + fieldStatus
   startCountdown()
 })
 
@@ -452,160 +457,103 @@ async function loadTodayQuestion() {
 
 async function loadSessionState() {
   try {
-    const userId = ensureUserId() // whatever you currently use to get the UUID
-    const today = dateKey.value
-    const windowId = currentWindowId.value // e.g. 'earlybird', etc.
-
-    if (!userId || !today || !windowId) return
-
-    // 1) Ask backend for: this-window attempts, and whole-day attempts
-    const [windowRes, dayRes] = await Promise.all([
-      fetch('/api/load-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, dateKey: today, windowId }),
+    const res = await fetch('/api/load-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        dateKey: dateKey.value,
+        windowId: curWin.value.id,
       }),
-      fetch('/api/load-day-progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, dateKey: today }),
-      }),
-    ])
+    })
 
-    if (!windowRes.ok) {
-      console.error('load-session failed', await windowRes.text())
-      return
-    }
-    if (!dayRes.ok) {
-      console.error('load-day-progress failed', await dayRes.text())
+    if (!res.ok) {
+      console.error('load-session failed', await res.text())
       return
     }
 
-    const windowData = await windowRes.json()
-    const dayData = await dayRes.json()
+    const data = await res.json()
+    if (!data.attempts || !data.attempts.length) {
+      return
+    }
 
-    const attemptsThisWindow = windowData.attempts || []
-    const allAttemptsToday = dayData.attempts || []
+    // Store for later merge
+    const latest = data.attempts[data.attempts.length - 1]
 
-    const MAX = MAX_ATTEMPTS // whatever constant you already have
+    answers.value = latest.answers || Array(answerCount.value).fill('')
+    attemptsRemaining.value = Math.max(0, MAX_ATTEMPTS - data.attempts.length)
 
-    // Safety: default initial state
+    if (attemptsRemaining.value <= 0) {
+      hardLocked.value = true
+      screenState.value = 'split-lockout'
+    }
+  } catch (err) {
+    console.error('Failed to load session', err)
+  }
+}
+
+async function loadHistory() {
+  try {
+    const res = await fetch('/api/load-history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        dateKey: dateKey.value,
+      }),
+    })
+
+    if (!res.ok) {
+      console.error('load-history failed', await res.text())
+      return
+    }
+
+    const data = await res.json()
+    historicalCorrect.value = Array.isArray(data.correctGiven) ? data.correctGiven : []
+  } catch (err) {
+    console.error('Failed to load history', err)
+  }
+}
+
+function applyHydratedState() {
+  // 1) First, if we already have answers from this window (loadSessionState)
+  if (answers.value && answers.value.length) {
+    // Ensure we have correct length
+    if (answers.value.length !== answerCount.value) {
+      answers.value = [
+        ...answers.value,
+        ...Array(Math.max(0, answerCount.value - answers.value.length)).fill(''),
+      ].slice(0, answerCount.value)
+    }
+    recomputeFieldStatusFromAnswers()
+  } else {
+    // No attempts in this window yet: pre-fill correct answers from history
+    const canon = correctAnswers.value.map((c) => ({
+      raw: c,
+      norm: normalise(c),
+    }))
+
+    const seen = new Set(historicalCorrect.value.map(normalise))
+    const used = new Set()
+
     answers.value = Array(answerCount.value).fill('')
     fieldStatus.value = Array(answerCount.value).fill('')
-    hardLocked.value = false
-    isReplaySequence.value = false
-    screenState.value = 'normal'
-    attemptsRemaining.value = MAX
 
-    // Helper: normalise like you do in your check-answers function
-    const normalise = (s) => (s || '').toString().trim().toLowerCase()
-
-    const canonNormalised = (correctAnswers.value || []).map(normalise)
-
-    // ------------------------------------------------
-    // (A) Have we *ever* fully succeeded today?
-    // ------------------------------------------------
-    const hasSuccessToday = allAttemptsToday.some(
-      (a) => a.result && a.result.toLowerCase() === 'success',
-    )
-
-    if (hasSuccessToday) {
-      // Player already finished the puzzle earlier today.
-      hardLocked.value = true
-      attemptsRemaining.value = 0
-      screenState.value = 'normal'
-
-      // Show the full correct set (or as many as we expect)
-      const full = (correctAnswers.value || []).slice(0, answerCount.value)
-      answers.value = full
-      fieldStatus.value = full.map(() => 'correct')
-
-      // Put them straight onto the success summary view
-      currentView.value = 'success'
-      return
-    }
-
-    // ------------------------------------------------
-    // (B) If there are attempts in THIS window,
-    //     restore the last attempt exactly.
-    // ------------------------------------------------
-    if (attemptsThisWindow.length > 0) {
-      const last = attemptsThisWindow[attemptsThisWindow.length - 1]
-      const prevAnswers = last.answers || []
-
-      // Lives left in this window
-      attemptsRemaining.value = Math.max(0, MAX - attemptsThisWindow.length)
-
-      // Restore text
-      answers.value = Array(answerCount.value)
-        .fill('')
-        .map((_, i) => prevAnswers[i] || '')
-
-      // Recompute per-field status
-      const used = new Set()
-      fieldStatus.value = answers.value.map((raw) => {
-        const v = normalise(raw)
-        if (!v) return ''
-        const idx = canonNormalised.indexOf(v)
-        if (idx !== -1 && !used.has(idx)) {
-          used.add(idx)
-          return 'correct'
-        }
-        return 'incorrect'
-      })
-
-      // If they’ve burned all attempts in this window, lock the UI
-      if (attemptsRemaining.value <= 0) {
-        hardLocked.value = true
-        screenState.value = 'split-lockout'
-      }
-
-      return // Done – in-window persistence wins
-    }
-
-    // ------------------------------------------------
-    // (C) No attempts yet in this window, but there
-    //     *were* attempts in earlier windows today.
-    //     => Carry forward all unique correct answers.
-    // ------------------------------------------------
-    if (allAttemptsToday.length > 0) {
-      const discovered = []
-      const discoveredIdx = new Set()
-
-      for (const attempt of allAttemptsToday) {
-        for (const raw of attempt.answers || []) {
-          const v = normalise(raw)
-          if (!v) continue
-          const idx = canonNormalised.indexOf(v)
-          if (idx !== -1 && !discoveredIdx.has(idx)) {
-            discoveredIdx.add(idx)
-            // keep the original casing the user typed
-            discovered.push(raw)
-          }
-        }
-      }
-
-      answers.value = Array(answerCount.value).fill('')
-      fieldStatus.value = Array(answerCount.value).fill('')
-
-      const k = Math.min(discovered.length, answerCount.value)
-      for (let i = 0; i < k; i++) {
-        answers.value[i] = discovered[i]
+    // For each correct answer the user has ever given,
+    // place it in the next available slot.
+    for (let i = 0; i < answerCount.value; i++) {
+      const slot = canon.find((c) => seen.has(c.norm) && !used.has(c.norm))
+      if (slot) {
+        used.add(slot.norm)
+        answers.value[i] = slot.raw
         fieldStatus.value[i] = 'correct'
       }
-
-      attemptsRemaining.value = MAX // fresh 3 lives for this window
-      hardLocked.value = false
-      screenState.value = 'normal'
-      return
     }
 
-    // ------------------------------------------------
-    // (D) No attempts today at all – keep the blank
-    //     default state (already set above).
-    // ------------------------------------------------
-  } catch (err) {
-    console.error('loadSessionState error:', err)
+    // No attempts have been used yet in this window
+    attemptsRemaining.value = MAX_ATTEMPTS
+    hardLocked.value = false
+    screenState.value = 'normal'
   }
 }
 
@@ -618,6 +566,9 @@ function normalise(s) {
     .toLowerCase()
     .replace(/\s+/g, ' ')
 }
+
+// Correct answers the user has ever given today (all windows)
+const historicalCorrect = ref([]) // array of strings
 
 async function onLockIn() {
   if (hardLocked.value) return
