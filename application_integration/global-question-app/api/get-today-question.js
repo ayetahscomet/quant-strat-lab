@@ -1,7 +1,11 @@
-import { base } from '../lib/airtable'
+import Airtable from 'airtable'
 
 export default async function handler(req, res) {
   try {
+    const base = new Airtable({
+      apiKey: process.env.AIRTABLE_TOKEN,
+    }).base(process.env.AIRTABLE_BASE_ID)
+
     const today = new Date().toISOString().slice(0, 10)
 
     const records = await base('Questions')
@@ -17,6 +21,7 @@ export default async function handler(req, res) {
 
     const q = records[0].fields
 
+    // --- Normalise correct answers ---
     let correct = q.CorrectAnswers || q.correctAnswers || []
 
     if (typeof correct === 'string') {
@@ -26,13 +31,16 @@ export default async function handler(req, res) {
         .filter(Boolean)
     }
 
+    // --- Normalise answer count ---
     const answerCount = q.AnswerCount || (Array.isArray(correct) ? correct.length : 0)
+
+    const hint = q.HintText || q.hint || ''
 
     return res.status(200).json({
       text: q.QuestionText || '',
       answerCount,
       correctAnswers: correct,
-      hint: q.HintText || '',
+      hint: q.HintText,
       date: q.DateKey || '',
     })
   } catch (err) {
