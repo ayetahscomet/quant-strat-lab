@@ -9,19 +9,25 @@ export default async function handler(req, res) {
     const { userId, country, dateKey, windowId, answers, correctAnswers, result } = req.body
 
     if (!userId || !dateKey || !windowId) {
-      return res.status(400).json({ error: 'Missing required fields (userId, dateKey, windowId)' })
+      return res.status(400).json({
+        error: 'Missing required fields (userId, dateKey, windowId)',
+      })
     }
 
-    await base('UserPlays').create({
-      UserID: userId,
-      Country: country || 'XX',
-      DateKey: dateKey,
-      WindowID: windowId,
-      Result: result || 'attempt',
-      AnswersJSON: JSON.stringify(answers || []),
-      CorrectAnswersJSON: JSON.stringify(correctAnswers || []),
-      CreatedAt: new Date().toISOString(),
-    })
+    await base('UserAnswers').create([
+      {
+        fields: {
+          UserID: userId,
+          Country: country || 'XX',
+          DateKey: dateKey,
+          WindowID: windowId,
+          Result: result,
+          AnswersJSON: JSON.stringify(answers || []),
+          CorrectAnswersJSON: JSON.stringify(correctAnswers || []),
+          CreatedAt: new Date().toISOString(),
+        },
+      },
+    ])
 
     return res.status(200).json({ ok: true })
   } catch (err) {

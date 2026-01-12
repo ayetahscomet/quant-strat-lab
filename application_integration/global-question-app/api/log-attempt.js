@@ -13,17 +13,21 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
-    await base('UserPlays').create({
-      UserID: userId,
-      Country: country || 'XX',
-      DateKey: dateKey,
-      WindowID: windowId,
-      AttemptIndex: attemptIndex || 1,
-      AnswersJSON: JSON.stringify(answers),
-      CorrectAnswersJSON: JSON.stringify(correctAnswers || []),
-      Result: result || 'fail',
-      CreatedAt: new Date().toISOString(),
-    })
+    await base('UserAnswers').create([
+      {
+        fields: {
+          UserID: userId,
+          Country: country || 'XX',
+          DateKey: dateKey,
+          WindowID: windowId,
+          AttemptIndex: attemptIndex || 1,
+          AnswersJSON: JSON.stringify(answers || []),
+          CorrectAnswersJSON: JSON.stringify(correctAnswers || []),
+          Result: result || 'fail',
+          CreatedAt: new Date().toISOString(),
+        },
+      },
+    ])
 
     return res.status(200).json({ ok: true })
   } catch (err) {
