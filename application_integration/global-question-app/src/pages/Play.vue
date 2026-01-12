@@ -451,28 +451,161 @@ async function loadTodayQuestion() {
 }
 
 async function loadSessionState() {
-  const res = await fetch('/api/load-session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      userId,
-      dateKey: dateKey.value,
-      windowId: curWin.value.id,
-    }),
-  })
+  try {
+    const userId = ensureUserId() // whatever you currently use to get the UUID
+    const today = dateKey.value
+    const windowId = currentWindowId.value // e.g. 'earlybird', etc.
 
-  const data = await res.json()
+    if (!userId || !today || !windowId) return
 
-  if (!data.attempts.length) return
+    // 1) Ask backend for: this-window attempts, and whole-day attempts
+    const [windowRes, dayRes] = await Promise.all([
+      fetch('/api/load-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, dateKey: today, windowId }),
+      }),
+      fetch('/api/load-day-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, dateKey: today }),
+      }),
+    ])
 
-  const latest = data.attempts[data.attempts.length - 1]
+    if (!windowRes.ok) {
+      console.error('load-session failed', await windowRes.text())
+      return
+    }
+    if (!dayRes.ok) {
+      console.error('load-day-progress failed', await dayRes.text())
+      return
+    }
 
-  answers.value = latest.answers
-  attemptsRemaining.value = MAX_ATTEMPTS - data.attempts.length
+    const windowData = await windowRes.json()
+    const dayData = await dayRes.json()
 
-  if (attemptsRemaining.value <= 0) {
-    hardLocked.value = true
-    screenState.value = 'split-lockout'
+    const attemptsThisWindow = windowData.attempts || []
+    const allAttemptsToday = dayData.attempts || []
+
+    const MAX = MAX_ATTEMPTS // whatever constant you already have
+
+    // Safety: default initial state
+    answers.value = Array(answerCount.value).fill('')
+    fieldStatus.value = Array(answerCount.value).fill('')
+    hardLocked.value = false
+    isReplaySequence.value = false
+    screenState.value = 'normal'
+    attemptsRemaining.value = MAX
+
+    // Helper: normalise like you do in your check-answers function
+    const normalise = (s) => (s || '').toString().trim().toLowerCase()
+
+    const canonNormalised = (correctAnswers.value || []).map(normalise)
+
+    // ------------------------------------------------
+    // (A) Have we *ever* fully succeeded today?
+    // ------------------------------------------------
+    const hasSuccessToday = allAttemptsToday.some(
+      (a) => a.result && a.result.toLowerCase() === 'success',
+    )
+
+    if (hasSuccessToday) {
+      // Player already finished the puzzle earlier today.
+      hardLocked.value = true
+      attemptsRemaining.value = 0
+      screenState.value = 'normal'
+
+      // Show the full correct set (or as many as we expect)
+      const full = (correctAnswers.value || []).slice(0, answerCount.value)
+      answers.value = full
+      fieldStatus.value = full.map(() => 'correct')
+
+      // Put them straight onto the success summary view
+      currentView.value = 'success'
+      return
+    }
+
+    // ------------------------------------------------
+    // (B) If there are attempts in THIS window,
+    //     restore the last attempt exactly.
+    // ------------------------------------------------
+    if (attemptsThisWindow.length > 0) {
+      const last = attemptsThisWindow[attemptsThisWindow.length - 1]
+      const prevAnswers = last.answers || []
+
+      // Lives left in this window
+      attemptsRemaining.value = Math.max(0, MAX - attemptsThisWindow.length)
+
+      // Restore text
+      answers.value = Array(answerCount.value)
+        .fill('')
+        .map((_, i) => prevAnswers[i] || '')
+
+      // Recompute per-field status
+      const used = new Set()
+      fieldStatus.value = answers.value.map((raw) => {
+        const v = normalise(raw)
+        if (!v) return ''
+        const idx = canonNormalised.indexOf(v)
+        if (idx !== -1 && !used.has(idx)) {
+          used.add(idx)
+          return 'correct'
+        }
+        return 'incorrect'
+      })
+
+      // If they’ve burned all attempts in this window, lock the UI
+      if (attemptsRemaining.value <= 0) {
+        hardLocked.value = true
+        screenState.value = 'split-lockout'
+      }
+
+      return // Done – in-window persistence wins
+    }
+
+    // ------------------------------------------------
+    // (C) No attempts yet in this window, but there
+    //     *were* attempts in earlier windows today.
+    //     => Carry forward all unique correct answers.
+    // ------------------------------------------------
+    if (allAttemptsToday.length > 0) {
+      const discovered = []
+      const discoveredIdx = new Set()
+
+      for (const attempt of allAttemptsToday) {
+        for (const raw of attempt.answers || []) {
+          const v = normalise(raw)
+          if (!v) continue
+          const idx = canonNormalised.indexOf(v)
+          if (idx !== -1 && !discoveredIdx.has(idx)) {
+            discoveredIdx.add(idx)
+            // keep the original casing the user typed
+            discovered.push(raw)
+          }
+        }
+      }
+
+      answers.value = Array(answerCount.value).fill('')
+      fieldStatus.value = Array(answerCount.value).fill('')
+
+      const k = Math.min(discovered.length, answerCount.value)
+      for (let i = 0; i < k; i++) {
+        answers.value[i] = discovered[i]
+        fieldStatus.value[i] = 'correct'
+      }
+
+      attemptsRemaining.value = MAX // fresh 3 lives for this window
+      hardLocked.value = false
+      screenState.value = 'normal'
+      return
+    }
+
+    // ------------------------------------------------
+    // (D) No attempts today at all – keep the blank
+    //     default state (already set above).
+    // ------------------------------------------------
+  } catch (err) {
+    console.error('loadSessionState error:', err)
   }
 }
 
