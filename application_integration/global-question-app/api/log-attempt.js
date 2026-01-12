@@ -1,4 +1,4 @@
-import { base } from '../../lib/airtable'
+import { base } from '../lib/airtable'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
