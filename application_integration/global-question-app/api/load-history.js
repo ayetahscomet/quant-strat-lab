@@ -1,5 +1,5 @@
 // /api/load-history.js
-import { base } from '../../lib/airtable.js'
+import { base } from '../lib/airtable.js'
 
 function normalise(s) {
   return String(s || '')
