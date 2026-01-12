@@ -1,12 +1,17 @@
-import Airtable from 'airtable'
+import { base } from '../lib/airtable'
 
 export default async function handler(req, res) {
   try {
-    const base = new Airtable({
-      apiKey: process.env.AIRTABLE_TOKEN,
-    }).base(process.env.AIRTABLE_BASE_ID)
+    console.log('➡️ ENTER /api/get-today-question')
+
+    // Check env first
+    console.log('ENV CHECK:', {
+      hasToken: !!process.env.AIRTABLE_TOKEN,
+      hasBaseId: !!process.env.AIRTABLE_BASE_ID,
+    })
 
     const today = new Date().toISOString().slice(0, 10)
+    console.log('DATE:', today)
 
     const records = await base('Questions')
       .select({
@@ -15,15 +20,15 @@ export default async function handler(req, res) {
       })
       .firstPage()
 
+    console.log('RECORDS:', records.length)
+
     if (!records || records.length === 0) {
       return res.status(404).json({ error: 'No question found for today' })
     }
 
     const q = records[0].fields
 
-    // --- Normalise correct answers ---
     let correct = q.CorrectAnswers || q.correctAnswers || []
-
     if (typeof correct === 'string') {
       correct = correct
         .split(',')
@@ -31,20 +36,15 @@ export default async function handler(req, res) {
         .filter(Boolean)
     }
 
-    // --- Normalise answer count ---
-    const answerCount = q.AnswerCount || (Array.isArray(correct) ? correct.length : 0)
-
-    const hint = q.HintText || q.hint || ''
-
     return res.status(200).json({
       text: q.QuestionText || '',
-      answerCount,
+      answerCount: q.AnswerCount || correct.length,
       correctAnswers: correct,
-      hint: q.HintText,
+      hint: q.HintText || '',
       date: q.DateKey || '',
     })
   } catch (err) {
-    console.error('get-today-question error:', err)
-    return res.status(500).json({ error: 'Internal Server Error' })
+    console.error('⛔️ get-today-question error:', err)
+    return res.status(500).json({ error: 'Internal Server Error', details: err.message })
   }
 }
