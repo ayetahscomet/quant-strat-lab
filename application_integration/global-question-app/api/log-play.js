@@ -1,3 +1,4 @@
+// /api/log-play.js
 import { base } from '../lib/airtable.js'
 
 export default async function handler(req, res) {
@@ -9,22 +10,21 @@ export default async function handler(req, res) {
     const { userId, country, dateKey, windowId, answers, correctAnswers, result } = req.body
 
     if (!userId || !dateKey || !windowId) {
-      return res.status(400).json({
-        error: 'Missing required fields (userId, dateKey, windowId)',
-      })
+      return res.status(400).json({ error: 'Missing required fields' })
     }
 
     await base('UserAnswers').create([
       {
         fields: {
           UserID: userId,
-          Country: country || 'XX',
+          Country: country || 'xx',
           DateKey: dateKey,
           WindowID: windowId,
-          Result: result,
+          Result: result || 'lockout', // <-- important change
           AnswersJSON: JSON.stringify(answers || []),
           CorrectAnswersJSON: JSON.stringify(correctAnswers || []),
           CreatedAt: new Date().toISOString(),
+          AttemptIndex: 999, // marker for final
         },
       },
     ])

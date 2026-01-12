@@ -1,3 +1,4 @@
+// /api/log-attempt.js
 import { base } from '../lib/airtable.js'
 
 export default async function handler(req, res) {
@@ -9,21 +10,26 @@ export default async function handler(req, res) {
     const { userId, country, dateKey, windowId, attemptIndex, answers, correctAnswers, result } =
       req.body
 
-    if (!userId || !dateKey || !windowId || !answers) {
+    if (!userId || !dateKey || !windowId || !Array.isArray(answers)) {
       return res.status(400).json({ error: 'Missing required fields' })
     }
+
+    // Calculate incorrect for analytics
+    const correctSet = new Set(correctAnswers || [])
+    const incorrect = answers.filter((a) => !correctSet.has(a))
 
     await base('UserAnswers').create([
       {
         fields: {
           UserID: userId,
-          Country: country || 'XX',
+          Country: country || 'xx',
           DateKey: dateKey,
           WindowID: windowId,
           AttemptIndex: attemptIndex || 1,
-          AnswersJSON: JSON.stringify(answers || []),
+          Result: result || 'attempt',
+          AnswersJSON: JSON.stringify(answers),
           CorrectAnswersJSON: JSON.stringify(correctAnswers || []),
-          Result: result || 'fail',
+          IncorrectJSON: JSON.stringify(incorrect),
           CreatedAt: new Date().toISOString(),
         },
       },
