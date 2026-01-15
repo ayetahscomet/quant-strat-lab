@@ -441,41 +441,39 @@ async function loadTodayQuestion() {
 }
 
 async function loadSessionState() {
-  try {
-    const res = await fetch('/api/load-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId,
-        dateKey: dateKey.value,
-        windowId: curWin.value.id,
-      }),
-    })
+  const res = await fetch('/api/load-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      dateKey: dateKey.value,
+      windowId: curWin.value.id,
+    }),
+  })
 
-    if (!res.ok) {
-      console.error('load-session failed', await res.text())
-      return
-    }
+  const data = await res.json()
+  if (!data.attempts?.length) return
 
-    const data = await res.json()
-    if (!data.attempts || !data.attempts.length) {
-      return
-    }
+  const attempts = data.attempts
+  const latest = attempts[attempts.length - 1]
 
-    // Store for later merge
-    const latest = data.attempts[data.attempts.length - 1]
+  // Restore answers
+  answers.value = latest.answers
 
-    answers.value = latest.answers || Array(answerCount.value).fill('')
-    attemptsRemaining.value = Math.max(0, MAX_ATTEMPTS - data.attempts.length)
+  // Restore attempts remaining
+  attemptsRemaining.value = MAX_ATTEMPTS - attempts.length
 
-    if (attemptsRemaining.value <= 0) {
-      hardLocked.value = true
-      screenState.value = 'split-lockout'
-    }
-  } catch (err) {
-    console.error('Failed to load session', err)
+  // Restore success
+  if (latest.result === 'success') {
+    hardLocked.value = true
+    currentView.value = 'success'
+    return
+  }
 
-    recomputeFieldStatusFromAnswers()
+  // Restore lockout
+  if (attemptsRemaining.value <= 0 || latest.result === 'lockout') {
+    hardLocked.value = true
+    screenState.value = 'split-lockout'
   }
 }
 
