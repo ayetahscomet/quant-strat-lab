@@ -297,6 +297,31 @@ function onKey(e, i) {
 }
 
 /* ======================================================
+  CREATING PERSISTENCE VIA LOCAL STORAGE
+  =================================================== */
+
+function saveLocalSession(state) {
+  const key = `akinto_session_${dateKey.value}_${curWin.value.id}`
+  localStorage.setItem(key, JSON.stringify(state))
+}
+
+function loadLocalSession() {
+  const key = `akinto_session_${dateKey.value}_${curWin.value.id}`
+  const raw = localStorage.getItem(key)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+function clearLocalSession() {
+  const key = `akinto_session_${dateKey.value}_${curWin.value.id}`
+  localStorage.removeItem(key)
+}
+
+/* ======================================================
    TIME WINDOW / STAGE LABEL
 ====================================================== */
 
@@ -441,39 +466,59 @@ async function loadTodayQuestion() {
 }
 
 async function loadSessionState() {
-  const res = await fetch('/api/load-session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      userId,
-      dateKey: dateKey.value,
-      windowId: curWin.value.id,
-    }),
-  })
+  let server = null
 
-  const data = await res.json()
-  if (!data.attempts?.length) return
+  try {
+    const res = await fetch('/api/load-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        dateKey: dateKey.value,
+        windowId: curWin.value.id,
+      }),
+    })
 
-  const attempts = data.attempts
-  const latest = attempts[attempts.length - 1]
+    if (res.ok) {
+      const data = await res.json()
+      if (data.attempts?.length) {
+        server = data.attempts[data.attempts.length - 1]
+      }
+    }
+  } catch (err) {
+    console.warn('Server load-session failed, falling back to local storage.')
+  }
+
+  // Try local storage if server failed or empty
+  const local = loadLocalSession()
+
+  const source = server || local
+  if (!source) return
 
   // Restore answers
-  answers.value = latest.answers
+  answers.value = source.answers || Array(answerCount.value).fill('')
+  attemptsRemaining.value = Math.max(0, MAX_ATTEMPTS - (source.attemptsUsed || 0))
 
-  // Restore attempts remaining
-  attemptsRemaining.value = MAX_ATTEMPTS - attempts.length
+  // Recompute correctness
+  fieldStatus.value = answers.value.map((a) => {
+    const v = normalise(a)
+    return correctAnswers.value.some((c) => normalise(c) === v) ? 'correct' : a ? 'incorrect' : ''
+  })
 
-  // Restore success
-  if (latest.result === 'success') {
+  // Success?
+  if (source.result === 'success') {
     hardLocked.value = true
     currentView.value = 'success'
+    clearLocalSession()
     return
   }
 
-  // Restore lockout
-  if (attemptsRemaining.value <= 0 || latest.result === 'lockout') {
+  // Lockout?
+  if (source.result === 'lockout' || attemptsRemaining.value <= 0) {
     hardLocked.value = true
     screenState.value = 'split-lockout'
+    clearLocalSession()
+    return
   }
 }
 
@@ -600,10 +645,25 @@ async function onLockIn() {
     }),
   })
 
+  // Save snapshot locally (write-through cache)
+  saveLocalSession({
+    dateKey: dateKey.value,
+    windowId: curWin.value.id,
+    answers: answers.value,
+    attemptIndex: MAX_ATTEMPTS - attemptsRemaining.value + 1,
+    attemptsUsed: MAX_ATTEMPTS - attemptsRemaining.value,
+    result: isPerfect ? 'success' : 'fail',
+    timestamp: Date.now(),
+  })
+
   if (isPerfect) {
-    hardLocked.value = true // we are done for today
+    hardLocked.value = true
     await logPlay('success')
-    currentView.value = 'success' // ⬅ go straight to success summary
+
+    // Clear local session — day finished
+    clearLocalSession()
+
+    currentView.value = 'success'
     return
   }
 
@@ -617,9 +677,11 @@ async function onLockIn() {
     hardLocked.value = true
     modalMode.value = null
     screenState.value = 'split-lockout'
+
     await logPlay('lockout')
-  } else {
-    modalMode.value = 'askHint'
+
+    // Clear local state — no returning this window
+    clearLocalSession()
   }
 }
 
@@ -665,6 +727,16 @@ function confirmExitEarly() {
   hardLocked.value = true
   screenState.value = 'split-lockout'
   logPlay('exit-early')
+
+  saveLocalSession({
+    dateKey: dateKey.value,
+    windowId: curWin.value.id,
+    answers: answers.value,
+    attemptsUsed: MAX_ATTEMPTS,
+    result: 'exit-early',
+    timestamp: Date.now(),
+  })
+
   currentView.value = 'failure'
 }
 
