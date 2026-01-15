@@ -685,6 +685,49 @@ async function logPlay(result) {
   })
 }
 
+/*= ======================================================
+Client Registration + Subscription
+========================================================= */
+
+async function registerPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    alert('Notifications not supported on this browser.')
+    return
+  }
+
+  // 1. Register SW
+  const sw = await navigator.serviceWorker.register('/sw.js')
+
+  // 2. Request permission
+  const permission = await Notification.requestPermission()
+  if (permission !== 'granted') {
+    alert('Notifications disabled.')
+    return
+  }
+
+  // 3. Subscribe with VAPID
+  const sub = await sw.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC),
+  })
+
+  // 4. Send to server
+  await fetch('/api/save-subscription', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sub }),
+  })
+
+  alert('Notifications enabled!')
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = window.atob(base64)
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)))
+}
+
 /* ======================================================
    MODALS
 ====================================================== */

@@ -1,4 +1,3 @@
-// /api/save-subscription.js
 import Airtable from 'airtable'
 
 const base = new Airtable({

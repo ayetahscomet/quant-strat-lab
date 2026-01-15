@@ -1,3 +1,8 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+  "crons": [
+    {
+      "path": "/api/push-window-open",
+      "schedule": "* * * * *"
+    }
+  ]
 }
