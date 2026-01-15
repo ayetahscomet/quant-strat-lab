@@ -1,6 +1,6 @@
 <template>
   <!-- LANDING SCREEN -->
-  <div v-if="currentView === 'landing'" class="landing">
+  <div class="landing">
     <div class="landing-inner">
       <!-- Logo + Title -->
       <div class="brand-row">
@@ -39,20 +39,17 @@
       </div>
     </div>
   </div>
-
-  <!-- ✅ PLAY SCREEN -->
-  <Play v-else-if="currentView === 'play'" @exit="currentView = 'landing'" />
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import Play from '../pages/Play.vue'
+import { useRouter } from 'vue-router'
 import { countries } from '../data/countries.js'
 
-const currentView = ref('landing')
+const router = useRouter()
 
 function goToGame() {
-  currentView.value = 'play'
+  router.push('/play')
 }
 
 const today = computed(() =>
@@ -77,7 +74,6 @@ function selectCountry(code) {
 }
 
 function handleLandingKey(e) {
-  if (currentView.value !== 'landing') return
   if (e.key === 'Enter') {
     e.preventDefault()
     goToGame()
