@@ -491,6 +491,7 @@ async function loadSessionState() {
 
   // Try local storage if server failed or empty
   const local = loadLocalSession()
+
   const source = server || local
   if (!source) return
 
@@ -504,20 +505,19 @@ async function loadSessionState() {
     return correctAnswers.value.some((c) => normalise(c) === v) ? 'correct' : a ? 'incorrect' : ''
   })
 
-  // SUCCESS → End of day
+  // Success?
   if (source.result === 'success') {
     hardLocked.value = true
-    clearLocalSession()
     currentView.value = 'success'
+    clearLocalSession()
     return
   }
 
-  // LOCKOUT → End of window
+  // Lockout?
   if (source.result === 'lockout' || attemptsRemaining.value <= 0) {
     hardLocked.value = true
     screenState.value = 'split-lockout'
     clearLocalSession()
-    currentView.value = 'play' // <-- critical fix
     return
   }
 }
@@ -727,16 +727,6 @@ function confirmExitEarly() {
   hardLocked.value = true
   screenState.value = 'split-lockout'
   logPlay('exit-early')
-
-  saveLocalSession({
-    dateKey: dateKey.value,
-    windowId: curWin.value.id,
-    answers: answers.value,
-    attemptsUsed: MAX_ATTEMPTS,
-    result: 'exit-early',
-    timestamp: Date.now(),
-  })
-
   currentView.value = 'failure'
 }
 
