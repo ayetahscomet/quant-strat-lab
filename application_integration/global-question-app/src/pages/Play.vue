@@ -1397,32 +1397,24 @@ body,
 
 /* Split-Lockout Page Formatting and Animations */
 
-.split-lock-enter-from {
-  opacity: 0;
-  transform: translateY(30px) scale(0.97);
-}
-
-.split-lock-enter-active {
-  transition: 0.55s cubic-bezier(0.16, 0.8, 0.32, 1);
-}
-
-.split-lock-enter-to {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.split-lock-leave-from {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.split-lock-leave-active {
-  transition: all 0.3s cubic-bezier(0.16, 0.8, 0.32, 1);
-}
-
+.split-lock-enter-from,
 .split-lock-leave-to {
   opacity: 0;
-  transform: translateY(20px) scale(0.95);
+  transform: translateY(20px);
+}
+
+.split-lock-enter-to,
+.split-lock-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.split-lock-enter-active,
+.split-lock-leave-active {
+  transition:
+    opacity 0.35s cubic-bezier(0.17, 0.85, 0.39, 1),
+    transform 0.35s cubic-bezier(0.17, 0.85, 0.39, 1);
+  will-change: opacity, transform;
 }
 
 .lockout-split {
@@ -1432,6 +1424,7 @@ body,
   height: 100vh;
   padding: 0;
   margin: 0;
+  will-change: transform, opacity;
 }
 
 .left-pane {
@@ -1979,11 +1972,13 @@ body {
 .left-pane {
   animation: slideFromLeft cubic-bezier(0.18, 0.74, 0.32, 1) both;
   animation-duration: 0.5s; /* Standard speed */
+  will-change: transform, opacity;
 }
 
 .right-pane {
   animation: slideFromRight cubic-bezier(0.18, 0.74, 0.32, 1) both;
   animation-duration: 0.6s; /* Slightly slower to create parallax */
+  will-change: transform, opacity;
 }
 
 .theme-night .left-pane {
