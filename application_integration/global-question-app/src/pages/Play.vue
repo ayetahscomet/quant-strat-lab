@@ -466,59 +466,39 @@ async function loadTodayQuestion() {
 }
 
 async function loadSessionState() {
-  let server = null
-
-  try {
-    const res = await fetch('/api/load-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId,
-        dateKey: dateKey.value,
-        windowId: curWin.value.id,
-      }),
-    })
-
-    if (res.ok) {
-      const data = await res.json()
-      if (data.attempts?.length) {
-        server = data.attempts[data.attempts.length - 1]
-      }
-    }
-  } catch (err) {
-    console.warn('Server load-session failed, falling back to local storage.')
-  }
-
-  // Try local storage if server failed or empty
-  const local = loadLocalSession()
-
-  const source = server || local
-  if (!source) return
-
-  // Restore answers
-  answers.value = source.answers || Array(answerCount.value).fill('')
-  attemptsRemaining.value = Math.max(0, MAX_ATTEMPTS - (source.attemptsUsed || 0))
-
-  // Recompute correctness
-  fieldStatus.value = answers.value.map((a) => {
-    const v = normalise(a)
-    return correctAnswers.value.some((c) => normalise(c) === v) ? 'correct' : a ? 'incorrect' : ''
+  const res = await fetch('/api/load-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      dateKey: dateKey.value,
+      windowId: curWin.value.id,
+    }),
   })
 
-  // Success?
-  if (source.result === 'success') {
+  const data = await res.json()
+  if (!data.attempts?.length) return
+
+  const attempts = data.attempts
+  const latest = attempts[attempts.length - 1]
+
+  // Restore answers
+  answers.value = latest.answers
+
+  // Restore attempts remaining
+  attemptsRemaining.value = MAX_ATTEMPTS - attempts.length
+
+  // Restore success
+  if (latest.result === 'success') {
     hardLocked.value = true
     currentView.value = 'success'
-    clearLocalSession()
     return
   }
 
-  // Lockout?
-  if (source.result === 'lockout' || attemptsRemaining.value <= 0) {
+  // Restore lockout
+  if (attemptsRemaining.value <= 0 || latest.result === 'lockout') {
     hardLocked.value = true
     screenState.value = 'split-lockout'
-    clearLocalSession()
-    return
   }
 }
 
