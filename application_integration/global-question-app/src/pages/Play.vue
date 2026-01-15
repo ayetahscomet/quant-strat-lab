@@ -139,22 +139,6 @@
             <p class="modal-text">Fill all boxes first.</p>
             <button class="modal-btn primary" @click="showFillWarning = false">OK</button>
           </div>
-          <!-- SUCCESS -->
-          <div v-if="modalMode === 'success'" class="modal">
-            <h2 class="modal-title">Nicely done!</h2>
-            <p class="modal-text">You’ve locked in all {{ answerCount }} answers correctly.</p>
-
-            <div v-if="missingAnswers.length" class="reveal-block">
-              <p class="reveal-title">You could also have answered:</p>
-              <ul class="reveal-list">
-                <li v-for="(alt, i) in missingAnswers" :key="i">
-                  {{ alt }}
-                </li>
-              </ul>
-            </div>
-
-            <button class="modal-btn primary" @click="goToSuccessSummary">Continue</button>
-          </div>
 
           <!-- ASK HINT -->
           <div v-else-if="modalMode === 'askHint'" class="modal">
@@ -201,7 +185,7 @@
       v-else-if="currentView === 'success'"
       :answers="answers"
       :correctAnswers="correctAnswers"
-      @continue="currentView = 'play'"
+      @continue="goHome"
     />
 
     <!-- ===========================
@@ -619,9 +603,9 @@ async function onLockIn() {
   })
 
   if (isPerfect) {
-    hardLocked.value = true // treat success as “done” for this window
-    modalMode.value = 'success'
+    hardLocked.value = true // we are done for today
     await logPlay('success')
+    currentView.value = 'success' // ⬅ go straight to success summary
     return
   }
 
@@ -684,13 +668,6 @@ function confirmExitEarly() {
   screenState.value = 'split-lockout'
   logPlay('exit-early')
   currentView.value = 'failure'
-}
-
-/* ======================================================
-   SUCCESS CONTINUE
-====================================================== */
-function goToSuccessSummary() {
-  currentView.value = 'success'
 }
 
 /* ======================================================
