@@ -359,8 +359,19 @@ const nextSlotShort = computed(() => {
   return `${w.start} – ${w.end}`
 })
 
-function enableNotifications() {
-  alert('Notifications are coming soon. For now, add Akinto to your bookmarks!')
+import { registerPush } from '@/push/registerPush'
+
+async function enableNotifications() {
+  try {
+    const ok = await registerPush()
+    if (ok) {
+      console.log('Push setup complete')
+    } else {
+      console.warn('Push setup cancelled or failed')
+    }
+  } catch (err) {
+    console.error('Push registration failed:', err)
+  }
 }
 
 function startCountdown() {

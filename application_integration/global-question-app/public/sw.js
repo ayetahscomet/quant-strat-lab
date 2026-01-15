@@ -1,19 +1,21 @@
-self.addEventListener('push', (event) => {
-  const data = event.data?.json() || {}
-
-  const title = data.title || 'Akinto'
-  const options = {
-    body: data.body || '',
-    icon: '/logo-800-full.png',
-    badge: '/logo-800-full.png',
-    data: data.url || '/',
+self.addEventListener('push', function (event) {
+  let data = {}
+  try {
+    data = event.data.json()
+  } catch {
+    data = { title: 'Akinto.io', body: 'Check-in is open!' }
   }
 
-  event.waitUntil(self.registration.showNotification(title, options))
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: data.icon || '/push-icon.png',
+      badge: data.badge || '/push-badge.png',
+    }),
+  )
 })
 
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', function (event) {
   event.notification.close()
-  const url = event.notification.data || '/'
-  event.waitUntil(clients.openWindow(url))
+  event.waitUntil(clients.openWindow('/'))
 })
