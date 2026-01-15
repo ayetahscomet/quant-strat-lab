@@ -9,138 +9,110 @@ export const WINDOWS = [
   { id: 'midday', label: 'Midday', start: '12:00', end: '15:00' },
   { id: 'evening', label: 'Evening', start: '15:00', end: '20:00' },
   { id: 'late', label: 'Late Evening', start: '20:00', end: '21:00' },
-  { id: 'last', label: 'Last Chance', start: '21:00', end: '00:00' }, // midnight rollover
+  { id: 'last', label: 'Last Chance', start: '21:00', end: '24:00' }, // ends at midnight
 ]
 
 // =====================================================
-// TIMEZONE HANDLING (FALLBACK SAFE)
+// TIMEZONE HANDLING
 // =====================================================
 
 export function getTimezone() {
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     return tz || 'Europe/London'
-  } catch (err) {
+  } catch {
     return 'Europe/London'
   }
 }
 
-// =====================================================
-// MINUTE CALCULATION — TZ SAFE
-// =====================================================
-
+// minutes since midnight in given timezone
 export function getMinutesNow(tz = getTimezone()) {
-  // we force the date to the correct timezone
-  const now = new Date().toLocaleString('en-GB', { timeZone: tz })
-  const d = new Date(now)
+  const nowStr = new Date().toLocaleString('en-GB', { timeZone: tz })
+  const d = new Date(nowStr)
   return d.getHours() * 60 + d.getMinutes()
 }
 
+// helper: "HH:MM" -> minutes
+function timeToMinutes(t) {
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
+}
+
 // =====================================================
-// CURRENT WINDOW DETECTION
+// CURRENT + NEXT WINDOWS
 // =====================================================
 
 export function getCurrentWindow(tz = getTimezone()) {
   const mins = getMinutesNow(tz)
 
   for (const w of WINDOWS) {
-    const [sh, sm] = w.start.split(':').map(Number)
-    const [eh, em] = w.end.split(':').map(Number)
-    const start = sh * 60 + sm
-    const end = eh * 60 + em
-
-    // midnight rollover case (21:00 → 00:00)
-    if (w.end === '00:00') {
-      if (mins >= start) return w // 21:00 → midnight
-      continue
-    }
-
-    // normal case
+    const start = timeToMinutes(w.start)
+    const end = timeToMinutes(w.end)
     if (mins >= start && mins < end) return w
   }
 
-  // fallback: before first window → belongs to W0
-  return WINDOWS[0]
+  // after 24:00 shouldn't happen, but fallback to last
+  return WINDOWS[WINDOWS.length - 1]
 }
-
-// =====================================================
-// NEXT WINDOW DETECTION
-// =====================================================
 
 export function getNextWindow(tz = getTimezone()) {
   const mins = getMinutesNow(tz)
 
+  // next window is the first whose *start* is after now
   for (const w of WINDOWS) {
-    const [eh, em] = w.end.split(':').map(Number)
-    const end = eh * 60 + em
-
-    if (w.end === '00:00') {
-      return WINDOWS[0] // last → nightowl next day
-    }
-
-    if (mins < end) return w
+    const start = timeToMinutes(w.start)
+    if (start > mins) return w
   }
 
-  // beyond last window for today → start at next-day nightowl
+  // if we've passed all starts today, next is tomorrow's first window
   return WINDOWS[0]
 }
 
 // =====================================================
-// COUNTDOWN FUNCTION (NO NaN)
+// COUNTDOWN UNTIL NEXT WINDOW START (NO NaN, NO "SOON")
 // =====================================================
 
 export function getTimeRemainingToNextWindow(tz = getTimezone()) {
   const curr = getCurrentWindow(tz)
   const next = getNextWindow(tz)
 
-  const target = curr.id === next.id ? curr.end : next.start
-  const [th, tm] = target.split(':').map(Number)
+  const minsNow = getMinutesNow(tz)
+  const targetStart = timeToMinutes(next.start)
 
-  const local = new Date(new Date().toLocaleString('en-GB', { timeZone: tz }))
+  let diffMinutes = targetStart - minsNow
+  if (diffMinutes <= 0) diffMinutes += 24 * 60 // into tomorrow
 
-  let targetDate = new Date(local)
-  targetDate.setHours(th, tm, 0, 0)
-
-  // If target already passed today → move to tomorrow
-  if (targetDate <= local) {
-    targetDate.setDate(targetDate.getDate() + 1)
-  }
-
-  let diff = targetDate - local
-
-  // Fallback guard: if diff is invalid (NaN or <= 0)
-  // compute next valid window tomorrow
-  if (!diff || isNaN(diff) || diff <= 0) {
-    const nextTomorrow = new Date(local)
-    nextTomorrow.setDate(local.getDate() + 1)
-    nextTomorrow.setHours(th, tm, 0, 0)
-    diff = nextTomorrow - local
-  }
-
-  const hrs = Math.floor(diff / 3600000)
-  const mins = Math.floor((diff % 3600000) / 60000)
-  const secs = Math.floor((diff % 60000) / 1000)
+  const totalSeconds = diffMinutes * 60
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
 
   return {
-    hours: hrs,
-    minutes: mins,
-    seconds: secs,
-    formatted: `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`,
+    total: totalSeconds,
+    hours,
+    minutes,
+    seconds,
+    formatted: [
+      String(hours).padStart(2, '0'),
+      String(minutes).padStart(2, '0'),
+      String(seconds).padStart(2, '0'),
+    ].join(':'),
     currentWindow: curr.id,
     nextWindow: next.id,
   }
 }
 
 // =====================================================
-// END OF CURRENT WINDOW UTILITY
+// TIME UNTIL END OF CURRENT WINDOW (IF YOU NEED IT)
 // =====================================================
 
 export function getTimeRemainingToEndOfCurrent(tz = getTimezone()) {
   const curr = getCurrentWindow(tz)
   const mins = getMinutesNow(tz)
-  const [eh, em] = curr.end.split(':').map(Number)
-  const end = eh * 60 + em
-  const diff = end - mins
+  const end = timeToMinutes(curr.end)
+
+  let diff = end - mins
+  if (diff < 0) diff += 24 * 60
 
   return {
     window: curr.id,
@@ -151,7 +123,7 @@ export function getTimeRemainingToEndOfCurrent(tz = getTimezone()) {
 }
 
 // =====================================================
-// DATE KEY (FOR STORAGE)
+// DATE KEY FOR STORAGE
 // =====================================================
 
 export function todayKey(tz = getTimezone()) {
