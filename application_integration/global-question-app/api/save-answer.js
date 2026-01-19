@@ -1,9 +1,6 @@
 // api/save-answer.js
-import Airtable from 'airtable'
 
-const base = new Airtable({
-  apiKey: process.env.AIRTABLE_TOKEN,
-}).base(process.env.AIRTABLE_BASE_ID)
+import { base } from '../lib/airtable.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -22,9 +19,9 @@ export default async function handler(req, res) {
       },
     ])
 
-    res.status(200).json({ success: true })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to save answer' })
+    return res.status(200).json({ success: true })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'Failed to save answer' })
   }
 }

@@ -1,10 +1,11 @@
+// api/sendWindowPush.js
 import Airtable from 'airtable'
 import webpush from 'web-push'
 import { sendPush } from '../../scripts/send-push.js' // adjust path for vercel
 
 // Airtable
 const base = new Airtable({
-  apiKey: process.env.AIRTABLE_TOKEN,
+  apiKey: process.env.AIRTABLE_API_KEY,
 }).base(process.env.AIRTABLE_BASE_ID)
 
 // VAPID

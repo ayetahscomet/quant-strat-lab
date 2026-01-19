@@ -1,23 +1,25 @@
-import Airtable from 'airtable'
-
-const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
-  process.env.AIRTABLE_BASE_ID,
-)
-
 // api/save-push-sub.js
+
+import { base } from '../lib/airtable.js'
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { sub, timezone } = req.body
+  try {
+    const { sub, timezone } = req.body
 
-  await base('PushSubscriptions').create([
-    {
-      fields: {
-        SubscriptionJSON: JSON.stringify(sub),
-        Timezone: timezone || 'UTC',
+    await base('PushSubscriptions').create([
+      {
+        fields: {
+          SubscriptionJSON: JSON.stringify(sub),
+          Timezone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
       },
-    },
-  ])
+    ])
 
-  res.status(200).json({ ok: true })
+    return res.status(200).json({ ok: true })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'Failed to save push sub' })
+  }
 }

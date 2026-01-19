@@ -1,3 +1,5 @@
+// api/webpush-key.js
+
 export default function handler(req, res) {
   return res.status(200).json({
     publicKey: process.env.VAPID_PUBLIC_KEY,

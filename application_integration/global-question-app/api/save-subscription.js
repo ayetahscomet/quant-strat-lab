@@ -1,8 +1,6 @@
-import Airtable from 'airtable'
+// api/save-subscription.js
 
-const base = new Airtable({
-  apiKey: process.env.AIRTABLE_TOKEN,
-}).base(process.env.AIRTABLE_BASE_ID)
+import { base } from '../lib/airtable.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -14,13 +12,14 @@ export default async function handler(req, res) {
       {
         fields: {
           SubscriptionJSON: JSON.stringify(sub),
+          Timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         },
       },
     ])
 
-    res.status(200).json({ ok: true })
+    return res.status(200).json({ ok: true })
   } catch (err) {
     console.error(err)
-    res.status(500).json({ error: 'Failed to save subscription' })
+    return res.status(500).json({ error: 'Failed to save subscription' })
   }
 }

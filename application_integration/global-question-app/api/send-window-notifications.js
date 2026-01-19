@@ -1,16 +1,12 @@
 // /api/send-window-notifications.js
 import webpush from 'web-push'
-import Airtable from 'airtable'
+import { base } from '../lib/airtable.js'
 
 webpush.setVapidDetails(
-  'mailto:you@akinto.io',
+  'mailto:support@akinto.io',
   process.env.VAPID_PUBLIC_KEY,
   process.env.VAPID_PRIVATE_KEY,
 )
-
-const base = new Airtable({
-  apiKey: process.env.AIRTABLE_TOKEN,
-}).base(process.env.AIRTABLE_BASE_ID)
 
 export default async function handler(req, res) {
   try {
@@ -18,19 +14,20 @@ export default async function handler(req, res) {
 
     const payload = JSON.stringify({
       title: 'Akinto',
-      body: 'Your next window has opened – you have fresh attempts.',
+      body: 'Your next window has opened!',
+      icon: '/push-icon.png',
     })
 
     await Promise.all(
       subs.map((record) => {
-        const sub = JSON.parse(record.get('SubscriptionJSON'))
+        const sub = JSON.parse(record.fields.SubscriptionJSON)
         return webpush.sendNotification(sub, payload).catch(() => null)
       }),
     )
 
-    res.status(200).json({ ok: true })
+    return res.status(200).json({ ok: true })
   } catch (err) {
     console.error(err)
-    res.status(500).json({ error: 'Notification send failed' })
+    return res.status(500).json({ error: 'Notification send failed' })
   }
 }
