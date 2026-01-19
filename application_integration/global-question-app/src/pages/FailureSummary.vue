@@ -39,9 +39,31 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const summary = ref({})
 
+function todayKey() {
+  return new Date().toLocaleDateString('en-CA', {
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  })
+}
+
 onMounted(() => {
-  const keys = Object.keys(localStorage).filter((k) => k.endsWith('_summary'))
-  if (keys.length) summary.value = JSON.parse(localStorage.getItem(keys[0]))
+  const key = `${todayKey()}_summary`
+
+  // 1) Load today's summary if it exists
+  const today = localStorage.getItem(key)
+  if (today) {
+    summary.value = JSON.parse(today)
+    return
+  }
+
+  // 2) Otherwise fallback to the latest available summary
+  const all = Object.keys(localStorage)
+    .filter((k) => k.endsWith('_summary'))
+    .sort()
+
+  if (all.length) {
+    const latest = all[all.length - 1]
+    summary.value = JSON.parse(localStorage.getItem(latest))
+  }
 })
 
 function goAnalytics() {
