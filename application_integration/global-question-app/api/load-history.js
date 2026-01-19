@@ -14,10 +14,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userId, dateKey } = req.body
+    // Safely read req.body
+    const { userId, dateKey } = req.body || {}
 
     if (!userId || !dateKey) {
-      return res.status(400).json({ error: 'Missing required fields' })
+      return res.status(400).json({ error: 'Missing required fields: userId, dateKey' })
     }
 
     const records = await base('UserAnswers')
@@ -29,7 +30,7 @@ export default async function handler(req, res) {
       })
       .all()
 
-    const seen = new Map() // normalised -> original string (first seen)
+    const seen = new Map()
 
     for (const r of records) {
       let correct = []
@@ -41,14 +42,12 @@ export default async function handler(req, res) {
 
       for (const raw of correct || []) {
         const n = normalise(raw)
-        if (n && !seen.has(n)) {
-          seen.set(n, raw)
-        }
+        if (n && !seen.has(n)) seen.set(n, raw)
       }
     }
 
     return res.status(200).json({
-      correctGiven: Array.from(seen.values()), // de-duped, original casing
+      correctGiven: Array.from(seen.values()),
     })
   } catch (err) {
     console.error('load-history error:', err)
