@@ -12,7 +12,7 @@ export default async function handler(req, res) {
       {
         fields: {
           SubscriptionJSON: JSON.stringify(sub),
-          Timezone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+          Timezone: timezone || 'UTC',
         },
       },
     ])
