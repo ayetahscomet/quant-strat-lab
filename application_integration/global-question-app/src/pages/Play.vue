@@ -317,13 +317,55 @@ function clearLocalSession() {
 const countdown = ref('00:00:00')
 let countdownTimer = null
 
+function formatHHMMSS(totalSeconds) {
+  const s = Math.max(0, Math.floor(totalSeconds))
+  const h = String(Math.floor(s / 3600)).padStart(2, '0')
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0')
+  const sec = String(s % 60).padStart(2, '0')
+  return `${h}:${m}:${sec}`
+}
+
 function updateCountdown() {
-  const t = getTimeRemainingToNextWindow(tz.value)
+  const now = new Date()
 
-  countdown.value = t.formatted
+  const next = getNextWindow(tz.value)
+  if (!next) {
+    countdown.value = '00:00:00'
+    return
+  }
 
-  // refresh hour + allow theme to change live
-  hour.value = new Date().getHours()
+  // build next-window start in London time
+  const [hh, mm] = next.start.split(':').map(Number)
+
+  const londonNow = new Date(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz.value,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    })
+      .format(now)
+      .replace(',', ''),
+  )
+
+  const target = new Date(londonNow)
+  target.setHours(hh, mm, 0, 0)
+
+  // if that window is tomorrow
+  if (target <= londonNow) {
+    target.setDate(target.getDate() + 1)
+  }
+
+  const diffSeconds = (target.getTime() - londonNow.getTime()) / 1000
+
+  countdown.value = formatHHMMSS(diffSeconds)
+
+  // keep theme live
+  hour.value = londonNow.getHours()
 }
 
 function startCountdown() {
@@ -332,6 +374,10 @@ function startCountdown() {
   updateCountdown()
   countdownTimer = setInterval(updateCountdown, 1000)
 }
+
+onMounted(() => {
+  startCountdown()
+})
 
 onUnmounted(() => {
   if (countdownTimer) clearInterval(countdownTimer)
