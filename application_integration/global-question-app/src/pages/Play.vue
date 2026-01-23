@@ -138,7 +138,10 @@
 ======================================================= -->
 
       <transition name="modal-fade">
-        <div v-if="modalMode || showExitConfirm || showFillWarning" class="overlay modal-lower">
+        <div
+          v-if="modalMode || showExitConfirm || showFillWarning"
+          :class="['overlay', { 'modal-lower': modalMode && modalMode !== 'exit' }]"
+        >
           <!-- FILL WARNING -->
           <div v-if="showFillWarning" class="modal">
             <h2 class="modal-title">Almost there!</h2>
