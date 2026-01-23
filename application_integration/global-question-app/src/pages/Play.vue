@@ -240,13 +240,10 @@ const userCountry = localStorage.getItem('akinto_country') || 'XX' // XX = Unkno
 const tz = ref(getTimezone())
 const currentWindow = ref(getCurrentWindow(tz.value))
 const t0 = getTimeRemainingToNextWindow(tz.value)
-const countdown = ref(t0.formatted)
 
 const dateKey = ref(todayKey(tz.value))
 const curWin = computed(() => getCurrentWindow(tz.value))
 const currentHistory = ref(null)
-
-let countdownTimer = null
 
 onUnmounted(() => {
   clearInterval(countdownTimer)
@@ -321,6 +318,33 @@ function clearLocalSession() {
   localStorage.removeItem(key)
 }
 
+const countdown = ref('00:00:00')
+let countdownTimer = null
+
+function updateCountdown() {
+  const t = getTimeRemainingToNextWindow(tz.value)
+
+  countdown.value = t.formatted
+
+  // refresh theme + window boundaries live
+  hour.value = new Date().getHours()
+}
+
+function startCountdown() {
+  if (countdownTimer) clearInterval(countdownTimer)
+
+  updateCountdown()
+  countdownTimer = setInterval(updateCountdown, 1000)
+}
+
+onMounted(() => {
+  startCountdown()
+})
+
+onUnmounted(() => {
+  if (countdownTimer) clearInterval(countdownTimer)
+})
+
 /* ======================================================
    TIME WINDOW / STAGE LABEL
 ====================================================== */
@@ -362,26 +386,15 @@ async function enableNotifications() {
   }
 }
 
-function startCountdown() {
-  if (countdownTimer) clearInterval(countdownTimer)
-
-  countdownTimer = setInterval(() => {
-    const t = getTimeRemainingToNextWindow(tz.value)
-    countdown.value = t.formatted
-
-    // Always keep current window fresh for UI + lockout labels.
-    currentWindow.value = getCurrentWindow(tz.value)
-  }, 1000)
-}
-
 /* ======================================================
    BACKGROUND THEME
 ====================================================== */
-const hour = new Date().getHours()
+const hour = ref(new Date().getHours())
+
 const timeClass = computed(() => {
-  if (hour < 11) return 'theme-morning'
-  if (hour < 15) return 'theme-day'
-  if (hour < 20) return 'theme-evening'
+  if (hour.value < 11) return 'theme-morning'
+  if (hour.value < 15) return 'theme-day'
+  if (hour.value < 20) return 'theme-evening'
   return 'theme-night'
 })
 
@@ -397,10 +410,6 @@ onMounted(async () => {
   ])
   applyHydratedState() // merge both into answers + fieldStatus
   startCountdown()
-})
-
-onUnmounted(() => {
-  if (countdownTimer) clearInterval(countdownTimer)
 })
 
 async function loadTodayQuestion() {
