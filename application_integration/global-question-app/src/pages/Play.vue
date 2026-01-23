@@ -1389,11 +1389,11 @@ body,
 
 .lockout-return .right-pane {
   width: 100%;
-  max-width: 100%;
+  min-width: 100%;
 }
 
 .lockout-split.lockout-return {
-  grid-template-columns: 10% 90%;
+  grid-template-columns: 1% 99%;
 }
 
 .attempt-title {
