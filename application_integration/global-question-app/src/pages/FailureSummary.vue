@@ -35,7 +35,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { goHome } from './Play.vue'
+import { goHome } from 'vue'
 
 const router = useRouter()
 
