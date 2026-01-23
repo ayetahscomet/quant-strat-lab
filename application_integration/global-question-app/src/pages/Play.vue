@@ -71,7 +71,13 @@
               <p class="midday-time">{{ nextSlotShort }}</p>
               <p class="midday-countdown">Come back in {{ countdown }}</p>
 
-              <button class="notif-btn" @click="enableNotifications">Enable Notifications</button>
+              <button
+                class="notif-btn"
+                :disabled="notificationsEnabled"
+                @click="enableNotifications"
+              >
+                Enable Notifications
+              </button>
 
               <button class="exit-btn" @click="showExitConfirm = true">
                 <i>I’ve Had Enough for Today</i>
@@ -141,7 +147,7 @@
           </div>
 
           <!-- ASK HINT -->
-          <div v-else-if="modalMode === 'askHint'" class="modal">
+          <div v-else-if="modalMode === 'askHint' && !hintUsedThisWindow" class="modal">
             <h2 class="modal-title">Not quite.</h2>
             <p class="modal-text modal-spaced">Some answers aren’t quite there. Want a hint?</p>
 
@@ -260,6 +266,7 @@ const router = useRouter()
 const hintUsedThisWindow = ref(false)
 const triedIncorrectToday = ref(new Set())
 const lockoutMode = ref(null)
+const notificationsEnabled = ref(false)
 
 /* ======================================================
    INPUT REFERENCES (arrow navigation)
@@ -424,15 +431,18 @@ const nextSlotShort = computed(() => {
 })
 
 async function enableNotifications() {
+  if (notificationsEnabled.value) return
+
   try {
     const ok = await registerPush()
+
     if (ok) {
-      console.log('Push setup complete')
+      notificationsEnabled.value = true
     } else {
-      console.warn('Push setup cancelled or failed')
+      alert('Notifications coming soon — we’re still rolling this out.')
     }
-  } catch (err) {
-    console.error('Push registration failed:', err)
+  } catch {
+    alert('Notifications coming soon — we’re still rolling this out.')
   }
 }
 
@@ -613,15 +623,13 @@ function applyHydratedState() {
 
 function recomputeFieldStatusFromAnswers() {
   fieldStatus.value = answers.value.map((a) => {
-    if (!a) return { locked: false, correct: false }
+    if (!a) return ''
 
-    const canonical = a.trim().toLowerCase()
-    const isCorrect = correctAnswers.value.some((c) => c.trim().toLowerCase() === canonical)
+    const canonical = normalise(a)
 
-    return {
-      locked: isCorrect,
-      correct: isCorrect,
-    }
+    const isCorrect = correctAnswers.value.some((c) => normalise(c) === canonical)
+
+    return isCorrect ? 'correct' : ''
   })
 }
 
@@ -647,12 +655,12 @@ async function onLockIn() {
     return
   }
 
-  /* -----------------------------
-     SCORE ANSWERS (NORMALISED)
-  ----------------------------- */
-
   const canon = correctAnswers.value.map(normalise)
   const used = new Set()
+
+  // reset classes to retrigger shake
+  fieldStatus.value = answers.value.map(() => '')
+  await nextTick()
 
   fieldStatus.value = answers.value.map((a) => {
     const v = normalise(a)
@@ -663,10 +671,7 @@ async function onLockIn() {
 
   const isPerfect = fieldStatus.value.every((s) => s === 'correct')
 
-  /* --------------------------------------------------
-     UPDATE TRIED-INCORRECT SET (CROSS-WINDOW MEMORY)
-  -------------------------------------------------- */
-
+  // record incorrect globally
   fieldStatus.value.forEach((status, i) => {
     if (status === 'incorrect') {
       triedIncorrectToday.value.add(normalise(answers.value[i]))
@@ -674,10 +679,6 @@ async function onLockIn() {
   })
 
   const attemptIndex = MAX_ATTEMPTS - attemptsRemaining.value + 1
-
-  /* -----------------------------
-     PERSIST ATTEMPT → AIRTABLE
-  ----------------------------- */
 
   await fetch('/api/log-attempt', {
     method: 'POST',
@@ -694,40 +695,34 @@ async function onLockIn() {
     }),
   })
 
-  /* -----------------------------
-     PERFECT SCORE = DAY FINISH
-  ----------------------------- */
-
+  // ---------- PERFECT = END DAY ----------
   if (isPerfect) {
     hardLocked.value = true
-
-    // final marker for day
     await logPlay('success')
-
     currentView.value = 'success'
     return
   }
 
-  /* -----------------------------
-     CONSUME ATTEMPT
-  ----------------------------- */
+  // ---------- HINT PROMPT ----------
+  if (!hintUsedThisWindow.value && attemptsRemaining.value > 1) {
+    modalMode.value = 'askHint'
+  }
 
-  attemptsRemaining.value--
+  // ---------- CONSUME ATTEMPT ----------
+  const remaining = attemptsRemaining.value - 1
+  attemptsRemaining.value = remaining
 
-  if (attemptsRemaining.value === 1) {
+  if (remaining === 1) {
     isReplaySequence.value = true
   }
 
-  /* -----------------------------
-     WINDOW LOCKOUT
-  ----------------------------- */
-
-  if (attemptsRemaining.value <= 0) {
+  // ---------- WINDOW LOCKOUT ----------
+  if (remaining <= 0) {
     hardLocked.value = true
     modalMode.value = null
-    screenState.value = 'split-lockout'
 
     lockoutMode.value = 'replay'
+    screenState.value = 'split-lockout'
 
     await logPlay('lockout')
   }
@@ -1375,6 +1370,11 @@ body,
 .lockout-return .right-pane {
   width: 100%;
   max-width: 100%;
+}
+
+.lockout-return .left-pane,
+.lockout-return .right-pane {
+  animation: none !important;
 }
 
 .attempt-title {
