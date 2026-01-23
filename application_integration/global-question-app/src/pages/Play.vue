@@ -45,7 +45,7 @@
       ======================================================= -->
       <template v-if="screenState === 'split-lockout'">
         <transition name="split-lock" mode="out-in">
-          <div class="lockout-split ready">
+          <div class="lockout-split ready" :class="{ 'lockout-return': lockoutMode === 'return' }">
             <!-- ============ LEFT PANE: LATEST ATTEMPT ============ -->
             <div class="left-pane">
               <h2 class="attempt-title">Latest Attempt</h2>
@@ -259,6 +259,7 @@ const router = useRouter()
 
 const hintUsedThisWindow = ref(false)
 const triedIncorrectToday = ref(new Set())
+const lockoutMode = ref(null)
 
 /* ======================================================
    INPUT REFERENCES (arrow navigation)
@@ -557,9 +558,12 @@ async function loadSessionState() {
   if (attemptsRemaining.value <= 0) {
     hardLocked.value = true
     screenState.value = 'split-lockout'
+
+    lockoutMode.value = 'return'
   } else {
     hardLocked.value = false
     screenState.value = 'normal'
+    lockoutMode.value = null
   }
 
   recomputeFieldStatusFromAnswers()
@@ -722,6 +726,8 @@ async function onLockIn() {
     hardLocked.value = true
     modalMode.value = null
     screenState.value = 'split-lockout'
+
+    lockoutMode.value = 'replay'
 
     await logPlay('lockout')
   }
@@ -1356,6 +1362,19 @@ body,
 .lockout-card .countdown {
   font-size: 18px;
   margin-top: 2px;
+}
+
+.lockout-return {
+  grid-template-columns: 100% !important;
+}
+
+.lockout-return .left-pane {
+  display: none !important;
+}
+
+.lockout-return .right-pane {
+  width: 100%;
+  max-width: 100%;
 }
 
 .attempt-title {
