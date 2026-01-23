@@ -1371,6 +1371,12 @@ body,
     opacity 0.4s ease;
 }
 
+.lockout-return .left-pane {
+  opacity: 0;
+  transform: translateX(-40px);
+  pointer-events: none;
+}
+
 .attempt-title {
   font-size: 25px;
   font-weight: 700;
