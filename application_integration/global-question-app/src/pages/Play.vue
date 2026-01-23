@@ -325,8 +325,32 @@ function formatHHMMSS(totalSeconds) {
   return `${h}:${m}:${sec}`
 }
 
+function getLondonNow() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: tz.value,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date())
+
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]))
+
+  return {
+    year: Number(map.year),
+    month: Number(map.month),
+    day: Number(map.day),
+    hour: Number(map.hour),
+    minute: Number(map.minute),
+    second: Number(map.second),
+  }
+}
+
 function updateCountdown() {
-  const now = new Date()
+  const now = getLondonNow()
 
   const next = getNextWindow(tz.value)
   if (!next) {
@@ -334,38 +358,22 @@ function updateCountdown() {
     return
   }
 
-  // build next-window start in London time
   const [hh, mm] = next.start.split(':').map(Number)
 
-  const londonNow = new Date(
-    new Intl.DateTimeFormat('en-GB', {
-      timeZone: tz.value,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    })
-      .format(now)
-      .replace(',', ''),
-  )
+  const nowDate = new Date(now.year, now.month - 1, now.day, now.hour, now.minute, now.second, 0)
 
-  const target = new Date(londonNow)
-  target.setHours(hh, mm, 0, 0)
+  let target = new Date(now.year, now.month - 1, now.day, hh, mm, 0, 0)
 
-  // if that window is tomorrow
-  if (target <= londonNow) {
+  if (target <= nowDate) {
     target.setDate(target.getDate() + 1)
   }
 
-  const diffSeconds = (target.getTime() - londonNow.getTime()) / 1000
+  const diffSeconds = (target.getTime() - nowDate.getTime()) / 1000
 
   countdown.value = formatHHMMSS(diffSeconds)
 
   // keep theme live
-  hour.value = londonNow.getHours()
+  hour.value = now.hour
 }
 
 function startCountdown() {
