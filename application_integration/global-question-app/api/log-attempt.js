@@ -14,9 +14,18 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
-    // Calculate incorrect for analytics
-    const correctSet = new Set(correctAnswers || [])
-    const incorrect = answers.filter((a) => !correctSet.has(a))
+    function normalise(s) {
+      return String(s || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+    }
+
+    // Calculate incorrect for analytics (normalised, de-duped)
+    const canon = new Set((correctAnswers || []).map(normalise))
+    const incorrect = Array.from(
+      new Set((answers || []).map(normalise).filter((a) => a && !canon.has(a))),
+    )
 
     await base('UserAnswers').create([
       {

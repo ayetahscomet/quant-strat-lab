@@ -257,6 +257,9 @@ const modalMode = ref(null) // null | 'askHint' | 'hint' | 'success'
 const showExitConfirm = ref(false)
 const router = useRouter()
 
+const hintUsedThisWindow = ref(false)
+const triedIncorrectToday = ref(new Set())
+
 /* ======================================================
    INPUT REFERENCES (arrow navigation)
 ====================================================== */
@@ -450,10 +453,8 @@ const timeClass = computed(() => {
 
 onMounted(async () => {
   await loadTodayQuestion() // pulls question + correctAnswers
-  await Promise.all([
-    loadSessionState(), // per-window attempts
-    LoadHistory(), // cross-window correct answers
-  ])
+  await loadSessionState()
+
   applyHydratedState() // merge both into answers + fieldStatus
 })
 
@@ -527,48 +528,41 @@ async function loadSessionState() {
     }),
   })
 
+  if (!res.ok) return
+
   const data = await res.json()
-  if (!data.attempts?.length) return
 
-  const attempts = data.attempts
-  const latest = attempts[attempts.length - 1]
-
-  // Restore answers
-  answers.value = latest.answers
-
-  // Restore attempts remaining
-  attemptsRemaining.value = MAX_ATTEMPTS - attempts.length
-
-  // Restore success
-  if (latest.result === 'success') {
+  // day ended (success/exit-early)
+  if (data.dayEnded) {
     hardLocked.value = true
-    currentView.value = 'success'
+    currentView.value = data.dayEndResult === 'success' ? 'success' : 'failure'
     return
   }
 
-  // Restore lockout
-  if (attemptsRemaining.value <= 0 || latest.result === 'lockout') {
+  // tried incorrect across day
+  triedIncorrectToday.value = new Set((data.triedIncorrect || []).map(normalise))
+
+  // hint used in this window
+  hintUsedThisWindow.value = !!data.hintUsed
+
+  // restore latest answers (this window)
+  if (Array.isArray(data.latestAnswers) && data.latestAnswers.length) {
+    answers.value = data.latestAnswers
+  }
+
+  const attempts = Array.isArray(data.attempts) ? data.attempts : []
+  attemptsRemaining.value = MAX_ATTEMPTS - attempts.length
+
+  // lockout for this window
+  if (attemptsRemaining.value <= 0) {
     hardLocked.value = true
     screenState.value = 'split-lockout'
+  } else {
+    hardLocked.value = false
+    screenState.value = 'normal'
   }
-}
 
-async function LoadHistory() {
-  const res = await fetch('/api/load-history', { method: 'POST' })
-  if (!res.ok) return
-  const data = await res.json()
-
-  currentHistory.value = data // <-- store it
-
-  if (data.answers?.length) {
-    answers.value = [...data.answers]
-    attemptsRemaining.value = data.remainingAttempts
-    modalMode.value = data.modal
-    hardLocked.value = data.hardLocked
-    currentWindow.value = data.windowId
-
-    recomputeFieldStatusFromAnswers()
-  }
+  recomputeFieldStatusFromAnswers()
 }
 
 function applyHydratedState() {
@@ -649,6 +643,10 @@ async function onLockIn() {
     return
   }
 
+  /* -----------------------------
+     SCORE ANSWERS (NORMALISED)
+  ----------------------------- */
+
   const canon = correctAnswers.value.map(normalise)
   const used = new Set()
 
@@ -661,6 +659,22 @@ async function onLockIn() {
 
   const isPerfect = fieldStatus.value.every((s) => s === 'correct')
 
+  /* --------------------------------------------------
+     UPDATE TRIED-INCORRECT SET (CROSS-WINDOW MEMORY)
+  -------------------------------------------------- */
+
+  fieldStatus.value.forEach((status, i) => {
+    if (status === 'incorrect') {
+      triedIncorrectToday.value.add(normalise(answers.value[i]))
+    }
+  })
+
+  const attemptIndex = MAX_ATTEMPTS - attemptsRemaining.value + 1
+
+  /* -----------------------------
+     PERSIST ATTEMPT → AIRTABLE
+  ----------------------------- */
+
   await fetch('/api/log-attempt', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -669,34 +683,30 @@ async function onLockIn() {
       country: userCountry,
       dateKey: dateKey.value,
       windowId: curWin.value.id,
-      attemptIndex: MAX_ATTEMPTS - attemptsRemaining.value + 1,
+      attemptIndex,
       answers: answers.value,
       correctAnswers: correctAnswers.value,
       result: isPerfect ? 'success' : 'fail',
     }),
   })
 
-  // Save snapshot locally (write-through cache)
-  saveLocalSession({
-    dateKey: dateKey.value,
-    windowId: curWin.value.id,
-    answers: answers.value,
-    attemptIndex: MAX_ATTEMPTS - attemptsRemaining.value + 1,
-    attemptsUsed: MAX_ATTEMPTS - attemptsRemaining.value,
-    result: isPerfect ? 'success' : 'fail',
-    timestamp: Date.now(),
-  })
+  /* -----------------------------
+     PERFECT SCORE = DAY FINISH
+  ----------------------------- */
 
   if (isPerfect) {
     hardLocked.value = true
-    await logPlay('success')
 
-    // Clear local session — day finished
-    clearLocalSession()
+    // final marker for day
+    await logPlay('success')
 
     currentView.value = 'success'
     return
   }
+
+  /* -----------------------------
+     CONSUME ATTEMPT
+  ----------------------------- */
 
   attemptsRemaining.value--
 
@@ -704,15 +714,16 @@ async function onLockIn() {
     isReplaySequence.value = true
   }
 
+  /* -----------------------------
+     WINDOW LOCKOUT
+  ----------------------------- */
+
   if (attemptsRemaining.value <= 0) {
     hardLocked.value = true
     modalMode.value = null
     screenState.value = 'split-lockout'
 
     await logPlay('lockout')
-
-    // Clear local state — no returning this window
-    clearLocalSession()
   }
 }
 
@@ -754,8 +765,23 @@ function closeModal() {
   modalMode.value = null
 }
 
-function showHint() {
+async function showHint() {
   modalMode.value = 'hint'
+
+  if (hintUsedThisWindow.value) return
+  hintUsedThisWindow.value = true
+
+  // persist hint usage for re-entry
+  await fetch('/api/log-hint', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      country: userCountry,
+      dateKey: dateKey.value,
+      windowId: curWin.value.id,
+    }),
+  }).catch(() => null)
 }
 
 function closeHint() {
