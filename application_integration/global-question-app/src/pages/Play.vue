@@ -62,7 +62,7 @@
 
             <!-- ============ RIGHT PANE: LOCKOUT CARD ============ -->
             <div class="right-pane lockout-card">
-              <img src="/logo-800-full.svg" class="lockout-logo" />
+              <img src="/logo-800-full.svg" class="lockout-logo" @click="goHome" />
 
               <h2 class="lockout-headline-strong">{{ lockoutHeadlineStrong }}</h2>
               <h2 class="lockout-headline-sub">{{ lockoutHeadlineSub }}</h2>

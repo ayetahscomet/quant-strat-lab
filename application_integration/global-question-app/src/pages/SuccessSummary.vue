@@ -3,7 +3,7 @@
     <!-- ===================== HERO STRIP ===================== -->
     <header class="hero">
       <div class="hero-logo">
-        <img src="/logo-800-full.svg" alt="Akinto logo" />
+        <img src="/logo-800-full.svg" alt="Akinto logo" @click="goHome" />
       </div>
 
       <div class="hero-copy">

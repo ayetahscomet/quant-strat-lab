@@ -1,6 +1,6 @@
 <template>
   <div class="failure-wrapper">
-    <img src="/logo-800-full.svg" class="fail-logo" />
+    <img src="/logo-800-full.svg" class="fail-logo" @click="goHome" />
 
     <h1 class="fail-title">Today wasn’t your day — and that’s completely okay.</h1>
     <h2 class="fail-sub">See what you missed and come back stronger tomorrow.</h2>
@@ -145,6 +145,7 @@ function goAnalytics() {
 .fail-logo {
   width: 110px;
   margin-bottom: 20px;
+  outline: 1.5px solid #000;
 }
 .fail-title {
   font-size: 28px;
