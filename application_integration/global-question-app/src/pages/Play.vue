@@ -245,10 +245,6 @@ const dateKey = ref(todayKey(tz.value))
 const curWin = computed(() => getCurrentWindow(tz.value))
 const currentHistory = ref(null)
 
-onUnmounted(() => {
-  clearInterval(countdownTimer)
-})
-
 /* ======================================================
    UI + FX FLAGS (these were missing / duplicated)
 ====================================================== */
@@ -326,7 +322,7 @@ function updateCountdown() {
 
   countdown.value = t.formatted
 
-  // refresh theme + window boundaries live
+  // refresh hour + allow theme to change live
   hour.value = new Date().getHours()
 }
 
@@ -336,10 +332,6 @@ function startCountdown() {
   updateCountdown()
   countdownTimer = setInterval(updateCountdown, 1000)
 }
-
-onMounted(() => {
-  startCountdown()
-})
 
 onUnmounted(() => {
   if (countdownTimer) clearInterval(countdownTimer)
@@ -409,7 +401,6 @@ onMounted(async () => {
     LoadHistory(), // cross-window correct answers
   ])
   applyHydratedState() // merge both into answers + fieldStatus
-  startCountdown()
 })
 
 async function loadTodayQuestion() {
