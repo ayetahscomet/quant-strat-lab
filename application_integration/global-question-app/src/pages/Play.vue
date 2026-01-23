@@ -1392,6 +1392,10 @@ body,
   max-width: 100%;
 }
 
+.lockout-split.lockout-return {
+  grid-template-columns: 0% 100%;
+}
+
 .attempt-title {
   font-size: 25px;
   font-weight: 700;
