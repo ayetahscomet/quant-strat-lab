@@ -349,8 +349,6 @@ const nextSlotShort = computed(() => {
   return `${w.start} – ${w.end}`
 })
 
-import { registerPush } from '@/push/registerPush'
-
 async function enableNotifications() {
   try {
     const ok = await registerPush()
