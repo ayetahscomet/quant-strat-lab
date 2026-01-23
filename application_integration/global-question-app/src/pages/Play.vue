@@ -1369,16 +1369,10 @@ body,
   grid-template-columns: 0% 100%;
 }
 
-.left-pane {
+.right-pane {
   transition:
-    transform 0.5s cubic-bezier(0.18, 0.74, 0.32, 1),
-    opacity 0.4s ease;
-}
-
-.lockout-return .left-pane {
-  opacity: 0;
-  transform: translateX(-40px);
-  pointer-events: none;
+    transform 0.55s cubic-bezier(0.18, 0.74, 0.32, 1),
+    width 0.55s cubic-bezier(0.18, 0.74, 0.32, 1);
 }
 
 .lockout-return .right-pane {
