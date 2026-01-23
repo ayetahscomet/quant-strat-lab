@@ -35,7 +35,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { goHome } from '../pages/Play.vue'
+import { goHome } from './Play.vue'
 
 const router = useRouter()
 
@@ -111,6 +111,10 @@ async function loadFailureSummaryFromAirtable() {
   // Pick LAST REAL attempt (ignore markers)
   // ===============================
 
+  // ===============================
+  // Pick LAST REAL attempt (ignore markers)
+  // ===============================
+
   const realAttempts = attempts
     .filter((a) => {
       const idx = Number(a.attemptIndex)
@@ -118,9 +122,10 @@ async function loadFailureSummaryFromAirtable() {
     })
     .sort((a, b) => Number(b.attemptIndex) - Number(a.attemptIndex))
 
-  const finalAttempt = realAttempts[0] || null
+  const finalAttempt = realAttempts.length ? realAttempts[0] : null
 
-  const finalAnswers = Array.isArray(finalAttempt?.answers) ? finalAttempt.answers : []
+  const finalAnswers =
+    finalAttempt && Array.isArray(finalAttempt.answers) ? finalAttempt.answers : []
 
   summary.value = {
     answers: finalAnswers,
