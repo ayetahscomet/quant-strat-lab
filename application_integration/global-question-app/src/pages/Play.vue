@@ -1365,6 +1365,10 @@ body,
     background-color 0.35s ease;
 }
 
+.lockout-split.lockout-return {
+  grid-template-columns: 0% 100%;
+}
+
 .attempt-title {
   font-size: 25px;
   font-weight: 700;
