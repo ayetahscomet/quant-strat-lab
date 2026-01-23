@@ -238,7 +238,6 @@ const userCountry = localStorage.getItem('akinto_country') || 'XX' // XX = Unkno
 
 const tz = ref(getTimezone())
 const currentWindow = ref(getCurrentWindow(tz.value))
-const nextWindow = ref(getNextWindow(tz.value))
 const t0 = getTimeRemainingToNextWindow(tz.value)
 const countdown = ref(t0.formatted)
 
@@ -325,26 +324,16 @@ function clearLocalSession() {
    TIME WINDOW / STAGE LABEL
 ====================================================== */
 
-const windowLabels = {
-  nightowl: 'Night Owl',
-  early: 'Early Bird',
-  midmorning: 'Mid-Morning',
-  midday: 'Midday',
-  evening: 'Evening',
-  late: 'Late Evening',
-  last: 'Last Chance',
-}
-
 const stageLabel = computed(() => {
   const w = curWin.value
-  return windowLabels[w.id] || 'Check-In'
+  return w?.label || 'Check-In'
 })
 
 const lockoutHeadlineStrong = computed(() => {
   const w = curWin.value
   if (!w) return 'Check-In Locked'
   if (w.id === 'last') return 'That’s All For Today'
-  return 'Check-In Locked For Now'
+  return 'That’s All For Now'
 })
 
 const lockoutHeadlineSub = computed(() => {
@@ -354,7 +343,7 @@ const lockoutHeadlineSub = computed(() => {
 })
 
 const nextSlotShort = computed(() => {
-  const w = nextWindow.value
+  const w = getNextWindow(tz.value)
   if (!w) return 'Next window soon'
   return `${w.start} – ${w.end}`
 })
@@ -381,10 +370,8 @@ function startCountdown() {
     const t = getTimeRemainingToNextWindow(tz.value)
     countdown.value = t.formatted
 
-    if (t.total <= 0) {
-      currentWindow.value = getCurrentWindow(tz.value)
-      nextWindow.value = getNextWindow(tz.value)
-    }
+    // Always keep current window fresh for UI + lockout labels.
+    currentWindow.value = getCurrentWindow(tz.value)
   }, 1000)
 }
 

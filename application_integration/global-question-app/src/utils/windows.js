@@ -5,11 +5,11 @@
 export const WINDOWS = [
   { id: 'nightowl', label: 'Night Owl', start: '00:00', end: '04:30' },
   { id: 'early', label: 'Early Bird', start: '04:30', end: '10:00' },
-  { id: 'midmorning', label: 'Mid-Morning', start: '10:00', end: '12:00' },
-  { id: 'midday', label: 'Midday', start: '12:00', end: '15:00' },
-  { id: 'evening', label: 'Evening', start: '15:00', end: '20:00' },
-  { id: 'late', label: 'Late Evening', start: '20:00', end: '21:00' },
-  { id: 'last', label: 'Last Chance', start: '21:00', end: '24:00' }, // ends at midnight
+  { id: 'midmorning', label: 'Mid-Morning Check In', start: '10:00', end: '12:00' },
+  { id: 'midday', label: 'Midday Check In', start: '12:00', end: '15:00' },
+  { id: 'evening', label: 'Evening Check In', start: '15:00', end: '19:00' },
+  { id: 'late', label: 'Better Late Than Never', start: '19:00', end: '21:00' },
+  { id: 'last', label: 'Last Chance', start: '21:00', end: '24:00' },
 ]
 
 // =====================================================
@@ -27,9 +27,24 @@ export function getTimezone() {
 
 // minutes since midnight in given timezone
 export function getMinutesNow(tz = getTimezone()) {
-  const nowStr = new Date().toLocaleString('en-GB', { timeZone: tz })
-  const d = new Date(nowStr)
-  return d.getHours() * 60 + d.getMinutes()
+  // Use Intl parts to avoid parsing locale strings into Date (can produce Invalid Date => NaN).
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: tz,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date())
+
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value)
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value)
+
+  // Defensive fallback (should never hit, but prevents NaN cascade)
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+    const d = new Date()
+    return d.getHours() * 60 + d.getMinutes()
+  }
+
+  return hour * 60 + minute
 }
 
 // helper: "HH:MM" -> minutes
@@ -127,5 +142,10 @@ export function getTimeRemainingToEndOfCurrent(tz = getTimezone()) {
 // =====================================================
 
 export function todayKey(tz = getTimezone()) {
-  return new Date().toLocaleDateString('en-CA', { timeZone: tz })
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
 }
