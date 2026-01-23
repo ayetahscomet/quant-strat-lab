@@ -1365,25 +1365,6 @@ body,
     background-color 0.35s ease;
 }
 
-.lockout-split.lockout-return {
-  grid-template-columns: 0% 100%;
-}
-
-.right-pane {
-  transition:
-    transform 0.55s cubic-bezier(0.18, 0.74, 0.32, 1),
-    width 0.55s cubic-bezier(0.18, 0.74, 0.32, 1);
-}
-
-.lockout-return .right-pane {
-  transform: translateX(-12%);
-}
-
-.lockout-return .right-pane {
-  width: 100%;
-  max-width: 100%;
-}
-
 .attempt-title {
   font-size: 25px;
   font-weight: 700;
