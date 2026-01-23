@@ -810,7 +810,16 @@ async function confirmExitEarly() {
 ====================================================== */
 
 function goHome() {
-  router.push('/')
+  navigator.sendBeacon?.(
+    '/api/log-exit',
+    JSON.stringify({
+      userId,
+      dateKey: dateKey.value,
+      windowId: curWin.value.id,
+    }),
+  )
+
+  window.location.href = 'https://akinto.io'
 }
 
 /* ======================================================
