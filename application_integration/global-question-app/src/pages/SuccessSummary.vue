@@ -183,10 +183,6 @@ function todayKey() {
   })
 }
 
-function normalise(str = '') {
-  return str.toString().trim().toLowerCase().replace(/\s+/g, ' ')
-}
-
 function computeFieldStatus(answers = [], correctAnswers = []) {
   const canon = correctAnswers.map(normalise)
   const used = new Set()
