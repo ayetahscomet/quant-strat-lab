@@ -344,7 +344,7 @@ const lockoutHeadlineSub = computed(() => {
 
 const nextSlotShort = computed(() => {
   const w = getNextWindow(tz.value)
-  if (!w) return 'Next window soon'
+  if (!w) return 'Next window soon. '
   return `${w.start} – ${w.end}`
 })
 
