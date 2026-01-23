@@ -1383,6 +1383,10 @@ body,
     width 0.55s cubic-bezier(0.18, 0.74, 0.32, 1);
 }
 
+.lockout-return .right-pane {
+  transform: translateX(-12%);
+}
+
 .attempt-title {
   font-size: 25px;
   font-weight: 700;
