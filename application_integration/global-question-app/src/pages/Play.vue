@@ -1280,7 +1280,7 @@ body,
 .modal-text {
   font-size: 18px !important;
   color: #000;
-  line-height: 1cm;
+  line-height: 2;
 }
 
 .modal-sub {
