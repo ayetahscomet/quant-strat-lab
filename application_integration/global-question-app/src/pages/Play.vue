@@ -849,11 +849,16 @@ body,
   padding-bottom: var(--space-lg);
 }
 
-/*n/a (for things we are not sure about)*/
-
 .play-wrapper.split-lockout-active {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.lockout-split {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: inherit;
 }
 
 .lock:disabled {
@@ -875,23 +880,28 @@ body,
 
 .theme-morning {
   --bg-color: #9fd5ff;
-  background: var(--bg-color);
 }
 
 .theme-day {
   --bg-color: #9fd5ff;
-  background: var(--bg-color);
 }
 
 .theme-evening {
   --bg-color: #6ec04d;
-  background: var(--bg-color);
 }
 
 .theme-night {
   --bg-color: #0e0c24;
-  background: var(--bg-color);
   color: white;
+}
+
+/* real background carrier */
+.play-wrapper {
+  background: var(--bg-color);
+}
+
+.play-wrapper {
+  transition: background-color 0.25s ease;
 }
 
 /** Playscreen Layouts **/
