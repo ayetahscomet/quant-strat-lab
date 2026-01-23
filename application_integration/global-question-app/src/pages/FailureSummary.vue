@@ -35,6 +35,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { goHome } from '../pages/Play.vue'
 
 const router = useRouter()
 
@@ -100,12 +101,26 @@ async function loadFailureSummaryFromAirtable() {
     summary.value.correctAnswers = correctAnswers
     return
   }
+  if (!attempts.some((a) => Number(a.attemptIndex) >= 1 && Number(a.attemptIndex) <= 3)) {
+    summary.value.correctAnswers = correctAnswers
+    return
+  }
 
   // Prefer the final marker AttemptIndex = 999, else latest record
-  const finalAttempt =
-    attempts.find((a) => Number(a.attemptIndex) === 999) || attempts[attempts.length - 1]
+  // ===============================
+  // Pick LAST REAL attempt (ignore markers)
+  // ===============================
 
-  const finalAnswers = Array.isArray(finalAttempt.answers) ? finalAttempt.answers : []
+  const realAttempts = attempts
+    .filter((a) => {
+      const idx = Number(a.attemptIndex)
+      return idx >= 1 && idx <= 3
+    })
+    .sort((a, b) => Number(b.attemptIndex) - Number(a.attemptIndex))
+
+  const finalAttempt = realAttempts[0] || null
+
+  const finalAnswers = Array.isArray(finalAttempt?.answers) ? finalAttempt.answers : []
 
   summary.value = {
     answers: finalAnswers,
