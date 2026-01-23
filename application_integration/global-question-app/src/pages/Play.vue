@@ -1275,6 +1275,7 @@ body,
   line-height: 1;
   padding-top: 0.5px;
   padding-bottom: 0.5px;
+  line-height: 2;
 }
 
 .modal-text {
