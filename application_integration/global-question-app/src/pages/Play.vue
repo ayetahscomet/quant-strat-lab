@@ -1393,7 +1393,7 @@ body,
 }
 
 .lockout-split.lockout-return {
-  grid-template-columns: 0% 100%;
+  grid-template-columns: 50% 50%;
 }
 
 .attempt-title {
