@@ -1359,6 +1359,12 @@ body,
   margin-top: 2px;
 }
 
+.lockout-split {
+  transition:
+    grid-template-columns 0.55s cubic-bezier(0.18, 0.74, 0.32, 1),
+    background-color 0.35s ease;
+}
+
 .lockout-split.lockout-return {
   grid-template-columns: 0% 100%;
 }
@@ -1373,12 +1379,6 @@ body,
   opacity: 0;
   transform: translateX(-40px);
   pointer-events: none;
-}
-
-.right-pane {
-  transition:
-    transform 0.55s cubic-bezier(0.18, 0.74, 0.32, 1),
-    width 0.55s cubic-bezier(0.18, 0.74, 0.32, 1);
 }
 
 .lockout-return .right-pane {
