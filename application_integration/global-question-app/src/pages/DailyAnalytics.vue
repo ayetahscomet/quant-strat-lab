@@ -1534,6 +1534,8 @@ onMounted(async () => {
     // 3) Build copy + blocks
     buildHeroCopy(rng)
     personalCards.value = buildPersonalCards(rng)
+    globalChartRefs.value = new Map()
+
     globalBlocks.value = buildGlobalBlocks(rng)
 
     personalReady.value = true
@@ -1542,17 +1544,23 @@ onMounted(async () => {
     await nextTick()
     renderPersonalCharts(rng)
 
-    // 5) If global blocks have charts, they may need a second tick for refs
+    // second tick ONLY for global block charts (refs settle after v-for)
     await nextTick()
-    renderPersonalCharts(rng)
+    renderGlobalBlockCharts(rng)
   } catch (e) {
     console.error('DailyAnalytics load error:', e)
     // still show something minimal
     personalReady.value = true
     personalCards.value = buildPersonalCards(mulberry32(seed + 1))
+
+    globalChartRefs.value = new Map()
     globalBlocks.value = buildGlobalBlocks(mulberry32(seed + 2))
+
     await nextTick()
     renderPersonalCharts(mulberry32(seed + 3))
+
+    await nextTick()
+    renderGlobalBlockCharts(mulberry32(seed + 4))
   } finally {
     isLoading.value = false
   }
@@ -1583,10 +1591,13 @@ function blockStyleComputed(block) {
   return { gridColumnEnd: `span ${c}`, gridRowEnd: `span ${r}` }
 }
 function blockStyleMerged(block) {
-  return { ...blockStyle(block), ...blockStyleComputed(block) }
+  return {
+    ...blockStyleComputed(block),
+    transform: `rotate(${block.rot || 0}deg)`,
+  }
 }
+
 function blockStyle(block) {
-  // exposed to template (kept small)
   return blockStyleMerged(block)
 }
 </script>
