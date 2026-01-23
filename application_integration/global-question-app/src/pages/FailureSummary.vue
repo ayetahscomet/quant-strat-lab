@@ -37,7 +37,27 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const summary = ref({})
+
+const summary = ref({
+  answers: [],
+  correctAnswers: [],
+  fieldStatus: [],
+  result: '',
+  attemptIndex: null,
+  windowId: '',
+  createdAt: '',
+})
+
+function normalise(s) {
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
+function getUserId() {
+  return localStorage.getItem('akinto_uuid') || ''
+}
 
 function todayKey() {
   return new Date().toLocaleDateString('en-CA', {
@@ -45,29 +65,70 @@ function todayKey() {
   })
 }
 
-onMounted(() => {
-  const key = `${todayKey()}_summary`
+function computeFieldStatus(answers = [], correctAnswers = []) {
+  const canon = correctAnswers.map(normalise)
+  const used = new Set()
 
-  // 1) Load today's summary if it exists
-  const today = localStorage.getItem(key)
-  if (today) {
-    summary.value = JSON.parse(today)
+  return answers.map((a) => {
+    const v = normalise(a)
+    const ok = canon.includes(v) && !used.has(v)
+    if (ok) used.add(v)
+    return ok ? 'correct' : 'incorrect'
+  })
+}
+
+async function loadFailureSummaryFromAirtable() {
+  const userId = getUserId()
+  const dateKey = todayKey()
+
+  if (!userId || !dateKey) return
+
+  const res = await fetch('/api/load-day-progress', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, dateKey }),
+  })
+
+  if (!res.ok) return
+  const data = await res.json()
+
+  const attempts = Array.isArray(data.attempts) ? data.attempts : []
+  const correctAnswers = Array.isArray(data.correctAnswers) ? data.correctAnswers : []
+
+  if (!attempts.length) {
+    // nothing recorded today; keep defaults
+    summary.value.correctAnswers = correctAnswers
     return
   }
 
-  // 2) Otherwise fallback to the latest available summary
-  const all = Object.keys(localStorage)
-    .filter((k) => k.endsWith('_summary'))
-    .sort()
+  // Prefer the final marker AttemptIndex = 999, else latest record
+  const finalAttempt =
+    attempts.find((a) => Number(a.attemptIndex) === 999) || attempts[attempts.length - 1]
 
-  if (all.length) {
-    const latest = all[all.length - 1]
-    summary.value = JSON.parse(localStorage.getItem(latest))
+  const finalAnswers = Array.isArray(finalAttempt.answers) ? finalAttempt.answers : []
+
+  summary.value = {
+    answers: finalAnswers,
+    correctAnswers,
+    fieldStatus: computeFieldStatus(finalAnswers, correctAnswers),
+    result: finalAttempt.result || '',
+    attemptIndex: finalAttempt.attemptIndex ?? null,
+    windowId: finalAttempt.windowId || '',
+    createdAt: finalAttempt.createdAt || '',
   }
+}
+
+onMounted(() => {
+  loadFailureSummaryFromAirtable().catch((e) => console.error('FailureSummary load error:', e))
 })
 
 function goAnalytics() {
-  router.replace({ name: 'DailyAnalytics' })
+  // router name in src/router/index.js is "Analytics"
+  try {
+    router.replace({ name: 'Analytics' })
+  } catch {
+    router.replace('/analytics')
+  }
 }
 </script>
 

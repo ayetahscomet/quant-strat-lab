@@ -765,10 +765,13 @@ function closeHint() {
 /* ======================================================
    EXIT EARLY
 ====================================================== */
-function confirmExitEarly() {
+async function confirmExitEarly() {
   hardLocked.value = true
   screenState.value = 'split-lockout'
-  logPlay('exit-early')
+
+  // Write the final marker (AttemptIndex = 999) BEFORE showing summary
+  await logPlay('exit-early')
+
   currentView.value = 'failure'
 }
 

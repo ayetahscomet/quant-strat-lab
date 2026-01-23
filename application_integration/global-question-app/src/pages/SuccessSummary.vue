@@ -173,45 +173,88 @@ function normalise(str = '') {
   return str.toString().trim().toLowerCase().replace(/\s+/g, '')
 }
 
-/**
- * Load the most recent *_summary entry from localStorage.
- * This works with your current Play.vue logic where the key is
- * `${storageKey}_summary`.
- */
-function loadLatestSummary() {
-  let latest = null
-  let latestTime = 0
+function getUserId() {
+  return localStorage.getItem('akinto_uuid') || ''
+}
 
-  for (const key of Object.keys(window.localStorage)) {
-    if (!key.endsWith('_summary')) continue
+function todayKey() {
+  return new Date().toLocaleDateString('en-CA', {
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  })
+}
 
-    try {
-      const raw = window.localStorage.getItem(key)
-      if (!raw) continue
-      const parsed = JSON.parse(raw)
+function normalise(str = '') {
+  return str.toString().trim().toLowerCase().replace(/\s+/g, ' ')
+}
 
-      const t = new Date(parsed.timestamp || parsed.date || Date.now()).getTime()
-      if (Number.isFinite(t) && t >= latestTime) {
-        latestTime = t
-        latest = parsed
-      }
-    } catch {
-      // ignore malformed entries
-    }
-  }
+function computeFieldStatus(answers = [], correctAnswers = []) {
+  const canon = correctAnswers.map(normalise)
+  const used = new Set()
 
-  if (latest) {
-    summary.value = {
-      ...summary.value,
-      ...latest,
-    }
+  return answers.map((a) => {
+    const v = normalise(a)
+    const ok = canon.includes(v) && !used.has(v)
+    if (ok) used.add(v)
+    return ok ? 'correct' : 'incorrect'
+  })
+}
+
+async function loadSuccessSummaryFromAirtable() {
+  const userId = getUserId()
+  const dateKey = todayKey()
+  if (!userId || !dateKey) return
+
+  const res = await fetch('/api/load-day-progress', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, dateKey }),
+  })
+
+  if (!res.ok) return
+  const data = await res.json()
+
+  const attempts = Array.isArray(data.attempts) ? data.attempts : []
+  const correctAnswers = Array.isArray(data.correctAnswers) ? data.correctAnswers : []
+
+  if (!attempts.length) return
+
+  // Prefer AttemptIndex = 999 (final snapshot), else the latest "success" record, else latest record
+  const finalAttempt =
+    attempts.find((a) => Number(a.attemptIndex) === 999) ||
+    [...attempts].reverse().find((a) => a.result === 'success') ||
+    attempts[attempts.length - 1]
+
+  const answers = Array.isArray(finalAttempt.answers) ? finalAttempt.answers : []
+
+  // attemptsUsed: count attempts in the same window excluding the 999 marker
+  const windowId = finalAttempt.windowId
+  const attemptsUsed = attempts.filter(
+    (a) => a.windowId === windowId && Number(a.attemptIndex) !== 999,
+  ).length
+
+  const fieldStatus = computeFieldStatus(answers, correctAnswers)
+  const correctCount = fieldStatus.filter((s) => s === 'correct').length
+  const incorrectCount = fieldStatus.filter((s) => s === 'incorrect').length
+
+  summary.value = {
+    ...summary.value,
+    userId,
+    date: dateKey,
+    timestamp: finalAttempt.createdAt || new Date().toISOString(),
+    windowIndex: 0,
+    answers,
+    correctAnswers,
+    fieldStatus,
+    correctCount,
+    incorrectCount,
+    attemptsUsed: attemptsUsed || 1,
+    completed: true,
+    hintUsed: false,
   }
 }
 
 onMounted(() => {
-  if (typeof window !== 'undefined') {
-    loadLatestSummary()
-  }
+  loadSuccessSummaryFromAirtable().catch((e) => console.error('SuccessSummary load error:', e))
 })
 
 /* ---------- Basic derived values ---------- */
@@ -371,7 +414,7 @@ const reflectionLines = computed(() => {
 
 function goAnalytics() {
   try {
-    router.replace({ name: 'DailyAnalytics' })
+    router.replace({ name: 'Analytics' })
   } catch {
     router.replace('/analytics')
   }

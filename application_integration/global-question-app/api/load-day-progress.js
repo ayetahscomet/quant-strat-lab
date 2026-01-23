@@ -23,7 +23,9 @@ export default async function handler(req, res) {
 
     const attempts = records.map((r) => {
       const f = r.fields
+
       let answers = []
+      let correctAnswers = []
 
       try {
         answers = f.AnswersJSON ? JSON.parse(f.AnswersJSON) : []
@@ -31,16 +33,31 @@ export default async function handler(req, res) {
         answers = []
       }
 
+      try {
+        correctAnswers = f.CorrectAnswersJSON ? JSON.parse(f.CorrectAnswersJSON) : []
+      } catch {
+        correctAnswers = []
+      }
+
       return {
         windowId: f.WindowID || null,
-        attemptIndex: f.AttemptIndex || null,
-        result: f.Result || null, // 'success' | 'fail' | 'lockout' | 'attempt'
+        attemptIndex: f.AttemptIndex ?? null,
+        result: f.Result || null, // 'success' | 'fail' | 'lockout' | 'attempt' | 'exit-early'
         answers,
+        correctAnswers,
         createdAt: f.CreatedAt || null,
       }
     })
 
-    return res.status(200).json({ attempts })
+    // best available correct answers for the day (prefer latest record with non-empty correctAnswers)
+    const latestWithCorrect = [...attempts]
+      .reverse()
+      .find((a) => Array.isArray(a.correctAnswers) && a.correctAnswers.length)
+
+    return res.status(200).json({
+      attempts,
+      correctAnswers: latestWithCorrect?.correctAnswers || [],
+    })
   } catch (err) {
     console.error('load-day-progress error:', err)
     return res.status(500).json({ error: 'Failed to load day progress' })
