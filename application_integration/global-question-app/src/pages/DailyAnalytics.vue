@@ -877,14 +877,6 @@ function buildPersonalChart(rng) {
 ========================= */
 const globalBlocks = ref([])
 
-function blockStyle(block) {
-  // optional slight “editorial” variation
-  const rot = block.rot || 0
-  return {
-    transform: `rotate(${rot}deg)`,
-  }
-}
-
 /**
  * Block tier & shape control (CSS grid):
  * - tier: hero | major | minor | ticker | badge
