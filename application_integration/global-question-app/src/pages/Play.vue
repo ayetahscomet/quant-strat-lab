@@ -1375,12 +1375,6 @@ body,
     opacity 0.4s ease;
 }
 
-.lockout-return .left-pane {
-  opacity: 0;
-  transform: translateX(-40px);
-  pointer-events: none;
-}
-
 .right-pane {
   transition:
     transform 0.55s cubic-bezier(0.18, 0.74, 0.32, 1),
