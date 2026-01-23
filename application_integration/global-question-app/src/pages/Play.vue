@@ -1365,8 +1365,10 @@ body,
     background-color 0.35s ease;
 }
 
-.lockout-split.lockout-return {
-  grid-template-columns: 0% 100%;
+.left-pane {
+  transition:
+    transform 0.5s cubic-bezier(0.18, 0.74, 0.32, 1),
+    opacity 0.4s ease;
 }
 
 .attempt-title {
