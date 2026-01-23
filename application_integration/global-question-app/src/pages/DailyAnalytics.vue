@@ -1898,22 +1898,45 @@ function blockStyle(block) {
   justify-content: space-between;
   align-items: flex-end;
   gap: 14px;
-  margin-bottom: 14px;
+  margin-bottom: 26px;
 }
 
 .g-title {
   margin: 0;
-  font-size: 46px;
+  font-size: 60px;
   font-weight: 900;
   font-style: italic;
-  letter-spacing: -0.6px;
+  letter-spacing: -1px;
+  line-height: 0.95;
 }
+
 .g-sub {
   margin: 8px 0 0;
   font-size: 14px;
   opacity: 0.72;
   line-height: 1.55;
   max-width: 44rem;
+}
+
+.g-inner {
+  gap: 6px;
+}
+
+.g-head {
+  margin-bottom: 8px;
+}
+
+.g-body {
+  margin-bottom: 6px;
+}
+
+.g-mini {
+  margin-top: auto;
+  padding-top: 14px;
+}
+
+.g-caption {
+  margin-top: 12px;
 }
 
 .share-btn {
@@ -1934,15 +1957,15 @@ function blockStyle(block) {
   display: grid;
   grid-template-columns: repeat(2, minmax(260px, 1fr));
   grid-auto-rows: 110px;
-  gap: 12px;
+  gap: 18px;
   grid-auto-flow: dense;
 }
 
 .g-block {
   background: #f7f7fa;
   border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 18px 18px 16px;
   border-radius: 16px;
-  padding: 14px 14px 12px;
   overflow: hidden;
   position: relative;
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.06);
@@ -1974,7 +1997,7 @@ function blockStyle(block) {
   margin: 0;
   font-size: 13px;
   opacity: 0.82;
-  line-height: 1.55;
+  line-height: 1.65;
 }
 
 .g-mini {
@@ -2002,7 +2025,7 @@ function blockStyle(block) {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 10px;
-  padding: 9px 10px;
+  padding: 12px 14px;
   font-size: 12px;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
