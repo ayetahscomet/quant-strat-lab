@@ -1387,6 +1387,11 @@ body,
   transform: translateX(-12%);
 }
 
+.lockout-return .right-pane {
+  width: 100%;
+  max-width: 100%;
+}
+
 .attempt-title {
   font-size: 25px;
   font-weight: 700;
