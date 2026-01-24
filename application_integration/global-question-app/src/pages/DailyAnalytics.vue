@@ -1864,7 +1864,7 @@ function blockStyle(block) {
 }
 .cta {
   background: #111;
-  color: #ffffff;
+  color: #ffff;
   border: 2px solid rgba(255, 255, 255, 0.16);
   padding: 10px 14px;
   border-radius: 12px;
