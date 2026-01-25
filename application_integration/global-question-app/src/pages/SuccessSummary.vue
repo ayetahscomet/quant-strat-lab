@@ -232,12 +232,20 @@ async function loadSuccessSummaryFromAirtable() {
   const correctCount = fieldStatus.filter((s) => s === 'correct').length
   const incorrectCount = fieldStatus.filter((s) => s === 'incorrect').length
 
+  let windowIndex = Number(finalAttempt.windowIndex ?? finalAttempt.windowId)
+
+  if (!Number.isFinite(windowIndex)) {
+    const d = new Date(finalAttempt.createdAt)
+    const h = d.getHours()
+    windowIndex = Math.floor(h / 2)
+  }
+
   summary.value = {
     ...summary.value,
     userId,
     date: dateKey,
     timestamp: finalAttempt.createdAt || new Date().toISOString(),
-    windowIndex: 0,
+    windowIndex,
     answers,
     correctAnswers,
     fieldStatus,
@@ -428,6 +436,7 @@ function goBackToGame() {
 <style scoped>
 .success-shell {
   min-height: 100vh;
+  overflow-x: hidden;
   background: radial-gradient(
     circle at top left,
     #f3f5ff 0,
@@ -448,7 +457,8 @@ function goBackToGame() {
 
 /* HERO */
 .hero {
-  max-width: 1120px;
+  max-width: 1440px;
+  width: 100%;
   margin: 0 auto 26px;
   display: grid;
   grid-template-columns: auto 1fr;
@@ -460,8 +470,7 @@ function goBackToGame() {
   width: 78px;
   height: 78px;
   border-radius: 18px;
-  outline: 1.5px solid rgba(0, 0, 0, 0.12);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  outline: 1.5px solid rgb(255, 255, 255);
 }
 
 .hero-kicker {
@@ -511,7 +520,8 @@ function goBackToGame() {
 
 /* GRID LAYOUT */
 .grid {
-  max-width: 1120px;
+  max-width: 1440px;
+  width: 100%;
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 0.58fr) minmax(0, 0.42fr);
@@ -747,7 +757,7 @@ function goBackToGame() {
   }
 
   .grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 1fr 0.9fr;
   }
 }
 
