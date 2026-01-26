@@ -817,27 +817,25 @@ async function onLockIn() {
   }
 
   // ---------- WINDOW LOCKOUT ----------
-if (remaining <= 0) {
-  hardLocked.value = true
-  modalMode.value = null
+  if (remaining <= 0) {
+    hardLocked.value = true
+    modalMode.value = null
 
-  const w = curWin.value
+    const w = curWin.value
 
-  // FINAL WINDOW → straight to failure summary
-  if (w?.id === 'last') {
-    await logPlay('exit-early')
+    if (w?.id === 'last') {
+      await logPlay('exit-early')
 
-    currentView.value = 'failure'
-    return
+      currentView.value = 'failure'
+      return
+    }
+
+    lockoutMode.value = 'replay'
+    screenState.value = 'split-lockout'
+
+    await logPlay('lockout')
   }
-
-  // NORMAL WINDOW → split lockout
-  lockoutMode.value = 'replay'
-  screenState.value = 'split-lockout'
-
-  await logPlay('lockout')
-}
-
+} // 👈 CLOSE onLockIn()
 
 /* ======================================================
    PUSH WINDOW TIMING TO AIRTABLE (ANALYTICS)
