@@ -842,7 +842,18 @@ async function confirmExitEarly() {
   hardLocked.value = true
   screenState.value = 'split-lockout'
 
-  // Write the final marker (AttemptIndex = 999) BEFORE showing summary
+  // Mark the DAY as ended (blocking future entry)
+  await fetch('/api/end-day', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      dateKey: dateKey.value,
+      result: 'exit-early',
+    }),
+  }).catch(() => null)
+
+  // analytics
   await logPlay('exit-early')
 
   currentView.value = 'failure'
