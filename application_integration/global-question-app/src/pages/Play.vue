@@ -405,6 +405,43 @@ onUnmounted(() => {
   if (countdownTimer) clearInterval(countdownTimer)
 })
 
+async function resolveDailyStateBeforePlay() {
+  const res = await fetch('/api/load-day-progress', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      dateKey: dateKey.value,
+    }),
+  })
+
+  if (!res.ok) return false
+
+  const data = await res.json()
+
+  // HARD STOP STATES
+  if (data.dayEnded) {
+    if (data.dayEndResult === 'success') {
+      currentView.value = 'success'
+      return true
+    }
+
+    if (data.dayEndResult === 'exit-early') {
+      currentView.value = 'failure'
+      return true
+    }
+
+    if (data.dayEndResult === 'lockout') {
+      screenState.value = 'split-lockout'
+      hardLocked.value = true
+      lockoutMode.value = 'return'
+      return true
+    }
+  }
+
+  return false
+}
+
 /* ======================================================
    TIME WINDOW / STAGE LABEL
 ====================================================== */
@@ -466,10 +503,15 @@ const timeClass = computed(() => {
 ====================================================== */
 
 onMounted(async () => {
-  await loadTodayQuestion() // pulls question + correctAnswers
+  // FIRST: check if today already ended
+  const handled = await resolveDailyStateBeforePlay()
+  if (handled) return
+
+  // otherwise continue normal game load
+  await loadTodayQuestion()
   await loadSessionState()
 
-  applyHydratedState() // merge both into answers + fieldStatus
+  applyHydratedState()
 })
 
 async function loadTodayQuestion() {
@@ -532,6 +574,7 @@ async function loadTodayQuestion() {
 }
 
 async function loadSessionState() {
+  if (hardLocked.value) return
   const res = await fetch('/api/load-session', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
