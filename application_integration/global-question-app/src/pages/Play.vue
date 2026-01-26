@@ -39,6 +39,9 @@
           />
         </div>
       </div>
+      <div class="attempt-metric">
+        {{ fieldStatus.filter((s) => s === 'correct').length }} / {{ answers.length }} correct
+      </div>
 
       <!-- =======================================================
            SPLIT LOCKOUT MODE
@@ -49,7 +52,7 @@
             <!-- ============ LEFT PANE: LATEST ATTEMPT ============ -->
             <div class="left-pane">
               <h2 class="attempt-title">Latest Attempt</h2>
-
+              <p class="attempt-sub">Your final answers in this window</p>
               <div
                 v-for="(ans, i) in answers"
                 :key="i"
@@ -113,12 +116,13 @@
         >
           <input
             v-for="(ans, i) in answers"
-            :key="i"
+            :key="`${i}-${shakeNonce}`"
             v-model="answers[i]"
             :placeholder="i + 1 + '.'"
             :class="[
               'answer-input',
               fieldStatus[i],
+              'shake',
               `stagger-${i}`,
               { 'hero-flash': heroFlashIndex === i },
             ]"
@@ -262,6 +266,7 @@ const currentHistory = ref(null)
 const inputsVisible = ref(false)
 const isReplaySequence = ref(false)
 const heroFlashIndex = ref(null)
+const shakeNonce = ref(0)
 const showFillWarning = ref(false)
 
 const modalMode = ref(null) // null | 'askHint' | 'hint' | 'success'
@@ -739,6 +744,8 @@ const historicalCorrect = ref([]) // array of strings
 async function onLockIn() {
   if (hardLocked.value) return
 
+  shakeNonce.value++
+
   const filled = answers.value.filter((a) => a.trim()).length
   if (filled < answerCount.value) {
     showFillWarning.value = true
@@ -835,7 +842,7 @@ async function onLockIn() {
 
     await logPlay('lockout')
   }
-} // 👈 CLOSE onLockIn()
+}
 
 /* ======================================================
    PUSH WINDOW TIMING TO AIRTABLE (ANALYTICS)
@@ -1531,6 +1538,16 @@ body,
   pointer-events: none;
 }
 
+.attempt-metric {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.6;
+  letter-spacing: 0.3px;
+}
+
 .right-pane {
   transition:
     transform 0.55s cubic-bezier(0.18, 0.74, 0.32, 1),
@@ -1565,6 +1582,12 @@ body,
   font-weight: 700;
   margin-top: 85px;
   margin-bottom: 15px;
+}
+
+.attempt-sub {
+  font-size: 13px;
+  opacity: 0.7;
+  margin-bottom: 22px;
 }
 
 .header-shift-enter-from,
@@ -1738,10 +1761,19 @@ body,
   width: 100%;
   height: 100%;
   padding: 3.5rem 2rem;
-  background: rgba(0, 0, 0, 0.05);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.25));
+  backdrop-filter: blur(8px);
   border-right: 2px solid rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
+}
+
+.left-pane::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.35), transparent 60%);
+  pointer-events: none;
 }
 
 .right-pane {
@@ -2096,6 +2128,30 @@ body {
   color: #242227;
 }
 
+.answer-input.shake {
+  animation: shake 0.35s ease;
+}
+
+.locked-result {
+  animation: riseIn 0.45s cubic-bezier(0.18, 0.74, 0.32, 1) both;
+}
+
+.locked-result:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.locked-result:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.locked-result:nth-child(3) {
+  animation-delay: 0.19s;
+}
+.locked-result:nth-child(4) {
+  animation-delay: 0.26s;
+}
+.locked-result:nth-child(5) {
+  animation-delay: 0.33s;
+}
+
 /* Ingame-Animations Using KeyFrames */
 
 @keyframes sweepAttempt {
@@ -2273,6 +2329,17 @@ body {
   to {
     transform: translateX(0);
     opacity: 1;
+  }
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
