@@ -101,9 +101,23 @@ export default async function handler(req, res) {
     // latest correct list
     const latestWithCorrect = [...attempts].reverse().find((a) => a.correctAnswers?.length)
 
+    // ---------- HARD DAY END DETECTION ----------
+
+    // Prefer explicit exit / success markers
+    const dayEndAttempt = [...attempts]
+      .reverse()
+      .find((a) => ['success', 'exit-early', 'lockout'].includes(a.result))
+
+    const dayEnded = !!dayEndAttempt
+    const dayEndResult = dayEndAttempt?.result || null
+
     return res.status(200).json({
       attempts,
       correctAnswers: latestWithCorrect?.correctAnswers || [],
+
+      // ===== GATING FLAGS FOR PLAY.VUE =====
+      dayEnded,
+      dayEndResult,
 
       metrics: {
         completion,
