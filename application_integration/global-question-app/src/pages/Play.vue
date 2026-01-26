@@ -689,6 +689,45 @@ function normalise(s) {
     .replace(/\s+/g, ' ')
 }
 
+function levenshtein(a, b) {
+  const m = a.length
+  const n = b.length
+
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0))
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i
+  for (let j = 0; j <= n; j++) dp[0][j] = j
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
+    }
+  }
+
+  return dp[m][n]
+}
+
+function fuzzyMatch(user, target) {
+  const a = normalise(user)
+  const b = normalise(target)
+
+  if (a === b) return { ok: true, canonical: target }
+
+  const dist = levenshtein(a, b)
+  const maxLen = Math.max(a.length, b.length)
+
+  const similarity = 1 - dist / maxLen
+
+  // allow small typos only
+  if (dist <= 2 || similarity >= 0.9) {
+    return { ok: true, canonical: target }
+  }
+
+  return { ok: false }
+}
+
 // Correct answers the user has ever given today (all windows)
 const historicalCorrect = ref([]) // array of strings
 
@@ -701,19 +740,38 @@ async function onLockIn() {
     return
   }
 
-  const canon = correctAnswers.value.map(normalise)
+  const canon = correctAnswers.value
   const used = new Set()
 
   // reset classes to retrigger shake
   fieldStatus.value = answers.value.map(() => '')
   await nextTick()
 
-  fieldStatus.value = answers.value.map((a) => {
-    const v = normalise(a)
-    const ok = canon.includes(v) && !used.has(v)
-    if (ok) used.add(v)
-    return ok ? 'correct' : 'incorrect'
+  const corrected = [...answers.value]
+
+  fieldStatus.value = answers.value.map((a, i) => {
+    let matched = null
+
+    for (const c of canon) {
+      const res = fuzzyMatch(a, c)
+
+      if (res.ok && !used.has(normalise(c))) {
+        matched = c
+        used.add(normalise(c))
+        break
+      }
+    }
+
+    if (matched) {
+      corrected[i] = matched // auto-replace with canonical
+      return 'correct'
+    }
+
+    return 'incorrect'
   })
+
+  // push corrected display back into inputs
+  answers.value = corrected
 
   const isPerfect = fieldStatus.value.every((s) => s === 'correct')
 
