@@ -223,6 +223,7 @@ import {
 } from '../utils/windows.js'
 import { onUnmounted } from 'vue'
 import { registerPush } from '@/push/registerPush'
+import { countryAliases } from '@/data/countryAliases'
 
 /* ======================================================
    CORE GAME STATE
@@ -684,9 +685,12 @@ function recomputeFieldStatusFromAnswers() {
 ====================================================== */
 function normalise(s) {
   return String(s || '')
-    .trim()
     .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove accents
+    .replace(/[^a-z\s]/g, '')
     .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function levenshtein(a, b) {
@@ -743,34 +747,25 @@ async function onLockIn() {
   const canon = correctAnswers.value
   const used = new Set()
 
-  // reset classes to retrigger shake
   fieldStatus.value = answers.value.map(() => '')
   await nextTick()
 
   const corrected = [...answers.value]
 
   fieldStatus.value = answers.value.map((a, i) => {
-    let matched = null
+    const canonical = resolveCanonical(a, canon)
 
-    for (const c of canon) {
-      const res = fuzzyMatch(a, c)
+    if (canonical && !used.has(normalise(canonical))) {
+      used.add(normalise(canonical))
 
-      if (res.ok && !used.has(normalise(c))) {
-        matched = c
-        used.add(normalise(c))
-        break
-      }
-    }
+      corrected[i] = canonical
 
-    if (matched) {
-      corrected[i] = matched // auto-replace with canonical
       return 'correct'
     }
 
     return 'incorrect'
   })
 
-  // push corrected display back into inputs
   answers.value = corrected
 
   const isPerfect = fieldStatus.value.every((s) => s === 'correct')
@@ -850,6 +845,30 @@ async function logPlay(result) {
       result,
     }),
   })
+}
+
+/* ======================================================
+    HELPER FUNCTION(S)
+========================================================= */
+
+function resolveCanonical(input, canon) {
+  const n = normalise(input)
+
+  for (const c of canon) {
+    const key = normalise(c)
+
+    // exact match
+    if (key === n) return c
+
+    const aliases = countryAliases[key] || []
+
+    // alias match
+    if (aliases.some((a) => normalise(a) === n)) {
+      return c
+    }
+  }
+
+  return null
 }
 
 /*=======================================================
