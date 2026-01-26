@@ -1540,6 +1540,16 @@ body,
   grid-template-columns: 0% 100%;
 }
 
+.lockout-card,
+.lockout-card * {
+  color: #111 !important;
+}
+
+.theme-night .lockout-card,
+.theme-night .lockout-card * {
+  color: #111 !important;
+}
+
 .attempt-title {
   font-size: 25px;
   font-weight: 700;
@@ -1575,6 +1585,10 @@ body,
 .play-wrapper.split-lockout-active {
   padding-top: 0 !important;
 }
+
+/* ================================
+   FORCE LOCKOUT TEXT READABILITY
+================================ */
 
 /* Overlay and Pop-Up Animations for Smoothness*/
 
