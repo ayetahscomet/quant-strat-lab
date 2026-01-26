@@ -202,9 +202,10 @@
     ============================ -->
     <FailureSummary
       v-else-if="currentView === 'failure'"
+      mode="persistence"
       :answers="answers"
       :correctAnswers="correctAnswers"
-      @continue="currentView = 'play'"
+      @continue="goHome"
     />
   </transition>
 </template>
@@ -816,16 +817,27 @@ async function onLockIn() {
   }
 
   // ---------- WINDOW LOCKOUT ----------
-  if (remaining <= 0) {
-    hardLocked.value = true
-    modalMode.value = null
+if (remaining <= 0) {
+  hardLocked.value = true
+  modalMode.value = null
 
-    lockoutMode.value = 'replay'
-    screenState.value = 'split-lockout'
+  const w = curWin.value
 
-    await logPlay('lockout')
+  // FINAL WINDOW → straight to failure summary
+  if (w?.id === 'last') {
+    await logPlay('exit-early')
+
+    currentView.value = 'failure'
+    return
   }
+
+  // NORMAL WINDOW → split lockout
+  lockoutMode.value = 'replay'
+  screenState.value = 'split-lockout'
+
+  await logPlay('lockout')
 }
+
 
 /* ======================================================
    PUSH WINDOW TIMING TO AIRTABLE (ANALYTICS)

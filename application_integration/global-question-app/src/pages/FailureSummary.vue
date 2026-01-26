@@ -2,8 +2,8 @@
   <div class="failure-wrapper">
     <img src="/logo-800-full.svg" class="fail-logo" @click="goHome" />
 
-    <h1 class="fail-title">Today wasn’t your day — and that’s completely okay.</h1>
-    <h2 class="fail-sub">See what you missed and come back stronger tomorrow.</h2>
+    <h1 class="fail-title">{{ headline }}</h1>
+    <h2 class="fail-sub">{{ subline }}</h2>
 
     <div class="result-block">
       <h3>Your Final Attempt</h3>
@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -46,6 +46,31 @@ const summary = ref({
   attemptIndex: null,
   windowId: '',
   createdAt: '',
+})
+
+const props = defineProps({
+  answers: Array,
+  correctAnswers: Array,
+  mode: {
+    type: String,
+    default: 'standard',
+  },
+})
+
+const headline = computed(() => {
+  if (props.mode === 'persistence') {
+    return 'You Stayed in the Fight.'
+  }
+
+  return 'Today wasn’t your day — and that’s completely okay.'
+})
+
+const subline = computed(() => {
+  if (props.mode === 'persistence') {
+    return 'Most players exit early. You pushed all the way to the final window.'
+  }
+
+  return 'See what you missed and come back stronger tomorrow.'
 })
 
 function normalise(s) {
