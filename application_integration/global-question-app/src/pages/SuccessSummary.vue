@@ -455,7 +455,6 @@ function goBackToGame() {
   color: #0b0c11;
 
   /* lighter gutters so content breathes */
-  padding: 28px 48px 44px;
 
   box-sizing: border-box;
 }
