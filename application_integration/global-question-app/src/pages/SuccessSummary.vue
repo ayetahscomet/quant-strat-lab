@@ -436,6 +436,7 @@ function goBackToGame() {
 .success-shell {
   min-height: 100vh;
   overflow-x: hidden;
+
   background: radial-gradient(
     circle at top left,
     #f3f5ff 0,
@@ -443,23 +444,25 @@ function goBackToGame() {
     #f9fbff 60%,
     #ffffff 100%
   );
+
   font-family:
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
     'Inter',
     sans-serif;
+
   color: #0b0c11;
 
-  /* WIDER CANVAS */
-  padding: 28px 14px 40px;
+  /* lighter gutters so content breathes */
+  padding: 28px 48px 44px;
 
   box-sizing: border-box;
 }
 
 /* HERO */
 .hero {
-  max-width: 1880px;
+  max-width: 2200px;
   width: 100%;
   margin: 0 auto 34px;
 
@@ -523,7 +526,7 @@ function goBackToGame() {
 
 /* GRID LAYOUT */
 .grid {
-  max-width: 1880px;
+  max-width: 2220px;
   width: 100%;
   margin: 0 auto;
 
