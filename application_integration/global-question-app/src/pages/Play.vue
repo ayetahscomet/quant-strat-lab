@@ -192,8 +192,8 @@
       </transition>
     </div>
     <!-- ===========================
-         SUCCESS SUMMARY (NO ROUTE) 
-    ============================ -->
+          SUCCESS SUMMARY (NO ROUTE) 
+      ============================ -->
     <SuccessSummary
       v-else-if="currentView === 'success'"
       :answers="answers"
@@ -202,8 +202,8 @@
     />
 
     <!-- ===========================
-         FAILURE SUMMARY (NO ROUTE)
-    ============================ -->
+          FAILURE SUMMARY (NO ROUTE)
+      ============================ -->
     <FailureSummary
       v-else-if="currentView === 'failure'"
       mode="persistence"
@@ -1482,6 +1482,16 @@ body,
 .modal-fade-leave-from {
   opacity: 1;
   transform: scale(1) translateY(0);
+}
+
+.full-screen-summary {
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  background: #f6f8ff;
+  padding: 32px 28px;
 }
 
 /* Lockout Screen Formatting */
