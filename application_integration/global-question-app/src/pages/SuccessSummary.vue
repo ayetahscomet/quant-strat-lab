@@ -456,13 +456,14 @@ function goBackToGame() {
 
 /* HERO */
 .hero {
-  max-width: 1440px;
+  max-width: 1680px;
   width: 100%;
-  margin: 0 auto 26px;
+  margin: 0 auto 30px;
+
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 22px;
+  gap: 28px;
 }
 
 .hero-logo img {
@@ -519,12 +520,13 @@ function goBackToGame() {
 
 /* GRID LAYOUT */
 .grid {
-  max-width: 1440px;
+  max-width: 1680px;
   width: 100%;
   margin: 0 auto;
+
   display: grid;
-  grid-template-columns: minmax(0, 0.58fr) minmax(0, 0.42fr);
-  gap: 22px;
+  grid-template-columns: minmax(0, 0.6fr) minmax(0, 0.4fr);
+  gap: 32px;
 }
 
 .column {
