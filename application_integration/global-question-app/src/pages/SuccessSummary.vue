@@ -520,13 +520,13 @@ function goBackToGame() {
 
 /* GRID LAYOUT */
 .grid {
-  max-width: 1680px;
+  max-width: 1780px;
   width: 100%;
   margin: 0 auto;
 
   display: grid;
-  grid-template-columns: minmax(0, 0.6fr) minmax(0, 0.4fr);
-  gap: 32px;
+  grid-template-columns: minmax(0, 0.55fr) minmax(0, 0.45fr);
+  gap: 38px;
 }
 
 .column {
@@ -556,6 +556,7 @@ function goBackToGame() {
 .metrics-hero {
   background: linear-gradient(135deg, #0d0f11, #20232f);
   color: #ffffff;
+  padding: 28px 28px 26px;
 }
 
 .metrics-grid-card {
@@ -656,8 +657,8 @@ function goBackToGame() {
 
 .metric {
   background: rgba(15, 23, 42, 0.08);
-  border-radius: 14px;
-  padding: 10px 12px 9px;
+  border-radius: 16px;
+  padding: 14px 16px 13px;
   box-sizing: border-box;
 }
 
@@ -704,7 +705,7 @@ function goBackToGame() {
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 16px;
 }
 
 /* REFLECTION */
