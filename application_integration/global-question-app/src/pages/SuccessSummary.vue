@@ -135,7 +135,6 @@
 
           <div class="cta-row">
             <button class="btn btn-primary" @click="goAnalytics">Open daily analytics</button>
-            <button class="btn btn-ghost" @click="goBackToGame">Back to today’s question</button>
           </div>
         </div>
       </section>
@@ -738,11 +737,6 @@ function goBackToGame() {
 .btn-primary {
   background: #0b0c11;
   color: #ffffff;
-}
-
-.btn-ghost {
-  background: #ffffff;
-  color: #0b0c11;
 }
 
 /* RESPONSIVE */

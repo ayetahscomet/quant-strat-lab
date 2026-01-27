@@ -192,25 +192,23 @@
       </transition>
     </div>
     <!-- ===========================
-          SUCCESS SUMMARY (NO ROUTE) 
-      ============================ -->
-    <SuccessSummary
-      v-else-if="currentView === 'success'"
-      :answers="answers"
-      :correctAnswers="correctAnswers"
-      @continue="goHome"
-    />
+      SUCCESS SUMMARY (FULL SCREEN)
+============================ -->
+    <div v-else-if="currentView === 'success'" class="full-screen-summary">
+      <SuccessSummary :answers="answers" :correctAnswers="correctAnswers" @continue="goHome" />
+    </div>
 
     <!-- ===========================
-          FAILURE SUMMARY (NO ROUTE)
-      ============================ -->
-    <FailureSummary
-      v-else-if="currentView === 'failure'"
-      mode="persistence"
-      :answers="answers"
-      :correctAnswers="correctAnswers"
-      @continue="goHome"
-    />
+      FAILURE SUMMARY (FULL SCREEN)
+============================ -->
+    <div v-else-if="currentView === 'failure'" class="full-screen-summary">
+      <FailureSummary
+        mode="persistence"
+        :answers="answers"
+        :correctAnswers="correctAnswers"
+        @continue="goHome"
+      />
+    </div>
   </transition>
 </template>
 
