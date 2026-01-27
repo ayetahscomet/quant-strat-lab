@@ -474,8 +474,7 @@ function goBackToGame() {
 .hero-logo img {
   width: 78px;
   height: 78px;
-  border-radius: 18px;
-  outline: 1.5px solid rgb(255, 255, 255);
+  outline: 1.5px solid #0000;
 }
 
 .hero-kicker {
