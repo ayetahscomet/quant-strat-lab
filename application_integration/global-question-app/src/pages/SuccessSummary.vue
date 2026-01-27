@@ -545,7 +545,7 @@ function goBackToGame() {
 .card {
   background: #ffffff;
   border-radius: 20px;
-  padding: 20px 20px 18px;
+  padding: 22px 22px 22px;
   box-shadow:
     0 18px 40px rgba(15, 23, 42, 0.18),
     0 0 0 1px rgba(15, 23, 42, 0.02);
