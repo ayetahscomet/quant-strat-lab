@@ -423,6 +423,14 @@ function goAnalytics() {
   }
 }
 
+function goHome() {
+  try {
+    router.replace({ name: 'Home' })
+  } catch {
+    router.replace('/')
+  }
+}
+
 function goBackToGame() {
   try {
     router.replace({ name: 'Play' })
@@ -437,7 +445,7 @@ function goBackToGame() {
   min-height: 100vh;
   width: 100vw !important;
   max-width: none !important;
-
+  padding-bottom: 96px !important;
   overflow-x: hidden;
 
   background: radial-gradient(
@@ -476,9 +484,10 @@ function goBackToGame() {
 }
 
 .hero-logo img {
-  width: 78px;
-  height: 78px;
-  outline: 1.5px solid #0000;
+  width: 70px;
+  height: 70px;
+  outline: 1.5px solid #000000;
+  cursor: pointer;
 }
 
 .hero-kicker {
@@ -550,7 +559,7 @@ function goBackToGame() {
 }
 
 .metrics-column {
-  width: 100% !important;
+  width: 80% !important;
 }
 
 /* CARDS */
