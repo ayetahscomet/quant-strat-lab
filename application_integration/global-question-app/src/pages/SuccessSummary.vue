@@ -435,6 +435,9 @@ function goBackToGame() {
 <style scoped>
 .success-shell {
   min-height: 100vh;
+  width: 100vw !important;
+  max-width: none !important;
+
   overflow-x: hidden;
 
   background: radial-gradient(
@@ -461,8 +464,9 @@ function goBackToGame() {
 
 /* HERO */
 .hero {
-  max-width: 2200px;
-  width: 100%;
+  width: 100vw !important;
+  max-width: none !important;
+
   margin: 0 auto 34px;
 
   display: grid;
@@ -524,8 +528,9 @@ function goBackToGame() {
 
 /* GRID LAYOUT */
 .grid {
-  max-width: 2220px;
-  width: 100%;
+  width: 100vw !important;
+  max-width: none !important;
+
   margin: 0 auto;
 
   display: grid;
@@ -538,6 +543,14 @@ function goBackToGame() {
 
 .column {
   min-width: 0;
+}
+
+.answers-column {
+  width: 100% !important;
+}
+
+.metrics-column {
+  width: 100% !important;
 }
 
 /* CARDS */
@@ -781,5 +794,8 @@ function goBackToGame() {
   .metrics-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+.success-shell > * {
+  max-width: none !important;
 }
 </style>
