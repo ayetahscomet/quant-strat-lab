@@ -459,7 +459,7 @@ function goBackToGame() {
 
 /* HERO */
 .hero {
-  max-width: 1860px;
+  max-width: 1880px;
   width: 100%;
   margin: 0 auto 34px;
 
@@ -523,16 +523,16 @@ function goBackToGame() {
 
 /* GRID LAYOUT */
 .grid {
-  max-width: 1860px;
+  max-width: 1880px;
   width: 100%;
   margin: 0 auto;
 
   display: grid;
 
-  /* give metrics real breathing room */
-  grid-template-columns: minmax(0, 0.52fr) minmax(560px, 0.48fr);
+  /* balanced desktop layout */
+  grid-template-columns: minmax(0, 0.58fr) minmax(0, 0.42fr);
 
-  gap: 44px;
+  gap: 46px;
 }
 
 .column {
