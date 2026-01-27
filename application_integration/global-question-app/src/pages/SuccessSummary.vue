@@ -450,20 +450,23 @@ function goBackToGame() {
     'Inter',
     sans-serif;
   color: #0b0c11;
-  padding: 32px 26px 40px;
+
+  /* WIDER CANVAS */
+  padding: 28px 14px 40px;
+
   box-sizing: border-box;
 }
 
 /* HERO */
 .hero {
-  max-width: 1680px;
+  max-width: 1860px;
   width: 100%;
-  margin: 0 auto 30px;
+  margin: 0 auto 34px;
 
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 28px;
+  gap: 34px;
 }
 
 .hero-logo img {
@@ -520,13 +523,16 @@ function goBackToGame() {
 
 /* GRID LAYOUT */
 .grid {
-  max-width: 1780px;
+  max-width: 1860px;
   width: 100%;
   margin: 0 auto;
 
   display: grid;
-  grid-template-columns: minmax(0, 0.55fr) minmax(0, 0.45fr);
-  gap: 38px;
+
+  /* give metrics real breathing room */
+  grid-template-columns: minmax(0, 0.52fr) minmax(560px, 0.48fr);
+
+  gap: 44px;
 }
 
 .column {
@@ -560,7 +566,7 @@ function goBackToGame() {
 }
 
 .metrics-grid-card {
-  margin-top: 14px;
+  margin-top: 18px;
 }
 
 .reflection-card {
