@@ -33,7 +33,7 @@
 
       <!-- Primary visuals (always 3) -->
       <div class="primary-stats-grid" v-if="personalReady">
-        <div class="stat-card large">
+        <div class="stat-card completion-card">
           <p class="stat-label">Completion</p>
           <div class="canvas-wrap">
             <canvas ref="completionRing"></canvas>
@@ -42,7 +42,7 @@
           <span class="stat-foot">{{ completionFoot }}</span>
         </div>
 
-        <div class="stat-card medium">
+        <div class="stat-card accuracy-card">
           <p class="stat-label">Accuracy</p>
           <div class="canvas-wrap">
             <canvas ref="accuracyRing"></canvas>
@@ -51,7 +51,7 @@
           <span class="stat-foot">{{ accuracyFoot }}</span>
         </div>
 
-        <div class="stat-card medium">
+        <div class="stat-card pace-card">
           <p class="stat-label">Pace</p>
           <div class="canvas-wrap">
             <canvas ref="speedRing"></canvas>
@@ -1627,8 +1627,13 @@ function blockStyle(block) {
 .analytics-wrapper {
   display: flex;
   width: 100vw;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+
+  overflow-x: hidden;
+
+  margin: 0;
+  padding: 0;
+
   font-family:
     Inter,
     system-ui,
@@ -1643,11 +1648,17 @@ function blockStyle(block) {
    LEFT PANEL (PERSONAL)
 ========================= */
 .left-pane {
-  width: 42%;
+  flex: 0 0 38%;
+  max-width: 38%;
+  min-width: 360px;
+
   background: #0d0f11;
   color: white;
-  padding: 38px 44px 28px;
+
+  padding: 34px 30px 28px;
+
   overflow-y: auto;
+
   border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -1726,87 +1737,96 @@ function blockStyle(block) {
   opacity: 0.95;
 }
 
+/* =========================
+   HERO STAT BLOCKS (LEFT)
+========================= */
+
 .primary-stats-grid {
-  margin-top: 16px;
+  margin-top: 18px;
+
   display: grid;
-  grid-template-columns: 1.35fr 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
-/* Card now manages its own layout */
+/* Big vertical plaque */
 .stat-card {
-  background: #14181d;
-  border-radius: 18px;
-  padding: 14px 12px 12px;
+  background: linear-gradient(180deg, #5cc8ff, #3aa0ff);
 
-  display: grid;
-  grid-template-rows: auto minmax(96px, 1fr) auto auto;
-  row-gap: 6px;
+  border-radius: 16px;
+  padding: 10px 0px 110px;
 
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  min-height: 90px;
+  max-height: 100px;
+
+  text-align: center;
+
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
 }
 
-/* remove fixed-ish vertical pressure */
-.stat-card.large,
-.stat-card.medium {
-  min-height: 190px;
+/* Individual colour moods */
+.completion-card {
+  background: linear-gradient(180deg, #34e3a0, #1fbf85);
 }
 
-/* Title line */
+.accuracy-card {
+  background: linear-gradient(180deg, #6d8cff, #4b63ff);
+}
+
+.pace-card {
+  background: linear-gradient(180deg, #ffd36a, #ffb547);
+}
+
+/* Label at top */
 .stat-label {
   margin: 0;
-  font-size: 12px;
-  letter-spacing: 0.6px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  font-weight: 900;
   text-transform: uppercase;
-  opacity: 0.75;
-  text-align: center;
+  opacity: 0.85;
 }
 
+/* Big ring holder */
 .canvas-wrap {
-  height: 96px;
-  width: 100%;
-  position: relative;
+  width: 60px;
+  height: 60px;
+
+  margin: 5px 0 5px;
+
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+/* Huge percentage */
 .stat-value {
-  position: static;
-  transform: none;
+  margin: 0px 0 0px;
 
-  margin-top: 6px;
-  text-align: center;
-
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: 0.2px;
+  font-size: 10px;
+  font-weight: 900;
 }
 
-.stat-value.small {
-  font-size: 16px;
-}
-
+/* Caption */
 .stat-foot {
-  position: static;
-  transform: none;
-
-  margin-top: 4px;
-  text-align: center;
+  margin-top: 10px;
 
   font-size: 12px;
-  opacity: 0.7;
-  line-height: 1.35;
+  opacity: 0.85;
+  line-height: 1.45;
 
-  width: 100%;
-  padding: 0 6px;
+  max-width: 110px;
 }
 
 .personal-dynamics {
-  margin-top: 14px;
+  margin-top: 20px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 150px 260px;
+  grid-template-rows: 200px 300px;
   gap: 12px;
 }
 
@@ -1934,11 +1954,15 @@ function blockStyle(block) {
    RIGHT PANEL (GLOBAL)
 ========================= */
 .right-pane {
-  width: 58%;
+  flex: 1;
+
   background: #fff;
   color: #111;
-  padding: 30px 34px 26px;
+
+  padding: 32px 36px 30px;
+
   overflow-y: auto;
+
   position: relative;
 }
 
@@ -1952,7 +1976,7 @@ function blockStyle(block) {
 
 .g-title {
   margin: 0;
-  font-size: 60px;
+  font-size: clamp(38px, 4vw, 60px);
   font-weight: 900;
   font-style: italic;
   letter-spacing: -1px;
@@ -2006,7 +2030,7 @@ function blockStyle(block) {
 
 .global-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   grid-auto-rows: minmax(120px, auto);
   gap: 18px;
   grid-auto-flow: dense;
