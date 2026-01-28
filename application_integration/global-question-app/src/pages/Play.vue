@@ -30,7 +30,7 @@
            ATTEMPT DOTS (HIDDEN IN LOCKOUT)
       ======================================================= -->
       <div v-if="screenState !== 'split-lockout'" class="attempts-row">
-        <span class="attempts-label">Attempts this check-in:</span>
+        <span class="attempts-label">Attempts remaining:</span>
         <div class="dots">
           <span
             v-for="n in MAX_ATTEMPTS"
@@ -2058,9 +2058,10 @@ body,
 
 html,
 body {
-  overflow-x: hidden;
-  overflow-y: hidden;
-  overscroll-behavior: hidden;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-color);
+  overscroll-behavior-y: none;
 }
 
 .lockout-subtext {
@@ -2368,5 +2369,140 @@ body {
 }
 .theme-night .right-pane {
   animation-duration: 0.74s;
+}
+
+/* ============================================================
+   MOBILE GAMEPLAY TUNING
+============================================================ */
+@media (max-width: 600px) {
+  /* ---------- FULL HEIGHT + BG LOCK ---------- */
+
+  .logo {
+    width: 45px;
+    height: 45px;
+    outline: 1px solid #000000;
+    cursor: pointer;
+  }
+  .play-wrapper {
+    min-height: 100svh;
+    height: auto;
+    padding-top: 60px;
+    padding-bottom: 50px;
+  }
+
+  html,
+  body {
+    background: var(--bg-color);
+  }
+
+  /* ---------- HEADER CLUSTER ---------- */
+
+  .header {
+    margin-top: 12px;
+    margin-bottom: 8px;
+    gap: 6px;
+  }
+
+  .button-row {
+    display: flex;
+    gap: 22px;
+    min-width: 150px;
+  }
+
+  .divider {
+    opacity: 0.5;
+    font-weight: 400px;
+    font-size: 20px;
+  }
+
+  .attempts-row {
+    margin-bottom: 6px;
+  }
+
+  .attempt-metric {
+    position: relative;
+    top: auto;
+    right: auto;
+    margin-bottom: 18px;
+    font-size: 13px;
+    opacity: 0.7;
+  }
+
+  /* ---------- QUESTION ---------- */
+
+  .question-title {
+    font-size: 20px;
+    margin-bottom: 18px;
+    max-width: 92%;
+  }
+
+  /* ---------- INPUT STACK ---------- */
+
+  .input-group {
+    min-width: 200px;
+    gap: 14px;
+  }
+
+  .answer-input {
+    font-size: 16px;
+    padding: 0.7rem 1rem;
+  }
+
+  /* ---------- LOCK BUTTON ---------- */
+
+  .button-row {
+    margin-top: 10px;
+  }
+
+  .lock {
+    width: 92%;
+    max-width: 420px;
+  }
+
+  /* ---------- ATTEMPT DOTS ---------- */
+
+  .dots {
+    gap: 8px;
+  }
+
+  .dot {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* ---------- MODALS ---------- */
+
+  .modal {
+    width: 88%;
+    max-width: 420px;
+  }
+
+  /* ---------- SPLIT LOCKOUT ---------- */
+
+  .lockout-split {
+    grid-template-columns: 100%;
+  }
+
+  .left-pane {
+    display: none;
+  }
+
+  .right-pane {
+    width: 100%;
+  }
+
+  .lockout-logo {
+    margin-top: 60px;
+    width: 90px;
+    height: 90px;
+  }
+
+  /* ---------- SCROLL SAFETY ---------- */
+
+  .play-wrapper::after {
+    content: '';
+    display: block;
+    height: env(safe-area-inset-bottom);
+  }
 }
 </style>
