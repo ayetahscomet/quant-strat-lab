@@ -2308,4 +2308,167 @@ function blockStyle(block) {
 .stat-card:hover {
   transform: translateY(-2px);
 }
+
+/* ======================================================
+   DAILY ANALYTICS — MOBILE REFLOW
+   Personal first, Global second
+====================================================== */
+
+@media (max-width: 720px) {
+  /* ---- SHELL ---- */
+  .analytics-wrapper {
+    flex-direction: column;
+    height: auto;
+  }
+
+  /* ---- PANES STACK ---- */
+  .left-pane,
+  .right-pane {
+    flex: none;
+    max-width: 100%;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+  }
+
+  /* reduce padding for phone */
+  .left-pane {
+    padding: 22px 16px 26px;
+  }
+
+  .right-pane {
+    padding: 24px 16px 28px;
+  }
+
+  /* ====================================================
+     PERSONAL HEADER (INSPIRED BY SUCCESS SUMMARY)
+  ==================================================== */
+
+  .left-header {
+    align-items: flex-start;
+  }
+
+  .brand-logo {
+    width: 48px;
+    height: 48px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .sub {
+    font-size: 13px;
+  }
+
+  /* ====================================================
+     HERO COPY TIGHTEN
+  ==================================================== */
+
+  .hero-box {
+    padding: 14px;
+  }
+
+  .hero-line {
+    font-size: 17px;
+  }
+
+  .hero-sub {
+    font-size: 13px;
+  }
+
+  /* ====================================================
+     PRIMARY RINGS — FULL WIDTH STACK
+  ==================================================== */
+
+  .primary-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    min-height: 88px;
+    padding: 12px 0 96px;
+  }
+
+  .canvas-wrap {
+    width: 56px;
+    height: 56px;
+  }
+
+  /* ====================================================
+     PERSONAL DYNAMICS → SINGLE COLUMN
+  ==================================================== */
+
+  .personal-dynamics {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .chart-dynamic {
+    grid-column: auto;
+  }
+
+  /* ====================================================
+     FOOTER TIGHTEN
+  ==================================================== */
+
+  .left-footer {
+    margin-top: 18px;
+    padding-top: 12px;
+  }
+
+  /* ====================================================
+     GLOBAL HEADER TREATMENT
+  ==================================================== */
+
+  .right-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .g-title {
+    font-size: 30px;
+    line-height: 1;
+  }
+
+  .g-sub {
+    font-size: 13px;
+  }
+
+  .share-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  /* ====================================================
+     GLOBAL GRID → SINGLE COLUMN
+  ==================================================== */
+
+  .global-grid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    gap: 14px;
+  }
+
+  .g-block {
+    padding: 14px;
+  }
+
+  /* ====================================================
+     RIGHT FOOTER STACK
+  ==================================================== */
+
+  .right-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .brand-tag {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+}
 </style>

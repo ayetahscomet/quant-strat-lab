@@ -807,4 +807,169 @@ function goBackToGame() {
 .success-shell > * {
   max-width: none !important;
 }
+
+/* ============================================================
+   SUCCESS SUMMARY — MOBILE REFLOW
+============================================================ */
+@media (max-width: 600px) {
+  /* ROOT */
+  .success-shell {
+    padding: 20px 14px 46px;
+  }
+
+  /* HERO */
+  .hero {
+    grid-template-columns: auto 1fr !important;
+    align-items: flex-start !important;
+    gap: 12px;
+  }
+  .hero-title {
+    font-size: 22px;
+  }
+
+  .hero-logo {
+    margin-top: 14px;
+    outline: 0.1px;
+  }
+
+  .hero-logo img {
+    width: 50px;
+    height: 50px;
+  }
+
+  .hero-copy {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero-kicker {
+    font-size: 11px;
+  }
+
+  .hero-sub {
+    font-size: 13px;
+  }
+
+  /* =====================================================
+     MAIN GRID → SINGLE COLUMN
+  ===================================================== */
+
+  .grid {
+    grid-template-columns: 1fr !important;
+    max-width: 500px;
+    gap: 12px;
+  }
+
+  .metrics-column {
+    width: 82% !important;
+  }
+
+  .answers-column {
+    max-width: 82%;
+  }
+
+  /* =====================================================
+     ANSWERS + OTHER ACCEPTED → FULL WIDTH
+  ===================================================== */
+
+  .answers-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* =====================================================
+     TODAY’S BRAINPRINT → FULL WIDTH
+  ===================================================== */
+
+  .metrics-hero {
+    padding: 12px;
+  }
+
+  .metrics-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* =====================================================
+     MINI METRICS → 2 x 2 GRID
+  ===================================================== */
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .metrics-grid-card {
+    padding: 10px;
+  }
+
+  /* =====================================================
+     REFLECTION → FULL WIDTH
+  ===================================================== */
+
+  .reflection-card {
+    margin-top: 8px;
+  }
+
+  /* =====================================================
+     CARDS → TIGHTER HEIGHT / BETTER TYPE
+  ===================================================== */
+
+  .card {
+    padding: 12px;
+  }
+
+  .card-title {
+    font-size: 16px;
+  }
+
+  .card-title-sm {
+    font-size: 14px;
+  }
+
+  .card-sub {
+    font-size: 13px;
+  }
+
+  /* =====================================================
+     PILLS / ANSWERS
+  ===================================================== */
+
+  .pill {
+    font-size: 14px;
+    padding: 50px 14px;
+  }
+
+  .pill-stack-dark {
+    padding: 12px;
+  }
+
+  /* =====================================================
+     METRIC VALUES SCALE DOWN SLIGHTLY
+  ===================================================== */
+
+  .metric-value-lg {
+    font-size: 22px;
+  }
+
+  .metric-value {
+    font-size: 16px;
+  }
+
+  /* =====================================================
+     SAFE BOTTOM SCROLL SPACE
+  ===================================================== */
+
+  .success-shell::after {
+    content: '';
+    display: block;
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  .hero-logo {
+    margin-top: 16px;
+  }
+}
 </style>
