@@ -2388,7 +2388,7 @@ function blockStyle(block) {
 
   .stat-card {
     min-height: 88px;
-    padding: 12px 0 96px;
+    padding: 12px 0 20px;
   }
 
   .canvas-wrap {

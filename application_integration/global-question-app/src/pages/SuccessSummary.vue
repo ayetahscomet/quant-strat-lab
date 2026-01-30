@@ -814,7 +814,7 @@ function goBackToGame() {
 @media (max-width: 600px) {
   /* ROOT */
   .success-shell {
-    padding: 20px 14px 46px;
+    padding: 20px 0px 0px;
   }
 
   /* HERO */
@@ -891,6 +891,12 @@ function goBackToGame() {
     gap: 12px;
   }
 
+  .metrics-hero {
+    background: linear-gradient(270deg, #0d0f11, #20232f);
+    color: #ffffff;
+    padding: 0px 0px 0px;
+  }
+
   /* =====================================================
      MINI METRICS → 2 x 2 GRID
   ===================================================== */
@@ -938,7 +944,7 @@ function goBackToGame() {
 
   .pill {
     font-size: 14px;
-    padding: 50px 14px;
+    padding: 14px 14px;
   }
 
   .pill-stack-dark {

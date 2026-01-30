@@ -213,7 +213,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import SuccessSummary from './SuccessSummary.vue'
 import FailureSummary from './FailureSummary.vue'
 import { useRouter } from 'vue-router'
@@ -414,17 +414,13 @@ async function resolveDailyStateBeforePlay() {
   const res = await fetch('/api/load-day-progress', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      userId,
-      dateKey: dateKey.value,
-    }),
+    body: JSON.stringify({ userId, dateKey: dateKey.value }),
   })
 
   if (!res.ok) return false
-
   const data = await res.json()
 
-  // HARD STOP STATES
+  // Only "true day end" states should block re-entry
   if (data.dayEnded) {
     if (data.dayEndResult === 'success') {
       currentView.value = 'success'
@@ -436,11 +432,10 @@ async function resolveDailyStateBeforePlay() {
       return true
     }
 
+    // 🚫 CRITICAL: do NOT treat "lockout" as a day-ending state
+    // lockout is per-window, and loadSessionState() will handle it properly
     if (data.dayEndResult === 'lockout') {
-      screenState.value = 'split-lockout'
-      hardLocked.value = true
-      lockoutMode.value = 'return'
-      return true
+      return false
     }
   }
 
@@ -926,6 +921,29 @@ async function showHint() {
 function closeHint() {
   modalMode.value = null
 }
+
+watch(
+  () => curWin.value?.id,
+  async (newId, oldId) => {
+    if (!newId || newId === oldId) return
+
+    // moving into a new time window:
+    hardLocked.value = false
+    screenState.value = 'normal'
+    lockoutMode.value = null
+    modalMode.value = null
+    showFillWarning.value = false
+    showExitConfirm.value = false
+
+    // refresh keys (important if you ever cross midnight too)
+    dateKey.value = todayKey(tz.value)
+
+    // reload question + session state for the new window
+    await loadTodayQuestion()
+    await loadSessionState()
+    applyHydratedState()
+  },
+)
 
 /* ======================================================
    EXIT EARLY
@@ -2386,7 +2404,7 @@ body {
   .play-wrapper {
     min-height: 100svh;
     height: auto;
-    padding-top: 60px;
+    padding-top: 100px;
     padding-bottom: 50px;
   }
 

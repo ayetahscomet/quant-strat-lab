@@ -5,10 +5,10 @@
 export const WINDOWS = [
   { id: 'nightowl', label: 'Night Owl', start: '00:00', end: '04:30' },
   { id: 'early', label: 'Early Bird', start: '04:30', end: '10:00' },
-  { id: 'midmorning', label: 'Mid-Morning Check In', start: '10:00', end: '12:00' },
-  { id: 'midday', label: 'Midday Check In', start: '12:00', end: '15:00' },
-  { id: 'evening', label: 'Evening Check In', start: '15:00', end: '19:00' },
-  { id: 'late', label: 'Better Late Than Never', start: '19:00', end: '21:00' },
+  { id: 'midmorning', label: 'Morning Rush', start: '10:00', end: '12:00' },
+  { id: 'midday', label: 'Midday Dash', start: '12:00', end: '15:00' },
+  { id: 'evening', label: 'Golden Hour', start: '15:00', end: '19:00' },
+  { id: 'late', label: 'After Hours', start: '19:00', end: '21:00' },
   { id: 'last', label: 'Last Chance', start: '21:00', end: '24:00' },
 ]
 
