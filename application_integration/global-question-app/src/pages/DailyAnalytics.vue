@@ -417,7 +417,7 @@ function buildHeroCopy(rng) {
           ? 'You ran out of attempts in at least one window.'
           : 'Today’s session is logged.'
 
-  heroDescription.value = `${outcomeLine}. ${paceLine}${paceLine}`
+  heroDescription.value = `${outcomeLine} ${paceLine}`
 
   // feet for the three big cards
   const required = p.totalSlots || 0
