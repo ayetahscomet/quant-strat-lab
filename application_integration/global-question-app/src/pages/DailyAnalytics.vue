@@ -35,29 +35,47 @@
       <div class="primary-stats-grid" v-if="personalReady">
         <div class="stat-card completion-card">
           <p class="stat-label">Completion</p>
-          <div class="canvas-wrap">
-            <canvas ref="completionRing"></canvas>
+
+          <div class="stat-row">
+            <div class="ring-stack">
+              <canvas ref="completionRing"></canvas>
+              <span class="ring-center">{{ displayCompletion }}%</span>
+            </div>
+
+            <div class="stat-copy">
+              <p class="stat-foot">{{ completionFoot }}</p>
+            </div>
           </div>
-          <span class="stat-value">{{ displayCompletion }}%</span>
-          <span class="stat-foot">{{ completionFoot }}</span>
         </div>
 
         <div class="stat-card accuracy-card">
           <p class="stat-label">Accuracy</p>
-          <div class="canvas-wrap">
-            <canvas ref="accuracyRing"></canvas>
+
+          <div class="stat-row">
+            <div class="ring-stack">
+              <canvas ref="accuracyRing"></canvas>
+              <span class="ring-center">{{ displayAccuracy }}%</span>
+            </div>
+
+            <div class="stat-copy">
+              <p class="stat-foot">{{ accuracyFoot }}</p>
+            </div>
           </div>
-          <span class="stat-value">{{ displayAccuracy }}%</span>
-          <span class="stat-foot">{{ accuracyFoot }}</span>
         </div>
 
         <div class="stat-card pace-card">
           <p class="stat-label">Pace</p>
-          <div class="canvas-wrap">
-            <canvas ref="speedRing"></canvas>
+
+          <div class="stat-row">
+            <div class="ring-stack">
+              <canvas ref="speedRing"></canvas>
+              <span class="ring-center">{{ displaySpeed }}%</span>
+            </div>
+
+            <div class="stat-copy">
+              <p class="stat-foot">{{ speedFoot }}</p>
+            </div>
           </div>
-          <span class="stat-value small">{{ displaySpeed }}%</span>
-          <span class="stat-foot">{{ speedFoot }}</span>
         </div>
       </div>
 
@@ -159,7 +177,7 @@
 
       <div class="right-footer" v-if="personalReady">
         <p class="rotation-note">Views refresh daily. Tomorrow tells a new story.</p>
-        <div class="brand-tag">Akinto. A game of Common Knowledge</div>
+        <div class="brand-tag">A game of Common Knowledge.</div>
       </div>
 
       <div class="right-skeleton" v-else>
@@ -404,10 +422,14 @@ function buildHeroCopy(rng) {
   )}%. ${paceLine}`
 
   // feet for the three big cards
+  const required = p.totalSlots || 0
+  const possible = p._totalPossible || required
+  const foundTowardCompletion = Math.min(p.uniqueCorrect, required)
+
   completionFoot.value =
-    p.uniqueCorrect === p.totalSlots
-      ? 'All slots found.'
-      : `${p.uniqueCorrect} of ${p.totalSlots} correct answers discovered today.`
+    required > 0 && foundTowardCompletion >= required
+      ? `All required answers found. (${p.uniqueCorrect} of ${possible} possible discovered today.)`
+      : `${foundTowardCompletion} of ${required} required found. (${p.uniqueCorrect} of ${possible} possible discovered today.)`
 
   accuracyFoot.value =
     p.submittedUnique > 0
@@ -669,11 +691,10 @@ function makeDoughnut(ctx, valuePct, fg, bg) {
   return new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['Value', 'Rest'],
       datasets: [
         {
           data: [clamp(valuePct, 0, 100), 100 - clamp(valuePct, 0, 100)],
-          backgroundColor: [fg, bg],
+          backgroundColor: [fg, bg || 'rgba(0,0,0,0.18)'],
           borderWidth: 0,
         },
       ],
@@ -681,8 +702,11 @@ function makeDoughnut(ctx, valuePct, fg, bg) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '72%',
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      cutout: '62%', // <-- THICKER ring
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+      },
     },
   })
 }
@@ -1312,15 +1336,11 @@ function renderPersonalCharts(rng) {
   const accuracyCtx = accuracyRing.value.getContext('2d')
   const speedCtx = speedRing.value.getContext('2d')
 
-  chartInstances.push(
-    makeDoughnut(completionCtx, pct(p.completion), COLORS.green, 'rgba(255,255,255,0.10)'),
-  )
-  chartInstances.push(
-    makeDoughnut(accuracyCtx, pct(p.accuracy), COLORS.blue, 'rgba(255,255,255,0.10)'),
-  )
+  chartInstances.push(makeDoughnut(completionCtx, pct(p.completion), '#18E2A4', 'rgba(0,0,0,0.22)'))
+  chartInstances.push(makeDoughnut(accuracyCtx, pct(p.accuracy), '#5C82FF', 'rgba(0,0,0,0.22)'))
 
   const speedVal = typeof p.pacePercentile === 'number' ? pct(p.pacePercentile) : 55
-  chartInstances.push(makeDoughnut(speedCtx, speedVal, COLORS.gold, 'rgba(255,255,255,0.10)'))
+  chartInstances.push(makeDoughnut(speedCtx, speedVal, '#FFB938', 'rgba(0,0,0,0.22)'))
 
   // Personal dynamic chart
   if (personalChartCanvas.value) {
@@ -1351,7 +1371,14 @@ function derivePersonalFromDayProgress(dayProgress) {
     ? dayProgress.correctAnswers
     : []
 
-  const totalSlots = canonicalCorrect.length
+  const requiredSlots =
+    typeof dayProgress?.requiredSlots === 'number'
+      ? dayProgress.requiredSlots
+      : typeof dayProgress?.answerCount === 'number'
+        ? dayProgress.answerCount
+        : canonicalCorrect.length
+
+  const totalPossible = canonicalCorrect.length
   const correctSet = new Set(canonicalCorrect.map(normalise))
 
   // union across day
@@ -1386,7 +1413,11 @@ function derivePersonalFromDayProgress(dayProgress) {
 
   const submittedUnique = uniqueSubmissions.size
   const uniqueCorrect = uniqueCorrectFound.size
-  const completion = totalSlots > 0 ? (uniqueCorrect / totalSlots) * 100 : 0
+
+  // Completion should be "did you fill the required slots?"
+  const completionBase = Math.min(uniqueCorrect, requiredSlots)
+  const completion = requiredSlots > 0 ? (completionBase / requiredSlots) * 100 : 0
+
   const accuracy = submittedUnique > 0 ? (uniqueCorrect / submittedUnique) * 100 : 0
 
   const attemptsTotal = attempts.length
@@ -1412,7 +1443,8 @@ function derivePersonalFromDayProgress(dayProgress) {
 
   personal.value = {
     ...personal.value,
-    totalSlots,
+    totalSlots: requiredSlots,
+    _totalPossible: totalPossible,
     correctAnswers: canonicalCorrect,
     uniqueCorrect,
     submittedUnique,
@@ -1750,22 +1782,18 @@ function blockStyle(block) {
 }
 
 /* Big vertical plaque */
+
 .stat-card {
-  background: linear-gradient(180deg, #5cc8ff, #3aa0ff);
-
   border-radius: 16px;
-  padding: 10px 0px 110px;
-
+  padding: 10px 16px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
+  text-align: left;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
 
   min-height: 90px;
   max-height: 100px;
-
-  text-align: center;
-
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
 }
 
 /* Individual colour moods */
@@ -1781,9 +1809,55 @@ function blockStyle(block) {
   background: linear-gradient(180deg, #ffd36a, #ffb547);
 }
 
+.stat-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-left: 12px;
+}
+
+/* RING HOLDER */
+.ring-stack {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  flex-shrink: 0;
+}
+
+/* % TEXT */
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* TEXT COLUMN */
+.stat-copy {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* COMMENTARY */
+.stat-foot {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
 /* Label at top */
 .stat-label {
-  margin: 0;
+  padding-left: 10px;
+  margin: 0 0 0px;
   font-size: 11px;
   letter-spacing: 1px;
   font-weight: 900;
@@ -1791,35 +1865,13 @@ function blockStyle(block) {
   opacity: 0.85;
 }
 
-/* Big ring holder */
-.canvas-wrap {
-  width: 60px;
-  height: 60px;
-
-  margin: 5px 0 5px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.ring-stack canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 
-/* Huge percentage */
-.stat-value {
-  margin: 0px 0 0px;
-
-  font-size: 10px;
-  font-weight: 900;
-}
-
-/* Caption */
-.stat-foot {
-  margin-top: 10px;
-
-  font-size: 12px;
-  opacity: 0.85;
-  line-height: 1.45;
-
-  max-width: 110px;
+.pace-card .ring-center {
+  color: rgba(0, 0, 0, 0.78);
 }
 
 .personal-dynamics {
@@ -1988,7 +2040,7 @@ function blockStyle(block) {
   font-size: 14px;
   opacity: 0.72;
   line-height: 1.55;
-  max-width: 44rem;
+  max-width: 100rem;
 }
 
 .g-inner {
@@ -2270,6 +2322,7 @@ function blockStyle(block) {
   .analytics-wrapper {
     flex-direction: column;
     height: auto;
+    max-height: 100px;
   }
   .left-pane,
   .right-pane {
@@ -2289,6 +2342,7 @@ function blockStyle(block) {
   }
   .chart-dynamic {
     grid-column: auto;
+    max-height: 150px;
   }
 }
 
@@ -2396,6 +2450,23 @@ function blockStyle(block) {
     height: 56px;
   }
 
+  .stat-row {
+    gap: 14px;
+  }
+
+  .ring-stack {
+    width: 64px;
+    height: 64px;
+  }
+
+  .ring-center {
+    font-size: 13px;
+  }
+
+  .stat-foot {
+    font-size: 12.5px;
+  }
+
   /* ====================================================
      PERSONAL DYNAMICS → SINGLE COLUMN
   ==================================================== */
@@ -2422,24 +2493,31 @@ function blockStyle(block) {
      GLOBAL HEADER TREATMENT
   ==================================================== */
 
+  .right-pane {
+    padding-top: 18px;
+  }
+
   .right-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 8px;
+    margin-bottom: 16px;
+    max-height: 300px; /* IMPORTANT */
   }
 
   .g-title {
-    font-size: 30px;
-    line-height: 1;
+    margin-bottom: 4px;
   }
 
-  .g-sub {
-    font-size: 13px;
+  .g-title {
+    margin-bottom: 4px;
   }
 
   .share-btn {
-    padding: 8px 14px;
+    margin-top: 6px;
+    padding: 4px 7px;
     font-size: 13px;
+    align-self: flex-end;
   }
 
   /* ====================================================
@@ -2447,28 +2525,44 @@ function blockStyle(block) {
   ==================================================== */
 
   .global-grid {
-    grid-template-columns: 1fr;
-    grid-auto-rows: auto;
-    gap: 14px;
+    display: flex !important;
+    flex-direction: column;
+    gap: auto;
   }
 
   .g-block {
-    padding: 14px;
+    width: 100%;
+    margin: 0;
+    padding-left: 14px !important;
   }
 
-  /* ====================================================
-     RIGHT FOOTER STACK
-  ==================================================== */
+  .g-head {
+    margin-bottom: 4px;
+  }
 
-  .right-footer {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
+  .g-block > aside,
+  .g-block > .side-rail,
+  .g-block > .vertical-label,
+  .g-block > .speed-rail {
+    display: none;
+  }
+
+  .g-body {
+    margin-bottom: 2px;
+  }
+
+  .g-caption {
+    margin-top: 6px;
   }
 
   .brand-tag {
-    padding: 8px 14px;
-    font-size: 13px;
+    border: 1px solid #111;
+    border-radius: 100px;
+    padding-left: 10px;
+    font-weight: 500;
+    font-size: 10px;
+    background: #0d0f11;
+    color: #fff;
   }
 }
 </style>
