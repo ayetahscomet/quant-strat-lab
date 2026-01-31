@@ -405,7 +405,7 @@ function buildHeroCopy(rng) {
     typeof p.pacePercentile === 'number'
       ? `Pace: top ${pct(p.pacePercentile)}%.`
       : p.paceSeconds
-        ? `Pace: ${Math.max(1, Math.round(p.paceSeconds / 60))} min from first to last move.`
+        ? `${Math.max(1, Math.round(p.paceSeconds / 60))} min from first to last move.`
         : 'Pace: still calibrating.'
 
   const outcomeLine =
@@ -417,9 +417,7 @@ function buildHeroCopy(rng) {
           ? 'You ran out of attempts in at least one window.'
           : 'Today’s session is logged.'
 
-  heroDescription.value = `${outcomeLine} Completion ${pct(p.completion)}%, accuracy ${pct(
-    p.accuracy,
-  )}%. ${paceLine}`
+  heroDescription.value = `${pct(p.accuracy)}%. ${paceLine}`
 
   // feet for the three big cards
   const required = p.totalSlots || 0
@@ -428,7 +426,7 @@ function buildHeroCopy(rng) {
 
   completionFoot.value =
     required > 0 && foundTowardCompletion >= required
-      ? `All required answers found. (${p.uniqueCorrect} of ${possible} possible discovered today.)`
+      ? `All required answers found. (${p.uniqueCorrect} of ${uniqueCorrect} possible discovered today.)`
       : `${foundTowardCompletion} of ${required} required found. (${p.uniqueCorrect} of ${possible} possible discovered today.)`
 
   accuracyFoot.value =
@@ -1820,8 +1818,8 @@ function blockStyle(block) {
 /* RING HOLDER */
 .ring-stack {
   position: relative;
-  width: 70px;
-  height: 70px;
+  width: 65px;
+  height: 65px;
   flex-shrink: 0;
 }
 
@@ -2455,8 +2453,8 @@ function blockStyle(block) {
   }
 
   .ring-stack {
-    width: 64px;
-    height: 64px;
+    width: 60px;
+    height: 60px;
   }
 
   .ring-center {
