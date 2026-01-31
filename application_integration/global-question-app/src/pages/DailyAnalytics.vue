@@ -427,7 +427,7 @@ function buildHeroCopy(rng) {
   completionFoot.value =
     required > 0 && foundTowardCompletion >= required
       ? `All required answers found. (${p.uniqueCorrect} of ${uniqueCorrect} possible discovered today.)`
-      : `${foundTowardCompletion} of ${required} required found. (${p.uniqueCorrect} of ${possible} possible discovered today.)`
+      : `${foundTowardCompletion} of ${required} required found. (${p.uniqueCorrect} of ${possible} discovered throughout today's attempt attempt windows.)`
 
   accuracyFoot.value =
     p.submittedUnique > 0
