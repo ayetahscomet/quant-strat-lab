@@ -417,7 +417,7 @@ function buildHeroCopy(rng) {
           ? 'You ran out of attempts in at least one window.'
           : 'Today’s session is logged.'
 
-  heroDescription.value = `${pct(p.accuracy)}%. ${paceLine}`
+  heroDescription.value = `${outcomeLine}. ${paceLine}${paceLine}`
 
   // feet for the three big cards
   const required = p.totalSlots || 0
@@ -1512,7 +1512,7 @@ async function copyShareText() {
   if (!personalReady.value) return
 
   const p = personal.value
-  const line1 = `Akinto — Daily Analytics (${p.dateKey})`
+  const line1 = `Akinto - Daily Analytics (${p.dateKey})`
   const line2 = `Completion: ${pct(p.completion)}% | Accuracy: ${pct(p.accuracy)}%`
   const line3 =
     typeof p.pacePercentile === 'number'
