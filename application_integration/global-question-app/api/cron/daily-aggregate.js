@@ -162,7 +162,8 @@ export default async function handler(req, res) {
         Count: users.size,
         PercentOfPlayers: users.size / totalPlayers,
         Rank: idx + 1,
-        Countries: [...(answerCountries.get(answer) || [])],
+        Countries: [...(answerCountries.get(answer) || [])].join(', '),
+
         IsRare: users.size <= 2,
       },
     })
@@ -185,7 +186,7 @@ export default async function handler(req, res) {
     TotalHints: totalHints,
     DistinctAnswers: answerUsers.size,
     DistinctCountriesCount: distinctCountries.size,
-    CountriesMentioned: [...distinctCountries],
+    CountriesMentioned: [...distinctCountries].join(', '),
     AvgSolveSeconds: sumSolveSeconds / totalPlayers,
     AvgAccuracy: sumAccuracy / totalPlayers,
     AvgCompletion: sumCompletion / totalPlayers,
