@@ -1,6 +1,6 @@
 // /api/cron/daily-aggregate.js
 
-import { base } from '../lib/airtable.js'
+import { base } from '../../../lib/airtable.js'
 
 function yesterdayKey() {
   const d = new Date()
