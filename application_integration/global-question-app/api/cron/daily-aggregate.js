@@ -1,5 +1,12 @@
 // /api/cron/daily-aggregate.js
 
+async function createInBatches(table, rows, size = 10) {
+  for (let i = 0; i < rows.length; i += size) {
+    const batch = rows.slice(i, i + size)
+    await base(table).create(batch)
+  }
+}
+
 import { base } from '../../lib/airtable.js'
 
 function yesterdayKey() {
@@ -118,7 +125,7 @@ export default async function handler(req, res) {
   }
 
   if (answerRows.length) {
-    await base('DailyAnswerStats').create(answerRows)
+    await createInBatches('DailyAnswerStats', answerRows)
   }
 
   // =====================================================
@@ -145,7 +152,7 @@ export default async function handler(req, res) {
   }))
 
   if (profileRows.length) {
-    await base('UserDailyProfile').create(profileRows)
+    await createInBatches('UserDailyProfile', profileRows)
   }
 
   return res.status(200).json({
