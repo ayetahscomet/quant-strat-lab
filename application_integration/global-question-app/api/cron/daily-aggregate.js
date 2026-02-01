@@ -138,7 +138,7 @@ export default async function handler(req, res) {
     TotalAttempts: totalAttempts,
     TotalHints: totalHints,
     DistinctAnswers: answerCounts.size,
-    GeneratedAt: new Date().toISOString(),
+    GeneratedAt: new Date(),
   }
 
   await base('DailyAggregates').create([{ fields: dailyAgg }])
