@@ -1,3 +1,4 @@
+// api/end-day.js
 import { kv } from '@vercel/kv'
 
 export default async function handler(req, res) {

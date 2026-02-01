@@ -20,6 +20,7 @@ export default async function handler(req, res) {
           WindowID: windowId,
           AttemptIndex: 998,
           Result: 'hint-used',
+          HintUsed: true,
           CreatedAt: new Date().toISOString(),
         },
       },

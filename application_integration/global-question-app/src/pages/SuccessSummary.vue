@@ -1,3 +1,4 @@
+<!--SuccessSummary.vue -->
 <template>
   <div class="success-shell">
     <!-- ===================== HERO STRIP ===================== -->
@@ -252,7 +253,7 @@ async function loadSuccessSummaryFromAirtable() {
     incorrectCount,
     attemptsUsed: attemptsUsed || 1,
     completed: true,
-    hintUsed: false,
+    hintUsed: !!data.hintsUsed || data.hintCount > 0,
   }
 }
 

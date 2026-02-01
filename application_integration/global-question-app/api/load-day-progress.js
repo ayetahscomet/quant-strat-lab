@@ -1,3 +1,4 @@
+// api/load-day-progress.js
 import { base } from '../lib/airtable.js'
 
 function normalise(s) {
@@ -110,6 +111,7 @@ export default async function handler(req, res) {
 
     const dayEnded = !!dayEndAttempt
     const dayEndResult = dayEndAttempt?.result || null
+    const hintsUsed = hintCount > 0
 
     return res.status(200).json({
       attempts,
@@ -118,6 +120,10 @@ export default async function handler(req, res) {
       // ===== GATING FLAGS FOR PLAY.VUE =====
       dayEnded,
       dayEndResult,
+
+      // Top-level for summaries
+      hintCount,
+      hintsUsed,
 
       metrics: {
         completion,
