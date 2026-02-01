@@ -1,4 +1,6 @@
-//  /api/cron/daily-aggregate.js
+// /api/cron/daily-aggregate.js
+
+import { base } from '../../lib/airtable.js'
 
 async function createInBatches(table, rows, size = 10) {
   for (let i = 0; i < rows.length; i += size) {
@@ -6,8 +8,6 @@ async function createInBatches(table, rows, size = 10) {
     await base(table).create(batch)
   }
 }
-
-import { base } from '../../lib/airtable.js'
 
 function yesterdayKey() {
   const d = new Date()
@@ -20,6 +20,8 @@ function normalise(s) {
     .trim()
     .toLowerCase()
 }
+
+// =====================================================
 
 export default async function handler(req, res) {
   const secret = req.headers.authorization
@@ -53,7 +55,6 @@ export default async function handler(req, res) {
   for (const r of rows) {
     const id = r.UserID
     if (!id) continue
-
     if (!byUser.has(id)) byUser.set(id, [])
     byUser.get(id).push(r)
   }
@@ -63,22 +64,50 @@ export default async function handler(req, res) {
   const totalHints = rows.filter((r) => r.HintUsed).length
 
   // =====================================================
-  // Per-user profile
+  // Per-user profile + averages
   // =====================================================
 
   const userProfiles = []
+
+  let sumAccuracy = 0
+  let sumCompletion = 0
+  let sumSolveSeconds = 0
 
   for (const [userId, logs] of byUser.entries()) {
     const attempts = logs.filter((r) => r.AttemptIndex >= 1 && r.AttemptIndex <= 3)
 
     const hintCount = logs.filter((r) => r.HintUsed).length
 
-    const distinctAnswers = new Set()
-    attempts.forEach((r) =>
-      (r.AnswersJSON ? JSON.parse(r.AnswersJSON) : []).forEach((a) =>
-        distinctAnswers.add(normalise(a)),
-      ),
-    )
+    const answersSeen = new Set()
+    let correct = 0
+    let totalSlots = 0
+
+    const timestamps = logs
+      .map((r) => r.CreatedAt)
+      .filter(Boolean)
+      .sort()
+
+    attempts.forEach((r) => {
+      const a = r.AnswersJSON ? JSON.parse(r.AnswersJSON) : []
+      const c = r.CorrectAnswersJSON ? JSON.parse(r.CorrectAnswersJSON) : []
+
+      totalSlots = Math.max(totalSlots, c.length)
+
+      a.forEach((x) => answersSeen.add(normalise(x)))
+      correct += c.length
+    })
+
+    const accuracy = totalSlots ? correct / answersSeen.size : 0
+    const completion = totalSlots ? answersSeen.size / totalSlots : 0
+
+    let solveSeconds = null
+    if (timestamps.length >= 2) {
+      solveSeconds = (new Date(timestamps[timestamps.length - 1]) - new Date(timestamps[0])) / 1000
+    }
+
+    sumAccuracy += accuracy
+    sumCompletion += completion
+    if (solveSeconds) sumSolveSeconds += solveSeconds
 
     userProfiles.push({
       UserID: userId,
@@ -86,25 +115,38 @@ export default async function handler(req, res) {
       Country: logs[0].Country || 'xx',
       AttemptsUsed: attempts.length,
       HintCount: hintCount,
-      DistinctAnswers: distinctAnswers.size,
+      DistinctAnswers: answersSeen.size,
+      Accuracy: accuracy,
+      Completion: completion,
+      SolveSeconds: solveSeconds,
     })
   }
 
   // =====================================================
-  // Answer frequency
+  // Answer frequency (distinct players per answer)
   // =====================================================
 
-  const answerCounts = new Map()
+  const answerUsers = new Map() // answer -> Set(userId)
+  const answerCountries = new Map()
 
   for (const r of rows) {
-    if (!r.AnswersJSON) continue
+    if (!r.AnswersJSON || !r.UserID) continue
+
     const arr = JSON.parse(r.AnswersJSON)
+
     for (const raw of arr) {
       const n = normalise(raw)
       if (!n) continue
-      answerCounts.set(n, (answerCounts.get(n) || 0) + 1)
+
+      if (!answerUsers.has(n)) answerUsers.set(n, new Set())
+      answerUsers.get(n).add(r.UserID)
+
+      if (!answerCountries.has(n)) answerCountries.set(n, new Set())
+      if (r.Country) answerCountries.get(n).add(r.Country)
     }
   }
+
+  const sortedAnswers = [...answerUsers.entries()].sort((a, b) => b[1].size - a[1].size)
 
   // =====================================================
   // Write DailyAnswerStats
@@ -112,17 +154,19 @@ export default async function handler(req, res) {
 
   const answerRows = []
 
-  for (const [answer, count] of answerCounts.entries()) {
+  sortedAnswers.forEach(([answer, users], idx) => {
     answerRows.push({
       fields: {
         DateKey: dateKey,
         Answer: answer,
-        Count: count,
-        PercentOfPlayers: count / totalPlayers,
-        IsRare: count <= 2,
+        Count: users.size,
+        PercentOfPlayers: users.size / totalPlayers,
+        Rank: idx + 1,
+        Countries: [...(answerCountries.get(answer) || [])],
+        IsRare: users.size <= 2,
       },
     })
-  }
+  })
 
   if (answerRows.length) {
     await createInBatches('DailyAnswerStats', answerRows)
@@ -132,13 +176,19 @@ export default async function handler(req, res) {
   // DailyAggregates
   // =====================================================
 
+  const distinctCountries = new Set(rows.map((r) => r.Country).filter(Boolean))
+
   const dailyAgg = {
     DateKey: dateKey,
     TotalPlayers: totalPlayers,
     TotalAttempts: totalAttempts,
     TotalHints: totalHints,
-    DistinctAnswers: answerCounts.size,
-    GeneratedAt: new Date(),
+    DistinctAnswers: answerUsers.size,
+    DistinctCountriesCount: distinctCountries.size,
+    CountriesMentioned: [...distinctCountries],
+    AvgSolveSeconds: sumSolveSeconds / totalPlayers,
+    AvgAccuracy: sumAccuracy / totalPlayers,
+    AvgCompletion: sumCompletion / totalPlayers,
   }
 
   await base('DailyAggregates').create([{ fields: dailyAgg }])
@@ -159,6 +209,6 @@ export default async function handler(req, res) {
     ok: true,
     dateKey,
     players: totalPlayers,
-    answers: answerCounts.size,
+    answers: answerUsers.size,
   })
 }
