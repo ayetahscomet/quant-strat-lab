@@ -1,4 +1,4 @@
-// /api/cron/daily-aggregate.js
+//  /api/cron/daily-aggregate.js
 
 async function createInBatches(table, rows, size = 10) {
   for (let i = 0; i < rows.length; i += size) {
