@@ -19,7 +19,9 @@
           <span class="chip" v-if="summary.attemptsUsed">
             {{ summary.attemptsUsed }} attempt{{ summary.attemptsUsed === 1 ? '' : 's' }}
           </span>
-          <span class="chip" v-if="!summary.hintUsed"> Hint-free run </span>
+          <span class="chip" v-if="summary.hintCount > 0">
+            {{ summary.hintCount }} hint{{ summary.hintCount === 1 ? '' : 's' }}
+          </span>
           <span class="chip chip-soft"> Session ID • {{ shortId }} </span>
         </div>
       </div>
@@ -106,10 +108,15 @@
             <div class="metric">
               <p class="metric-label">Hint usage</p>
               <p class="metric-value">
-                {{ summary.hintUsed ? 'Guided' : 'Unaided' }}
+                <template v-if="summary.hintCount > 0">
+                  {{ summary.hintCount }} hint{{ summary.hintCount === 1 ? '' : 's' }} used
+                </template>
+                <template v-else> Unaided </template>
               </p>
+
               <p class="metric-footnote">
-                {{ summary.hintUsed ? 'You leaned on a hint.' : 'You solved without hints.' }}
+                <template v-if="summary.hintCount > 0"> You leaned on a hint. </template>
+                <template v-else> You solved without hints. </template>
               </p>
             </div>
 
@@ -160,6 +167,7 @@ const summary = ref({
   attemptsUsed: 0,
   completed: false,
   hintUsed: false,
+  hintCount: 0,
   date: '',
   timestamp: '',
   windowIndex: 0,
@@ -254,6 +262,7 @@ async function loadSuccessSummaryFromAirtable() {
     attemptsUsed: attemptsUsed || 1,
     completed: true,
     hintUsed: !!data.hintsUsed || data.hintCount > 0,
+    hintCount: Number(data.hintCount || 0),
   }
 }
 
