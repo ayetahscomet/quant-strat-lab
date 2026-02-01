@@ -1,3 +1,4 @@
+/* /api/load-global-analytics.js */
 import { base } from '../lib/airtable.js'
 
 function normalise(s) {

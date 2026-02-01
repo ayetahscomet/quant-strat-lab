@@ -94,7 +94,7 @@
               <p class="metric-value">
                 {{ summary.attemptsUsed || 1 }}
               </p>
-              <p class="metric-footnote">Out of {{ maxAttempts }} lives.</p>
+              <p class="metric-footnote">These are summed throughout your daily windows.</p>
             </div>
 
             <div class="metric">
