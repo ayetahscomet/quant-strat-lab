@@ -173,6 +173,7 @@ export default async function handler(req, res) {
     const completion = totalSlots > 0 ? correct.size / totalSlots : 0
 
     const countryCode = String(logs.find((x) => x.Country)?.Country || 'xx').toLowerCase()
+    const region = continentFromCountry(countryCode)
 
     // rare answers the user submitted (based on UNIQUE PLAYERS for that answer)
     let rareAnswers = 0
