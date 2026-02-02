@@ -1,6 +1,6 @@
 // /api/cron/daily-aggregate.js
 import { base } from '../../lib/airtable.js'
-import { continentFromCountry } from '../../data/continents.js'
+import { continentFromCountry } from '../src/data/continents.js'
 
 async function createInBatches(table, rows, size = 10) {
   for (let i = 0; i < rows.length; i += size) {
