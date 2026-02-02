@@ -275,6 +275,25 @@ function normalise(s) {
     .replace(/\s+/g, ' ')
 }
 
+function normaliseAirtablePercent(x) {
+  // Airtable "Percent" fields are often stored as:
+  // - 0.33 (shown as 33%)
+  // - OR accidentally stored as 3.33 (shown as 333%)
+  // - OR 9 (shown as 900%)
+  // We normalise to 0–100 scale for the UI.
+  if (x === null || x === undefined) return null
+  let n = Number(x)
+  if (!isFinite(n)) return null
+
+  // if it's a fraction (0–1), convert to 0–100
+  if (n > 0 && n <= 1) n = n * 100
+
+  // if it's "too big", scale down by 10 until it fits
+  while (n > 100) n = n / 10
+
+  return n
+}
+
 /* =========================
    USER + DATE CONTEXT
 ========================= */
@@ -302,25 +321,34 @@ const isLoading = ref(true)
 const personalReady = ref(false)
 
 const personal = ref({
-  // derived from Airtable attempts via /api/load-day-progress
+  // from UserDailyProfile (+ Questions for answerCount / correct answers if you want)
   dateKey: dateKeyRef.value,
+  userId,
   countryCode: userCountryCode,
   countryName,
-  totalSlots: 0,
-  correctAnswers: [],
-  uniqueCorrect: 0,
-  attemptsTotal: 0,
-  windowsPlayed: 0,
-  dayResult: '', // success | failure | lockout | exit-early | unknown
-  hintsUsed: 0, // if you track it
-  firstSeenAt: null,
-  lastSeenAt: null,
-  paceSeconds: null, // total seconds between first and last event
-  pacePercentile: null, // from global endpoint if available
-  accuracy: 0, // correct / submitted unique (or correct / totalSlots)
-  completion: 0, // uniqueCorrect / totalSlots
-  submittedUnique: 0, // unique answers submitted across day
-  duplicatePenalty: 0, // duplicates count
+
+  // question meta (optional but used by your UI pills)
+  totalSlots: 0, // answer count needed for the day
+  correctAnswers: [], // canonical answer list (optional)
+
+  // personal metrics (UserDailyProfile)
+  attemptsTotal: 0, // AttemptsUsed
+  hintsUsed: 0, // HintCount
+  uniqueCorrect: 0, // DistinctAnswers (or correct count if you store it)
+  rareAnswers: 0, // RareAnswers
+  completion: 0, // Completion (0–100)
+  accuracy: 0, // Accuracy (0–100)
+  paceSeconds: null, // SolveSeconds
+  pacePercentile: null, // PercentileSpeed
+  accuracyPercentile: null, // PercentileAccuracy
+
+  // optional classifications
+  archetype: null,
+  streakContinues: null,
+  firstSolveToday: null,
+
+  // outcome (you can map if you store it; else keep "unknown")
+  dayResult: 'unknown',
 })
 
 const global = ref({
@@ -405,7 +433,7 @@ function buildHeroCopy(rng) {
     typeof p.pacePercentile === 'number'
       ? `Pace: top ${pct(p.pacePercentile)}%.`
       : p.paceSeconds
-        ? `${Math.max(1, Math.round(p.paceSeconds / 60))} min from first to last move.`
+        ? `${Math.max(1, Math.round(p.paceSeconds / 60))} min to solve today.`
         : 'Pace: still calibrating.'
 
   const outcomeLine =
@@ -426,8 +454,8 @@ function buildHeroCopy(rng) {
 
   completionFoot.value =
     required > 0 && foundTowardCompletion >= required
-      ? `All required answers found. (${p.uniqueCorrect} of ${uniqueCorrect} possible discovered today.)`
-      : `${p.uniqueCorrect} of ${possible} discovered throughout today's attempt windows.`
+      ? `All required answers found. (${p.uniqueCorrect} of ${possible} possible discovered today.)`
+      : `${p.uniqueCorrect} of ${possible} discovered throughout today.`
 
   accuracyFoot.value =
     p.submittedUnique > 0
@@ -438,6 +466,14 @@ function buildHeroCopy(rng) {
     typeof p.pacePercentile === 'number'
       ? `Faster than ${pct(p.pacePercentile)}% of players today.`
       : 'Global pace percentile will appear once enough players exist.'
+
+  if (p.archetype) {
+    heroDescription.value += ` Archetype: ${p.archetype}.`
+  }
+
+  if (p.firstSolveToday) {
+    heroDescription.value += ` New personal streak record.`
+  }
 }
 
 /* =========================
@@ -926,7 +962,7 @@ function buildGlobalBlocks(rng) {
       body:
         typeof g.avgCompletion === 'number'
           ? `Average completion worldwide: ${pct(g.avgCompletion)}%.`
-          : 'Global completion will appear once enough players exist today.',
+          : `Processing today’s global totals…`,
       tier: 'hero',
       shape: 'wide',
       mini:
@@ -953,8 +989,9 @@ function buildGlobalBlocks(rng) {
         p.countryName && typeof g.yourCountryAvgCompletion === 'number'
           ? `Average completion in ${p.countryName}: ${pct(g.yourCountryAvgCompletion)}%.`
           : p.countryName
-            ? `We’re still building ${p.countryName}’s sample size today.`
-            : 'You’ll get country leaderboards once a country is set.',
+            ? `Processing today’s ${p.countryName} totals…`
+            : 'Set your country to unlock this comparison.',
+
       tier: 'major',
       shape: 'tall',
       mini:
@@ -1003,7 +1040,8 @@ function buildGlobalBlocks(rng) {
       body:
         typeof g.avgAccuracy === 'number'
           ? `World average accuracy: ${pct(g.avgAccuracy)}%. You: ${pct(p.accuracy)}%.`
-          : `You: ${pct(p.accuracy)}%. World average appears once enough players exist.`,
+          : `You: ${pct(p.accuracy)}%. Processing global accuracy…`,
+
       tier: 'major',
       shape: 'wide',
       mini: { big: `${pct(p.accuracy)}%`, sub: 'You' },
@@ -1036,7 +1074,8 @@ function buildGlobalBlocks(rng) {
       title: 'Most common behaviour',
       body: totalPlayers
         ? `Across ${totalPlayers} players, the modal outcome was “lockout”. (Just kidding… maybe.)`
-        : 'Global behaviours appear once today has a player pool.',
+        : 'Processing today’s global behaviours…',
+
       tier: 'ticker',
       shape: 'wide',
       mini: null,
@@ -1074,7 +1113,10 @@ function buildGlobalBlocks(rng) {
       body: 'A shamelessly simplified score.',
       tier: 'badge',
       shape: 'square',
-      mini: { big: `${pct(p.completion * 0.6 + p.accuracy * 0.4 || 0)}%`, sub: 'Akinto Index' },
+      mini: {
+        big: `${pct(p.completion * 0.5 + p.accuracy * 0.3 + (p.pacePercentile || 50) * 0.2)}%`,
+        sub: 'Daily Score',
+      },
       caption: 'Not scientific. Extremely shareable.',
     }),
   ]
@@ -1097,7 +1139,8 @@ function buildGlobalBlocks(rng) {
       body:
         typeof g.avgCompletion === 'number'
           ? `You completed ${pct(p.completion)}%. World average: ${pct(g.avgCompletion)}%.`
-          : `You completed ${pct(p.completion)}%. World average appears once enough players exist.`,
+          : `You completed ${pct(p.completion)}%. Processing global totals…`,
+
       tier: pick(rng, ['minor', 'ticker']),
       shape: pick(rng, ['wide', 'square']),
       mini: { big: `${pct(p.completion)}%`, sub: 'You' },
@@ -1126,7 +1169,8 @@ function buildGlobalBlocks(rng) {
           ? `Faster than ${pct(p.pacePercentile)}% today.`
           : p.paceSeconds
             ? `~${Math.max(1, Math.round(p.paceSeconds / 60))} minutes from first to last move.`
-            : 'We’ll show percentiles once enough players exist today.',
+            : 'Processing today’s pace distribution…',
+
       tier: pick(rng, ['minor', 'badge']),
       shape: pick(rng, ['square', 'slim']),
       mini: {
@@ -1162,7 +1206,7 @@ function buildGlobalBlocks(rng) {
       body: p.countryName
         ? typeof g.yourCountryAvgCompletion === 'number'
           ? `${p.countryName} avg completion: ${pct(g.yourCountryAvgCompletion)}%.`
-          : `Still building today’s sample for ${p.countryName}.`
+          : `Processing today’s ${p.countryName} totals…`
         : 'Set your country to unlock comparisons.',
       tier: pick(rng, ['minor', 'ticker']),
       shape: pick(rng, ['wide', 'square']),
@@ -1252,8 +1296,8 @@ function buildGlobalBlocks(rng) {
     blocks.push({
       id: `gb_fallback_${blocks.length}`,
       kicker: 'Global',
-      title: 'More data incoming…',
-      body: 'As more players join today, this page gets louder.',
+      title: 'Today’s global totals are processing',
+      body: 'We’re aggregating worldwide play right now — refresh in a moment.',
       tier: 'minor',
       shape: 'square',
       mini: null,
@@ -1363,100 +1407,46 @@ function renderPersonalCharts(rng) {
      hintsUsed: number (optional)
    }
 ========================= */
-function derivePersonalFromDayProgress(dayProgress) {
-  const attempts = Array.isArray(dayProgress?.attempts) ? dayProgress.attempts : []
-  const canonicalCorrect = Array.isArray(dayProgress?.correctAnswers)
-    ? dayProgress.correctAnswers
-    : []
+function derivePersonalFromUserDailyProfile(payload) {
+  // payload shape expected from server:
+  // {
+  //   profile: { AttemptsUsed, HintCount, Accuracy, Completion, SolveSeconds, DistinctAnswers, RareAnswers, PercentileSpeed, PercentileAccuracy, Archetype, StreakContinues, FirstSolveToday, Country, Region },
+  //   question: { answerCount, correctAnswers } // optional but recommended for your pills/hero
+  // }
 
-  const requiredSlots =
-    typeof dayProgress?.requiredSlots === 'number'
-      ? dayProgress.requiredSlots
-      : typeof dayProgress?.answerCount === 'number'
-        ? dayProgress.answerCount
-        : canonicalCorrect.length
+  const prof = payload?.profile || {}
+  const q = payload?.question || {}
 
-  const totalPossible = canonicalCorrect.length
-  const correctSet = new Set(canonicalCorrect.map(normalise))
-
-  // union across day
-  const uniqueSubmissions = new Set()
-  const uniqueCorrectFound = new Set()
-  let duplicates = 0
-
-  const attemptsByWindow = {}
-
-  let firstAt = null
-  let lastAt = null
-
-  for (const a of attempts) {
-    const w = a.windowId || 'unknown'
-    attemptsByWindow[w] = (attemptsByWindow[w] || 0) + 1
-
-    const createdAt = a.createdAt ? new Date(a.createdAt) : null
-    if (createdAt && !isNaN(createdAt.getTime())) {
-      if (!firstAt || createdAt < firstAt) firstAt = createdAt
-      if (!lastAt || createdAt > lastAt) lastAt = createdAt
-    }
-
-    const ans = Array.isArray(a.answers) ? a.answers : []
-    for (const raw of ans) {
-      const v = normalise(raw)
-      if (!v) continue
-      if (uniqueSubmissions.has(v)) duplicates++
-      uniqueSubmissions.add(v)
-      if (correctSet.has(v)) uniqueCorrectFound.add(v)
-    }
-  }
-
-  const submittedUnique = uniqueSubmissions.size
-  const uniqueCorrect = uniqueCorrectFound.size
-
-  // Completion should be "did you fill the required slots?"
-  const completionBase = Math.min(uniqueCorrect, requiredSlots)
-  const completion = requiredSlots > 0 ? (completionBase / requiredSlots) * 100 : 0
-
-  const accuracy = submittedUnique > 0 ? (uniqueCorrect / submittedUnique) * 100 : 0
-
-  const attemptsTotal = attempts.length
-  const windowsPlayed = Object.keys(attemptsByWindow).filter((k) => attemptsByWindow[k] > 0).length
-
-  // Determine day result:
-  // prefer explicit dayEnded marker if present
-  const dayResult =
-    (dayProgress?.dayEnded && dayProgress?.dayEndResult) ||
-    // else: if any success attempt exists -> success
-    (attempts.some((x) => x.result === 'success') ? 'success' : null) ||
-    // else if any exit-early -> exit-early
-    (attempts.some((x) => x.result === 'exit-early') ? 'exit-early' : null) ||
-    // else if any lockout -> lockout
-    (attempts.some((x) => x.result === 'lockout') ? 'lockout' : null) ||
-    // else fail if any fail records
-    (attempts.some((x) => x.result === 'fail') ? 'failure' : 'unknown')
-
-  const paceSeconds =
-    firstAt && lastAt
-      ? Math.max(0, Math.round((lastAt.getTime() - firstAt.getTime()) / 1000))
-      : null
+  const completion = normaliseAirtablePercent(prof.Completion) ?? 0
+  const accuracy = normaliseAirtablePercent(prof.Accuracy) ?? 0
+  const pSpeed = normaliseAirtablePercent(prof.PercentileSpeed)
+  const pAcc = normaliseAirtablePercent(prof.PercentileAccuracy)
 
   personal.value = {
     ...personal.value,
-    totalSlots: requiredSlots,
-    _totalPossible: totalPossible,
-    correctAnswers: canonicalCorrect,
-    uniqueCorrect,
-    submittedUnique,
-    duplicatePenalty: duplicates,
-    attemptsTotal,
-    windowsPlayed,
-    dayResult,
-    hintsUsed: typeof dayProgress?.hintsUsed === 'number' ? dayProgress.hintsUsed : 0,
-    firstSeenAt: firstAt ? firstAt.toISOString() : null,
-    lastSeenAt: lastAt ? lastAt.toISOString() : null,
-    paceSeconds,
+
+    totalSlots: q.answerCount || 0,
+
+    attemptsTotal: prof.AttemptsUsed || 0,
+    hintsUsed: prof.HintCount || 0,
+
+    uniqueCorrect: prof.DistinctAnswers || 0,
+    rareAnswers: prof.RareAnswers || 0,
+
     completion,
     accuracy,
-    _attemptsByWindow: attemptsByWindow,
+
+    paceSeconds: prof.SolveSeconds ?? null,
+
+    pacePercentile: pSpeed,
+    accuracyPercentile: pAcc,
+
+    archetype: prof.Archetype ?? null,
+
+    streakContinues: prof.StreakBrokenYesterday === false,
+    firstSolveToday: prof.NewLongestStreakToday === true,
+
+    dayResult: prof.DayResult || 'unknown',
   }
 }
 
@@ -1464,13 +1454,17 @@ function derivePersonalFromDayProgress(dayProgress) {
    FETCHERS
    IMPORTANT: keep Airtable keys on server.
 ========================= */
-async function fetchDayProgress() {
-  const res = await fetch('/api/load-day-progress', {
+async function fetchPersonalAnalytics() {
+  const res = await fetch('/api/load-user-daily', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, dateKey: dateKeyRef.value }),
+    body: JSON.stringify({
+      userId,
+      dateKey: dateKeyRef.value,
+    }),
   })
-  if (!res.ok) throw new Error('load-day-progress failed')
+
+  if (!res.ok) throw new Error('load-user-daily failed')
   return res.json()
 }
 
@@ -1485,13 +1479,17 @@ async function fetchDayProgress() {
  * }
  */
 async function fetchGlobalAnalytics() {
+  // Server should read:
+  // - DailyAggregates for dateKey (TotalPlayers, TotalAttempts, AvgCompletion, AvgAccuracy, etc.)
+  // - (optional) Country leaderboard you compute server-side
+  // - (optional) yourCountryRank / yourCountryAvgCompletion server-side
   const res = await fetch('/api/load-global-analytics', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dateKey: dateKeyRef.value, userId, country: userCountryCode }),
+    body: JSON.stringify({ dateKey: dateKeyRef.value, country: userCountryCode, userId }),
   })
 
-  if (!res.ok) return null
+  if (!res.ok) throw new Error('load-global-analytics failed')
   return res.json()
 }
 
@@ -1546,53 +1544,60 @@ onMounted(async () => {
   globalSubline.value = pick(rng, GLOBAL_SUBLINES)
 
   try {
-    // 1) Personal day progress
-    const day = await fetchDayProgress()
-    derivePersonalFromDayProgress(day)
+    /* ===========================================
+     1) Personal analytics (UserDailyProfile)
+  =========================================== */
+    const personalPayload = await fetchPersonalAnalytics()
+    derivePersonalFromUserDailyProfile(personalPayload)
 
-    // 2) Optional global analytics
+    /* ===========================================
+     2) Global analytics (DailyAggregates)
+  =========================================== */
     const g = await fetchGlobalAnalytics()
+
     if (g) {
       global.value = {
-        ...global.value,
-        totalPlayers:
-          typeof g.totalPlayers === 'number' ? g.totalPlayers : global.value.totalPlayers,
-        totalAttempts:
-          typeof g.totalAttempts === 'number' ? g.totalAttempts : global.value.totalAttempts,
-        avgCompletion:
-          typeof g.avgCompletion === 'number' ? g.avgCompletion : global.value.avgCompletion,
-        avgAccuracy: typeof g.avgAccuracy === 'number' ? g.avgAccuracy : global.value.avgAccuracy,
-        countryLeaderboard: Array.isArray(g.countryLeaderboard)
-          ? g.countryLeaderboard
-          : global.value.countryLeaderboard,
-        yourCountryRank:
-          typeof g.yourCountryRank === 'number' ? g.yourCountryRank : global.value.yourCountryRank,
-        yourCountryAvgCompletion:
-          typeof g.yourCountryAvgCompletion === 'number'
-            ? g.yourCountryAvgCompletion
-            : global.value.yourCountryAvgCompletion,
+        totalPlayers: g.TotalPlayers,
+        totalAttempts: g.TotalAttempts,
+
+        avgCompletion: normaliseAirtablePercent(g.AvgCompletion),
+        avgAccuracy: normaliseAirtablePercent(g.AvgAccuracy),
+
+        countryLeaderboard: g.CountryLeaderboard || [],
+
+        yourCountryRank: g.YourCountryRank ?? null,
+        yourCountryAvgCompletion: normaliseAirtablePercent(g.YourCountryAvgCompletion),
       }
 
-      // Attach pace percentile to personal if provided
+      // Prefer Airtable-stored percentiles,
+      // but allow server override if returned
       if (typeof g.pacePercentileForUser === 'number') {
-        personal.value.pacePercentile = g.pacePercentileForUser
+        personal.value.pacePercentile = normaliseAirtablePercent(g.pacePercentileForUser)
+      }
+
+      if (typeof g.accuracyPercentileForUser === 'number') {
+        personal.value.accuracyPercentile = normaliseAirtablePercent(g.accuracyPercentileForUser)
       }
     }
 
-    // 3) Build copy + blocks
+    /* ===========================================
+     3) Build editorial copy + layout
+  =========================================== */
     buildHeroCopy(rng)
     personalCards.value = buildPersonalCards(rng)
-    globalChartRefs.value = new Map()
 
+    globalChartRefs.value = new Map()
     globalBlocks.value = buildGlobalBlocks(rng)
 
     personalReady.value = true
 
-    // 4) Charts
+    /* ===========================================
+     4) Render charts
+  =========================================== */
     await nextTick()
     renderPersonalCharts(rng)
 
-    // second tick ONLY for global block charts (refs settle after v-for)
+    // second tick ONLY for global block charts
     await nextTick()
     renderGlobalBlockCharts(rng)
   } catch (e) {

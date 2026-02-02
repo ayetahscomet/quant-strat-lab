@@ -448,7 +448,7 @@ export default async function handler(req, res) {
         avgAccuracy,
         avgHints: hintsCount ? Math.round((hintsSum / hintsCount) * 10) / 10 : null,
         medianPaceSeconds,
-        countryLeaderboard,
+        countryLeaderboard: [{ name, value }],
         yourCountryRank,
         yourCountryAvgCompletion,
         pacePercentileForUser,

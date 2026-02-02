@@ -35,9 +35,9 @@ export default async function handler(req, res) {
   const cohorts = new Map() // cohortDate -> users[]
 
   for (const u of userRows) {
-    if (!u.FirstSeen) continue
-    if (!cohorts.has(u.FirstSeen)) cohorts.set(u.FirstSeen, [])
-    cohorts.get(u.FirstSeen).push(u)
+    if (!u.FirstSeenDate) continue
+    if (!cohorts.has(u.FirstSeenDate)) cohorts.set(u.FirstSeenDate, [])
+    cohorts.get(u.FirstSeenDate).push(u)
   }
 
   const rows = []
@@ -45,9 +45,11 @@ export default async function handler(req, res) {
   for (const [cohortDate, members] of cohorts.entries()) {
     const total = members.length
 
-    const d1 = members.filter((u) => u.LastActiveDate === daysAgoKey(0)).length
-    const d3 = members.filter((u) => u.LastActiveDate >= daysAgoKey(2)).length
-    const d7 = members.filter((u) => u.LastActiveDate >= daysAgoKey(6)).length
+    const d1 = members.filter((u) => u.LastPlayedDate === daysAgoKey(0)).length
+
+    const d3 = members.filter((u) => u.LastPlayedDate && u.LastPlayedDate >= daysAgoKey(2)).length
+
+    const d7 = members.filter((u) => u.LastPlayedDate && u.LastPlayedDate >= daysAgoKey(6)).length
 
     rows.push({
       fields: {

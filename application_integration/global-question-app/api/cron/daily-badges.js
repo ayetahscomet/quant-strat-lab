@@ -8,6 +8,7 @@ function yesterdayKey() {
   return d.toISOString().slice(0, 10)
 }
 
+// percentile rank from bottom (ascending array)
 function pctRank(sortedAsc, value) {
   if (!sortedAsc.length) return null
   const idx = sortedAsc.findIndex((x) => x >= value)
@@ -53,11 +54,13 @@ export default async function handler(req, res) {
   ===================================================== */
 
   const accuracyVals = users.map((u) => u.Accuracy || 0).sort((a, b) => a - b)
+
+  const completionVals = users.map((u) => u.Completion || 0).sort((a, b) => a - b)
+
+  // lower SolveSeconds is better → still ascending
   const speedVals = users
     .map((u) => (Number.isFinite(u.SolveSeconds) ? u.SolveSeconds : Infinity))
     .sort((a, b) => a - b)
-
-  const completionVals = users.map((u) => u.Completion || 0).sort((a, b) => a - b)
 
   /* =====================================================
      Award rules
@@ -66,21 +69,28 @@ export default async function handler(req, res) {
   const awards = []
 
   for (const u of users) {
-    const accuracyPct = pctRank(accuracyVals, u.Accuracy || 0)
-    const completionPct = pctRank(completionVals, u.Completion || 0)
-    const speedPct = Number.isFinite(u.SolveSeconds) ? pctRank(speedVals, u.SolveSeconds) : null
+    const accuracyRank = pctRank(accuracyVals, u.Accuracy || 0)
+    const completionRank = pctRank(completionVals, u.Completion || 0)
+    const speedRank = Number.isFinite(u.SolveSeconds) ? pctRank(speedVals, u.SolveSeconds) : null
+
+    // convert bottom-rank → top-percent
+    const accuracyTop = accuracyRank !== null ? 100 - accuracyRank : null
+    const completionTop = completionRank !== null ? 100 - completionRank : null
+    const speedTop = speedRank !== null ? 100 - speedRank : null
 
     const badgeList = []
 
-    // ---- CORE ----
+    /* ---------------- CORE ---------------- */
+
     if (u.Completion >= 1) badgeList.push('Perfect Completion')
+
     if (u.Accuracy >= 0.9) badgeList.push('Sniper Accuracy')
 
-    if (speedPct !== null && speedPct <= 10) badgeList.push('Lightning Fast')
+    if (speedRank !== null && speedRank <= 10) badgeList.push('Lightning Fast')
 
-    if (accuracyPct !== null && accuracyPct >= 90) badgeList.push('Top 10% Accuracy')
+    if (accuracyTop !== null && accuracyTop >= 90) badgeList.push('Top 10% Accuracy')
 
-    if (completionPct !== null && completionPct >= 90) badgeList.push('Top 10% Completion')
+    if (completionTop !== null && completionTop >= 90) badgeList.push('Top 10% Completion')
 
     if (u.HintCount === 0) badgeList.push('No Hints Used')
 
@@ -90,7 +100,8 @@ export default async function handler(req, res) {
       badgeList.push('Low Attempts, High Impact')
     }
 
-    // ---- PARTICIPATION ----
+    /* ---------------- PARTICIPATION ---------------- */
+
     badgeList.push('Played Today')
 
     for (const badge of badgeList) {
@@ -99,12 +110,16 @@ export default async function handler(req, res) {
           UserID: u.UserID,
           DateKey: dateKey,
 
-          // TEXT field in Airtable
+          // TEXT fields
           Badge: badge,
 
           Accuracy: u.Accuracy,
           Completion: u.Completion,
           SolveSeconds: u.SolveSeconds ?? null,
+
+          AccuracyPct: accuracyTop,
+          CompletionPct: completionTop,
+          SpeedPct: speedTop,
 
           GeneratedAt: new Date().toISOString(),
         },

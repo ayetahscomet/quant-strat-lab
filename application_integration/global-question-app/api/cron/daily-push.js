@@ -31,18 +31,20 @@ export default async function handler(req, res) {
 
     if (!u.LastActiveDate) continue
 
-    const inactiveDays = (new Date(dateKey) - new Date(u.LastActiveDate)) / 86400000
+    const inactiveDays = Math.floor((new Date(dateKey) - new Date(u.LastPlayedDate)) / 86400000)
 
     let type = null
 
     if (u.CurrentStreak >= 3 && inactiveDays >= 1) {
       type = 'streak-risk'
-    } else if (u.LifetimeDaysPlayed === 1) {
+    } else if (u.TotalDaysPlayed === 1) {
       type = 'new-user'
     } else if (inactiveDays >= 5) {
       type = 're-engage'
     } else if (u.CurrentStreak >= 10) {
       type = 'high-streak'
+    } else if (inactiveDays === 0 && u.CurrentStreak >= 2) {
+      type = 'returning-today'
     }
 
     if (!type) continue
@@ -62,7 +64,18 @@ export default async function handler(req, res) {
     })
   }
 
-  if (pushes.length) await createInBatches('PushQueue', pushes)
+  const existing = await base('PushQueue')
+    .select({
+      maxRecords: 5000,
+      filterByFormula: `{DateKey}='${dateKey}'`,
+    })
+    .all()
+
+  const keys = new Set(existing.map((r) => `${r.fields.UserID}::${r.fields.Type}`))
+
+  const finalPushes = pushes.filter((p) => !keys.has(`${p.fields.UserID}::${p.fields.Type}`))
+
+  if (finalPushes.length) await createInBatches('PushQueue', finalPushes)
 
   return res.status(200).json({
     ok: true,
