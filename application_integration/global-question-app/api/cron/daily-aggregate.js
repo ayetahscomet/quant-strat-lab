@@ -63,7 +63,7 @@ export default async function handler(req, res) {
     byUser.get(id).push(r)
   }
 
-  const totalPlayers = byUser.size
+  const totalPlayers = Array.from(byUser.keys()).filter(Boolean).length
 
   // Attempts = only real attempts (1..3). (Exclude hint marker 998 + final 999)
   const attemptRows = rows.filter((r) => {
@@ -106,7 +106,7 @@ export default async function handler(req, res) {
 
       const st = answerStats.get(a)
       st.mentions += 1
-      if (userId) st.players.add(userId)
+      if (userId) st.players.add(String(userId))
 
       if (created && (!st.firstTime || created < st.firstTime)) {
         st.firstTime = created
@@ -169,7 +169,8 @@ export default async function handler(req, res) {
     }
 
     // accuracy and completion as 0..1 (Airtable formats as percent)
-    const accuracy = submitted.size > 0 ? correct.size / submitted.size : 0
+    const accuracy = totalSlots > 0 ? correct.size / totalSlots : 0
+
     const completion = totalSlots > 0 ? correct.size / totalSlots : 0
 
     const countryCode = String(logs.find((x) => x.Country)?.Country || 'xx').toLowerCase()
