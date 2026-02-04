@@ -129,7 +129,7 @@ export default async function handler(req, res) {
           DateKey: dateKey,
 
           // TEXT fields
-          Badge: badge,
+          BadgeName: badge,
 
           Accuracy: u.Accuracy,
           Completion: u.Completion,
@@ -156,9 +156,13 @@ export default async function handler(req, res) {
     })
     .all()
 
-  const existingKeys = new Set(existing.map((r) => `${r.fields.UserID?.[0]}::${r.fields.Badge}`))
+  const existingKeys = new Set(
+    existing.map((r) => `${r.fields.UserID?.[0]}::${r.fields.BadgeName}`),
+  )
 
-  const toInsert = awards.filter((r) => !existingKeys.has(`${r.fields.UserID}::${r.fields.Badge}`))
+  const toInsert = awards.filter(
+    (r) => !existingKeys.has(`${r.fields.UserID}::${r.fields.BadgeName}`),
+  )
 
   if (toInsert.length) {
     await createInBatches('UserDailyBadges', toInsert)

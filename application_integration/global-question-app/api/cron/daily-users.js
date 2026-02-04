@@ -69,10 +69,10 @@ export default async function handler(req, res) {
 
     /* =====================================================
        COMPUTE DAILY PERCENTILES (ON PROFILES)
-       ⚠️ PercentileCompletion REMOVED (schema mismatch)
     ===================================================== */
 
     const accVals = todayProfiles.map((r) => r.fields.Accuracy || 0)
+
     const paceVals = todayProfiles.map((r) =>
       Number.isFinite(r.fields.SolveSeconds) ? r.fields.SolveSeconds : 999999,
     )
@@ -86,6 +86,7 @@ export default async function handler(req, res) {
         id: rec.id,
         fields: {
           PercentileAccuracy: percentile(accVals, f.Accuracy || 0) / 100,
+
           PercentileSpeed: percentile(paceVals, f.SolveSeconds || 999999) / 100,
         },
       })
@@ -126,6 +127,21 @@ export default async function handler(req, res) {
       let streakBroken = false
       let newRecord = false
 
+      /* ---------------- Archetype ---------------- */
+
+      const acc = f.Accuracy || 0
+      const comp = f.Completion || 0
+      const pacePct = f.PercentileSpeed || 0
+      const attempts = f.AttemptsUsed || 99
+
+      let archetype = 'Explorer'
+
+      if (acc > 0.85 && comp < 0.7) archetype = 'Sniper'
+      else if (pacePct > 0.8) archetype = 'Speedrunner'
+      else if (attempts <= 2) archetype = 'Ghost'
+
+      /* ---------------- Existing user ---------------- */
+
       if (existing) {
         const prev = existing.fields || {}
 
@@ -148,6 +164,7 @@ export default async function handler(req, res) {
         }
 
         longestStreak = Math.max(prev.LongestStreak || 0, currentStreak)
+
         if (currentStreak === longestStreak && currentStreak > (prev.LongestStreak || 0)) {
           newRecord = true
         }
@@ -172,10 +189,14 @@ export default async function handler(req, res) {
             LastCompletion: f.Completion,
             LastSolveSeconds: f.SolveSeconds,
 
+            Archetype: archetype,
+
             GeneratedAt: new Date().toISOString(),
           },
         })
       } else {
+
+      /* ---------------- New user ---------------- */
         creates.push({
           fields: {
             UserID: userId,
@@ -191,30 +212,10 @@ export default async function handler(req, res) {
             CurrentStreak: 1,
             LongestStreak: 1,
 
+            Archetype: archetype,
+
             GeneratedAt: new Date().toISOString(),
           },
-        })
-      }
-
-      /* =====================================================
-         ARCHETYPE (OPTIONAL — only update if column exists)
-      ===================================================== */
-
-      const acc = f.Accuracy || 0
-      const comp = f.Completion || 0
-      const pacePct = f.PercentileSpeed || 0
-      const attempts = f.AttemptsUsed || 99
-
-      let archetype = 'Explorer'
-
-      if (acc > 0.85 && comp < 0.7) archetype = 'Sniper'
-      else if (pacePct > 0.8) archetype = 'Speedrunner'
-      else if (attempts <= 2) archetype = 'Ghost'
-
-      if (existing) {
-        updates.push({
-          id: existing.id,
-          fields: { Archetype: archetype },
         })
       }
     }
