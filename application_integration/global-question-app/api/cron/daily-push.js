@@ -62,8 +62,6 @@ export default async function handler(req, res) {
         Channel: 'web-push',
         CopyVariant: 'v1',
         DebugReason: 'queued',
-
-        GeneratedAt: new Date().toISOString(),
       },
     })
   }
