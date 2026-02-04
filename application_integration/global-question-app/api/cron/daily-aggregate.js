@@ -127,12 +127,23 @@ export default async function handler(req, res) {
           players: new Set(),
           firstUserId: null,
           firstTime: null,
+
+          countries: new Set(),
+          regions: new Set(),
         })
       }
 
       const st = answerStats.get(a)
       st.mentions += 1
       st.players.add(userId)
+
+      if (r.Country) {
+        const cc = String(r.Country).toLowerCase()
+        st.countries.add(cc)
+
+        const reg = continentFromCountry(cc)
+        if (reg) st.regions.add(reg)
+      }
 
       if (created && (!st.firstTime || created < st.firstTime)) {
         st.firstTime = created
@@ -286,7 +297,11 @@ export default async function handler(req, res) {
       players: st.players.size,
       firstUserId: st.firstUserId,
       firstTime: st.firstTime ? new Date(st.firstTime).toISOString() : null,
+
+      countries: Array.from(st.countries),
+      regions: Array.from(st.regions),
     }))
+
     .sort((a, b) => b.players - a.players)
 
   const answerCreates = []
@@ -298,8 +313,13 @@ export default async function handler(req, res) {
       Answer: a.answer,
       Count: a.players,
       PercentOfPlayers: totalPlayers ? a.players / totalPlayers : 0,
+
       FirstMentionUser: a.firstUserId || null,
       FirstMentionTime: a.firstTime || null,
+
+      Countries: a.countries.join(', '),
+      Regions: a.regions.join(', '),
+
       IsRare: a.players <= 2,
       Rank: idx + 1,
       CreatedAt: new Date().toISOString(),
