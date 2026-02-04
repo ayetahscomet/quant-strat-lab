@@ -1,9 +1,11 @@
 // /api/get-today-question.js
+
 import { base } from '../lib/airtable.js'
+import { dateKeyToday } from '../lib/dateKey.js'
 
 export default async function handler(req, res) {
   try {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = dateKeyToday() // Europe/London
 
     const records = await base('Questions')
       .select({
@@ -13,12 +15,11 @@ export default async function handler(req, res) {
       .firstPage()
 
     if (!records || records.length === 0) {
-      return res.status(404).json({ error: 'No question found for today' })
+      return res.status(404).json({ error: 'No question found for today', dateKey: today })
     }
 
     const q = records[0].fields
 
-    // Normalise correct answers
     let correct = q.CorrectAnswers || []
     if (typeof correct === 'string') {
       correct = correct
@@ -32,7 +33,7 @@ export default async function handler(req, res) {
       answerCount: q.AnswerCount || correct.length,
       correctAnswers: correct,
       hint: q.HintText || '',
-      date: q.DateKey || '',
+      dateKey: today,
     })
   } catch (err) {
     console.error('get-today-question error:', err)

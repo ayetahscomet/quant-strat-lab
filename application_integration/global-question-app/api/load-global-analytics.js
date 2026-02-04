@@ -151,123 +151,53 @@ export default async function handler(req, res) {
     const userCountry = normalise(country || '')
 
     /* ============================================================
-       PATH A (preferred): DailyGlobalStats + DailyCountryStats + DailyUserStats
-       - This is what scales to millions.
-    ============================================================ */
+   PATH A (REAL TABLES): DailyAggregates + DailyRegionStats
+  ============================================================ */
 
-    // 1) DailyGlobalStats (1 record per date)
-    const globalRecs = await trySelectAll('DailyGlobalStats', {
-      maxRecords: 5,
-      filterByFormula: `{DateKey} = '${dateKey}'`,
-    })
+    // 1) DailyAggregates (1 row per date)
+    const aggRows = await base('DailyAggregates')
+      .select({
+        maxRecords: 1,
+        filterByFormula: `{DateKey} = '${dateKey}'`,
+        sort: [{ field: 'GeneratedAt', direction: 'desc' }],
+      })
+      .all()
 
-    // 2) DailyCountryStats (many records per date)
-    const countryRecs = await trySelectAll('DailyCountryStats', {
-      maxRecords: 1000,
-      filterByFormula: `{DateKey} = '${dateKey}'`,
-      sort: [{ field: 'AvgCompletion', direction: 'desc' }],
-    })
+    // 2) DailyRegionStats (many rows per date — used as leaderboard proxy)
+    const regionRows = await base('DailyRegionStats')
+      .select({
+        maxRecords: 200,
+        filterByFormula: `{DateKey} = '${dateKey}'`,
+        sort: [{ field: 'Players', direction: 'desc' }],
+      })
+      .all()
 
-    // 3) DailyUserStats (many records per date) — used for percentiles + “you”
-    // IMPORTANT: If you want to avoid loading all users at scale, you can later replace
-    // this with a percentile lookup table (histogram / quantiles). For now it works for small–mid.
-    const userRecs = await trySelectAll('DailyUserStats', {
-      maxRecords: 5000,
-      filterByFormula: `{DateKey} = '${dateKey}'`,
-    })
+    if (aggRows.length) {
+      const f = aggRows[0].fields || {}
 
-    if (globalRecs && globalRecs.length) {
-      const f = globalRecs[0].fields || {}
+      const totalPlayers = Number(readField(f, ['TotalPlayers'], 0)) || 0
+      const totalAttempts = Number(readField(f, ['TotalAttempts'], null))
+      const avgCompletion = Number(readField(f, ['AvgCompletion'], null))
+      const avgAccuracy = Number(readField(f, ['AvgAccuracy'], null))
+      const avgHints = Number(readField(f, ['AvgHints'], null))
+      const medianPaceSeconds = Number(readField(f, ['MedianPaceSeconds', 'AvgSolveSeconds'], null))
 
-      const totalPlayers =
-        Number(readField(f, ['TotalPlayers', 'Players', 'Users', 'TotalUsers'], 0)) || 0
-      const totalAttempts = Number(readField(f, ['TotalAttempts', 'Attempts'], null))
-      const avgCompletion = Number(readField(f, ['AvgCompletion', 'AverageCompletion'], null))
-      const avgAccuracy = Number(readField(f, ['AvgAccuracy', 'AverageAccuracy'], null))
-      const avgHints = Number(readField(f, ['AvgHints', 'AverageHints'], null))
-      const medianPaceSeconds = Number(readField(f, ['MedianPaceSeconds', 'MedianPace'], null))
-
-      // Build country leaderboard
-      const countryLeaderboard = (countryRecs || [])
+      const countryLeaderboard = (regionRows || [])
         .map((r) => {
-          const cf = r.fields || {}
-          const code = normalise(readField(cf, ['Country', 'CountryCode', 'Code'], 'unknown'))
-          const name = readField(cf, ['CountryName', 'Name'], code)
-          const users = Number(readField(cf, ['Users', 'Players'], 0)) || 0
-          const value = Number(readField(cf, ['AvgCompletion', 'AverageCompletion'], null))
-          return { country: code, name, users, value: typeof value === 'number' ? pct(value) : 0 }
-        })
-        .filter((x) => x.country && x.country !== 'xx' && x.country !== 'unknown')
-        .slice(0, 10)
+          const rf = r.fields || {}
+          const name = readField(rf, ['Region'], 'Unknown')
+          const users = Number(readField(rf, ['Players'], 0)) || 0
+          const value = Number(readField(rf, ['AvgCompletion'], null))
 
-      // Your country rank + avg
-      let yourCountryRank = null
-      let yourCountryAvgCompletion = null
-      if (userCountry) {
-        const idx = countryLeaderboard.findIndex((x) => normalise(x.country) === userCountry)
-        if (idx !== -1) {
-          yourCountryRank = idx + 1
-          yourCountryAvgCompletion = countryLeaderboard[idx].value
-        } else if (countryRecs && countryRecs.length) {
-          // If you’re not top-10, compute rank from all countryRecs (still cheap)
-          const allCountries = (countryRecs || []).map((r) => {
-            const cf = r.fields || {}
-            return {
-              country: normalise(readField(cf, ['Country', 'CountryCode', 'Code'], 'unknown')),
-              value: Number(readField(cf, ['AvgCompletion', 'AverageCompletion'], 0)) || 0,
-            }
-          })
-          const sorted = allCountries.sort((a, b) => b.value - a.value)
-          const idx2 = sorted.findIndex((x) => x.country === userCountry)
-          if (idx2 !== -1) {
-            yourCountryRank = idx2 + 1
-            yourCountryAvgCompletion = pct(sorted[idx2].value)
+          return {
+            country: normalise(name),
+            name,
+            users,
+            value: typeof value === 'number' ? pct(value) : 0,
           }
-        }
-      }
-
-      // Pace percentile for user (from DailyUserStats if present; else null)
-      let pacePercentileForUser = null
-      let accuracyBuckets = null
-      let completionBuckets = null
-      let outcomeCounts = null
-
-      if (userRecs && userRecs.length) {
-        const userRows = userRecs.map((r) => r.fields || {})
-
-        const paceVals = userRows
-          .map((x) => Number(readField(x, ['PaceSeconds', 'Pace', 'PaceSec'], null)))
-          .filter((n) => typeof n === 'number' && isFinite(n) && n > 0)
-
-        const accVals = userRows
-          .map((x) => Number(readField(x, ['Accuracy', 'AccuracyPct'], 0)) || 0)
-          .map((x) => pct(x))
-
-        const compVals = userRows
-          .map((x) => Number(readField(x, ['Completion', 'CompletionPct'], 0)) || 0)
-          .map((x) => pct(x))
-
-        // Distribution buckets (always available even when N=2)
-        accuracyBuckets = bucketise(accVals, [20, 40, 60, 80])
-        completionBuckets = bucketise(compVals, [20, 40, 60, 80])
-
-        // Outcome counts
-        const counts = {}
-        for (const row of userRows) {
-          const r = normalise(readField(row, ['Result', 'DayResult', 'Outcome'], 'unknown'))
-          counts[r] = (counts[r] || 0) + 1
-        }
-        outcomeCounts = counts
-
-        // You
-        const youRow = userRows.find(
-          (x) => String(readField(x, ['UserID', 'UUID', 'User'], '')) === String(userId),
-        )
-        if (youRow) {
-          const yourPace = Number(readField(youRow, ['PaceSeconds', 'Pace', 'PaceSec'], null))
-          pacePercentileForUser = fasterThanPercentile(paceVals, yourPace)
-        }
-      }
+        })
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10)
 
       return res.status(200).json(
         buildResponse({
@@ -279,12 +209,14 @@ export default async function handler(req, res) {
           avgHints,
           medianPaceSeconds,
           countryLeaderboard,
-          yourCountryRank,
-          yourCountryAvgCompletion,
-          pacePercentileForUser,
-          accuracyBuckets,
-          completionBuckets,
-          outcomeCounts,
+
+          // MVP placeholders
+          yourCountryRank: null,
+          yourCountryAvgCompletion: null,
+          pacePercentileForUser: null,
+          accuracyBuckets: null,
+          completionBuckets: null,
+          outcomeCounts: null,
         }),
       )
     }
@@ -448,7 +380,7 @@ export default async function handler(req, res) {
         avgAccuracy,
         avgHints: hintsCount ? Math.round((hintsSum / hintsCount) * 10) / 10 : null,
         medianPaceSeconds,
-        countryLeaderboard: [{ name, value }],
+        countryLeaderboard,
         yourCountryRank,
         yourCountryAvgCompletion,
         pacePercentileForUser,

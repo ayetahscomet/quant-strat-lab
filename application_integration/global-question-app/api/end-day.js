@@ -1,16 +1,5 @@
-// api/end-day.js
-import { kv } from '@vercel/kv'
+// /api/end-day.js (MVP-safe: no KV dependency)
 
 export default async function handler(req, res) {
-  const { userId, dateKey, result } = req.body
-
-  const key = `akinto_day_${userId}_${dateKey}`
-
-  await kv.set(key, {
-    dayEnded: true,
-    dayEndResult: result,
-    endedAt: Date.now(),
-  })
-
-  res.status(200).json({ ok: true })
+  return res.status(200).json({ ok: true })
 }

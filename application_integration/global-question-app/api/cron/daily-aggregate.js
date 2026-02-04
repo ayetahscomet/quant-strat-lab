@@ -1,21 +1,8 @@
 // /api/cron/daily-aggregate.js
 
 import { base } from '../../lib/airtable.js'
+import { pickDateKey } from '../../lib/dateKey.js'
 import { continentFromCountry } from '../../src/data/continents.js'
-import { lookupCountry } from '../../src/data/countryMeta.js'
-
-async function createInBatches(table, rows, size = 10) {
-  for (let i = 0; i < rows.length; i += size) {
-    const batch = rows.slice(i, i + size)
-    await base(table).create(batch)
-  }
-}
-
-function yesterdayKey() {
-  const d = new Date()
-  d.setUTCDate(d.getUTCDate() - 1)
-  return d.toISOString().slice(0, 10)
-}
 
 function normalise(s) {
   return String(s || '')
@@ -32,16 +19,45 @@ function safeJsonArray(v) {
   }
 }
 
+async function fetchAll(table, formula) {
+  return base(table)
+    .select({
+      filterByFormula: formula || undefined,
+      maxRecords: 5000,
+    })
+    .all()
+}
+
+async function createInBatches(table, rows, size = 10) {
+  for (let i = 0; i < rows.length; i += size) {
+    await base(table).create(rows.slice(i, i + size))
+  }
+}
+
+async function updateInBatches(table, rows, size = 10) {
+  for (let i = 0; i < rows.length; i += size) {
+    await base(table).update(rows.slice(i, i + size))
+  }
+}
+
+async function upsertSingleByDateKey(table, dateKey, fields) {
+  const existing = await fetchAll(table, `{DateKey}='${dateKey}'`)
+  if (existing.length) {
+    await updateInBatches(table, [{ id: existing[0].id, fields }])
+    return { mode: 'update', id: existing[0].id }
+  }
+  const created = await base(table).create([{ fields }])
+  return { mode: 'create', id: created?.[0]?.id }
+}
+
 function computeDiversity(regionCounts) {
   const total = Object.values(regionCounts).reduce((a, b) => a + b, 0)
   if (!total) return 0
-
   let entropy = 0
   for (const c of Object.values(regionCounts)) {
     const p = c / total
     entropy -= p * Math.log2(p)
   }
-
   return Number(entropy.toFixed(3))
 }
 
@@ -60,26 +76,16 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'unauthorised' })
   }
 
-  const dateKey = req.query.dateKey || yesterdayKey()
-  console.log('📊 Aggregating day:', dateKey)
+  // ✅ Default to TODAY in Europe/London (aligns with frontend)
+  const { dateKey } = pickDateKey(req, { defaultOffsetDays: 0 })
+  console.log('📊 Aggregating DateKey:', dateKey)
 
-  const records = await base('UserAnswers')
-    .select({
-      filterByFormula: `{DateKey}='${dateKey}'`,
-      maxRecords: 5000,
-    })
-    .all()
-
-  if (!records.length) {
-    return res.status(200).json({ ok: true, message: 'no data' })
-  }
+  const records = await fetchAll('UserAnswers', `{DateKey}='${dateKey}'`)
+  if (!records.length) return res.status(200).json({ ok: true, message: 'no data', dateKey })
 
   const rows = records.map((r) => r.fields || {})
 
-  // =====================================================
-  // Group by user
-  // =====================================================
-
+  // group by user
   const byUser = new Map()
   for (const r of rows) {
     if (!r.UserID) continue
@@ -105,12 +111,8 @@ export default async function handler(req, res) {
     if (r.Country) countrySet.add(String(r.Country).toLowerCase())
   }
 
-  // =====================================================
-  // Answer stats
-  // =====================================================
-
+  // answer stats
   const answerStats = new Map()
-
   for (const r of attemptRows) {
     const userId = String(r.UserID)
     const created = r.CreatedAt ? new Date(r.CreatedAt).getTime() : null
@@ -139,36 +141,15 @@ export default async function handler(req, res) {
     }
   }
 
-  // =====================================================
-  // Streak lookup
-  // =====================================================
-
-  const prevDate = new Date(dateKey)
-  prevDate.setUTCDate(prevDate.getUTCDate() - 1)
-
-  const prevProfiles = await base('UserDailyProfile')
-    .select({
-      filterByFormula: `{DateKey}='${prevDate.toISOString().slice(0, 10)}'`,
-    })
-    .all()
-
-  const prevStreaks = new Map()
-  for (const r of prevProfiles) {
-    prevStreaks.set(r.fields.UserID, r.fields.StreakContinues || 0)
-  }
-
-  // =====================================================
-  // Per-user profile
-  // =====================================================
-
-  const userProfiles = []
-
+  // totalSlots = max correct list length seen today
   let totalSlots = 0
   for (const r of attemptRows) {
     const ca = safeJsonArray(r.CorrectAnswersJSON)
     if (ca.length > totalSlots) totalSlots = ca.length
   }
 
+  // build user daily profiles
+  const userProfiles = []
   for (const [userId, logs] of byUser.entries()) {
     const attempts = logs
       .map((x) => ({
@@ -196,20 +177,17 @@ export default async function handler(req, res) {
       solveSeconds = Math.round((attempts.at(-1)._t - attempts[0]._t) / 1000)
     }
 
-    const accuracy = totalSlots ? correct.size / totalSlots : 0
     const completion = totalSlots ? correct.size / totalSlots : 0
+    const accuracy = submitted.size ? correct.size / submitted.size : 0
 
     const countryCode = String(logs.find((x) => x.Country)?.Country || 'xx').toLowerCase()
-    const region = continentFromCountry(countryCode)
+    const region = continentFromCountry(countryCode) || 'Unknown'
 
     let rareAnswers = 0
     for (const a of submitted) {
       const st = answerStats.get(a)
       if (st && st.players.size <= 2) rareAnswers++
     }
-
-    const prev = prevStreaks.get(userId) || 0
-    const streak = prev + 1
 
     const archetype = classifyArchetype({
       AttemptsUsed: attempts.length,
@@ -221,60 +199,150 @@ export default async function handler(req, res) {
     })
 
     userProfiles.push({
-      UserID: userId,
+      UserID: String(userId),
       DateKey: dateKey,
-
       Country: countryCode,
       Region: region,
-
       AttemptsUsed: attempts.length,
       HintCount: hintCount,
-
-      Accuracy: accuracy,
+      Accuracy: completion, // keep if your Airtable expects 0-1; loaders normalise to %
       Completion: completion,
       SolveSeconds: solveSeconds,
-
       DistinctAnswers: submitted.size,
       RareAnswers: rareAnswers,
-
       Archetype: archetype,
-      StreakContinues: streak,
+      StreakContinues: 1,
+      GeneratedAt: new Date().toISOString(),
     })
   }
 
-  // =====================================================
-  // DailyAggregates (with diversity)
-  // =====================================================
+  // ✅ UPSERT UserDailyProfile by (UserID, DateKey)
+  const existingProfiles = await fetchAll('UserDailyProfile', `{DateKey}='${dateKey}'`)
+  const profileKeyToId = new Map(
+    existingProfiles.map((r) => [`${r.fields.UserID}::${r.fields.DateKey}`, r.id]),
+  )
 
-  const regionCounts = {}
-  for (const u of userProfiles) {
-    regionCounts[u.Region] = (regionCounts[u.Region] || 0) + 1
+  const profileCreates = []
+  const profileUpdates = []
+
+  for (const p of userProfiles) {
+    const key = `${p.UserID}::${p.DateKey}`
+    const id = profileKeyToId.get(key)
+    if (id) profileUpdates.push({ id, fields: p })
+    else profileCreates.push({ fields: p })
   }
 
-  const diversity = computeDiversity(regionCounts)
+  if (profileCreates.length) await createInBatches('UserDailyProfile', profileCreates)
+  if (profileUpdates.length) await updateInBatches('UserDailyProfile', profileUpdates)
+
+  // ✅ DailyRegionStats (UPSERT by DateKey+Region)
+  const regionBuckets = new Map()
+  for (const p of userProfiles) {
+    if (!regionBuckets.has(p.Region)) regionBuckets.set(p.Region, [])
+    regionBuckets.get(p.Region).push(p)
+  }
+
+  const existingRegions = await fetchAll('DailyRegionStats', `{DateKey}='${dateKey}'`)
+  const regionKeyToId = new Map(
+    existingRegions.map((r) => [`${r.fields.DateKey}::${r.fields.Region}`, r.id]),
+  )
+
+  const regionCreates = []
+  const regionUpdates = []
+
+  for (const [region, ps] of regionBuckets.entries()) {
+    const players = ps.length
+    const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0)
+
+    const fields = {
+      DateKey: dateKey,
+      Region: region,
+      Players: players,
+      AvgHints: avg(ps.map((x) => x.HintCount || 0)),
+      AvgAccuracy: avg(ps.map((x) => x.Accuracy || 0)),
+      AvgSolveSeconds: avg(ps.map((x) => (Number.isFinite(x.SolveSeconds) ? x.SolveSeconds : 0))),
+      AvgCompletion: avg(ps.map((x) => x.Completion || 0)),
+      ShareOfPlayers: totalPlayers ? players / totalPlayers : 0,
+      GeneratedAt: new Date().toISOString(),
+    }
+
+    const key = `${dateKey}::${region}`
+    const id = regionKeyToId.get(key)
+    if (id) regionUpdates.push({ id, fields })
+    else regionCreates.push({ fields })
+  }
+
+  if (regionCreates.length) await createInBatches('DailyRegionStats', regionCreates)
+  if (regionUpdates.length) await updateInBatches('DailyRegionStats', regionUpdates)
+
+  // ✅ DailyAnswerStats (UPSERT by DateKey+Answer)
+  const existingAnswers = await fetchAll('DailyAnswerStats', `{DateKey}='${dateKey}'`)
+  const ansKeyToId = new Map(
+    existingAnswers.map((r) => [`${r.fields.DateKey}::${normalise(r.fields.Answer)}`, r.id]),
+  )
+
+  const answerRows = Array.from(answerStats.entries())
+    .map(([answer, st]) => ({
+      answer,
+      players: st.players.size,
+      firstUserId: st.firstUserId,
+      firstTime: st.firstTime ? new Date(st.firstTime).toISOString() : null,
+    }))
+    .sort((a, b) => b.players - a.players)
+
+  const answerCreates = []
+  const answerUpdates = []
+
+  answerRows.forEach((a, idx) => {
+    const fields = {
+      DateKey: dateKey,
+      Answer: a.answer,
+      Count: a.players,
+      PercentOfPlayers: totalPlayers ? a.players / totalPlayers : 0,
+      FirstMentionUser: a.firstUserId || null,
+      FirstMentionTime: a.firstTime || null,
+      IsRare: a.players <= 2,
+      Rank: idx + 1,
+      CreatedAt: new Date().toISOString(),
+    }
+
+    const key = `${dateKey}::${a.answer}`
+    const id = ansKeyToId.get(key)
+    if (id) answerUpdates.push({ id, fields })
+    else answerCreates.push({ fields })
+  })
+
+  if (answerCreates.length) await createInBatches('DailyAnswerStats', answerCreates)
+  if (answerUpdates.length) await updateInBatches('DailyAnswerStats', answerUpdates)
+
+  // ✅ DailyAggregates UPSERT (stops duplicates)
+  const regionCounts = {}
+  for (const p of userProfiles) regionCounts[p.Region] = (regionCounts[p.Region] || 0) + 1
 
   const dailyAgg = {
     DateKey: dateKey,
     TotalPlayers: totalPlayers,
     TotalAttempts: totalAttempts,
     TotalHints: totalHints,
-
     DistinctAnswers: answerStats.size,
     DistinctCountriesCount: countrySet.size,
-
     CountriesMentioned: Array.from(countrySet).join(', '),
-
-    DiversityScore: diversity,
-
+    DiversityScore: computeDiversity(regionCounts),
     GeneratedAt: new Date().toISOString(),
   }
 
-  await base('DailyAggregates').create([{ fields: dailyAgg }])
+  const aggUpsert = await upsertSingleByDateKey('DailyAggregates', dateKey, dailyAgg)
 
   return res.status(200).json({
     ok: true,
     dateKey,
     players: totalPlayers,
-    answers: answerStats.size,
+    profileCreates: profileCreates.length,
+    profileUpdates: profileUpdates.length,
+    regionCreates: regionCreates.length,
+    regionUpdates: regionUpdates.length,
+    answerCreates: answerCreates.length,
+    answerUpdates: answerUpdates.length,
+    dailyAggregate: aggUpsert,
   })
 }

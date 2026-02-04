@@ -1,6 +1,7 @@
 // /api/cron/daily-cohorts.js
 
 import { base } from '../../lib/airtable.js'
+import { pickDateKey, dateKeyOffsetDays } from '../../lib/dateKey.js'
 
 function daysAgoKey(n) {
   const d = new Date()
@@ -20,7 +21,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'unauthorised' })
   }
 
-  const dateKey = req.query.dateKey || daysAgoKey(1)
+  const { dateKey } = pickDateKey(req, { defaultOffsetDays: 0 })
 
   console.log('📊 Cohorts:', dateKey)
 
@@ -45,11 +46,17 @@ export default async function handler(req, res) {
   for (const [cohortDate, members] of cohorts.entries()) {
     const total = members.length
 
-    const d1 = members.filter((u) => u.LastPlayedDate === daysAgoKey(0)).length
+    const todayKey = dateKeyOffsetDays(0)
 
-    const d3 = members.filter((u) => u.LastPlayedDate && u.LastPlayedDate >= daysAgoKey(2)).length
+    const d1 = members.filter((u) => u.LastPlayedDate === todayKey).length
 
-    const d7 = members.filter((u) => u.LastPlayedDate && u.LastPlayedDate >= daysAgoKey(6)).length
+    const d3Key = dateKeyOffsetDays(-2)
+
+    const d3 = members.filter((u) => u.LastPlayedDate && u.LastPlayedDate >= d3Key).length
+
+    const d7Key = dateKeyOffsetDays(-6)
+
+    const d7 = members.filter((u) => u.LastPlayedDate && u.LastPlayedDate >= d7Key).length
 
     rows.push({
       fields: {

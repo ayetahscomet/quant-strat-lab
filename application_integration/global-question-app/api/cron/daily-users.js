@@ -1,6 +1,7 @@
 // /api/cron/daily-users.js
 
 import { base } from '../../lib/airtable.js'
+import { pickDateKey } from '../../lib/dateKey.js'
 
 function yesterdayKey() {
   const d = new Date()
@@ -46,7 +47,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'unauthorised' })
   }
 
-  const dateKey = req.query.dateKey || yesterdayKey()
+  const { dateKey } = pickDateKey(req, { defaultOffsetDays: 0 })
   console.log('👤 Daily Users cron:', dateKey)
 
   /* =====================================================
