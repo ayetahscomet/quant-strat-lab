@@ -85,6 +85,13 @@ export default async function handler(req, res) {
 
   const rows = records.map((r) => r.fields || {})
 
+  /* =====================================================
+     Load USERS master table (for FirstSolveToday)
+  ===================================================== */
+
+  const usersTable = await fetchAll('Users')
+  const usersById = new Map(usersTable.map((r) => [String(r.fields.UserID), r.fields]))
+
   // group by user
   const byUser = new Map()
   for (const r of rows) {
@@ -191,6 +198,12 @@ export default async function handler(req, res) {
     const completion = totalSlots ? correct.size / totalSlots : 0
     const accuracy = submitted.size ? correct.size / submitted.size : 0
 
+    const userMaster = usersById.get(String(userId))
+
+    const firstSolveToday =
+      completion > 0 &&
+      (!userMaster || !userMaster.FirstSeenDate || userMaster.FirstSeenDate === dateKey)
+
     const countryCode = String(logs.find((x) => x.Country)?.Country || 'xx').toLowerCase()
     const region = continentFromCountry(countryCode) || 'Unknown'
 
@@ -209,6 +222,12 @@ export default async function handler(req, res) {
       HintCount: hintCount,
     })
 
+    const yesterday = new Date(dateKey)
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+    const yesterdayKey = yesterday.toISOString().slice(0, 10)
+
+    const streakContinues = logs.some((x) => x.DateKey === yesterdayKey)
+
     userProfiles.push({
       UserID: String(userId),
       DateKey: dateKey,
@@ -216,12 +235,18 @@ export default async function handler(req, res) {
       Region: region,
       AttemptsUsed: attempts.length,
       HintCount: hintCount,
-      Accuracy: completion,
+
+      Accuracy: accuracy,
       Completion: completion,
+
       SolveSeconds: solveSeconds,
       DistinctAnswers: submitted.size,
       RareAnswers: rareAnswers,
       Archetype: archetype,
+
+      StreakContinues: streakContinues,
+      FirstSolveToday: firstSolveToday,
+
       GeneratedAt: new Date().toISOString(),
     })
   }

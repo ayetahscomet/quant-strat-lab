@@ -87,7 +87,14 @@ export default async function handler(req, res) {
         fields: {
           PercentileAccuracy: percentile(accVals, f.Accuracy || 0) / 100,
 
-          PercentileSpeed: percentile(paceVals, f.SolveSeconds || 999999) / 100,
+          PercentileCompletion:
+            percentile(
+              todayProfiles.map((r) => r.fields.Completion || 0),
+              f.Completion || 0,
+            ) / 100,
+
+          PercentileSpeed:
+            percentile(paceVals, Number.isFinite(f.SolveSeconds) ? f.SolveSeconds : 999999) / 100,
         },
       })
     }
@@ -195,8 +202,7 @@ export default async function handler(req, res) {
           },
         })
       } else {
-
-      /* ---------------- New user ---------------- */
+        /* ---------------- New user ---------------- */
         creates.push({
           fields: {
             UserID: userId,
