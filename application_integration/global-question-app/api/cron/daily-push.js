@@ -56,6 +56,14 @@ export default async function handler(req, res) {
 
         Country: u.CountryCode || 'xx',
         Region: u.Region || 'Unknown',
+
+        Delivered: false,
+        DeliveredAt: null,
+        Channel: 'web-push',
+        CopyVariant: 'v1',
+        DebugReason: 'queued',
+
+        GeneratedAt: new Date().toISOString(),
       },
     })
   }
