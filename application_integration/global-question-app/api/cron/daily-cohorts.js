@@ -93,6 +93,8 @@ export default async function handler(req, res) {
           RetentionD7: retentionD7,
 
           Countries: countries,
+
+          GeneratedAt: new Date().toISOString(),
         },
       })
     }
