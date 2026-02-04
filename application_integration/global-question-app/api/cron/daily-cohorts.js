@@ -61,15 +61,12 @@ export default async function handler(req, res) {
     rows.push({
       fields: {
         CohortDate: cohortDate,
-        SnapshotDate: dateKey,
 
         Size: total,
 
         D1: d1,
         D3: d3,
         D7: d7,
-
-        GeneratedAt: new Date().toISOString(),
       },
     })
   }
