@@ -145,8 +145,11 @@ export default async function handler(req, res) {
       st.mentions += 1
       st.players.add(userId)
 
-      if (r.Country) {
-        const cc = String(r.Country).toLowerCase()
+      const rawCountry = r.CountryCode || r.Country || r.country || null
+
+      if (rawCountry && rawCountry !== 'xx') {
+        const cc = String(rawCountry).toLowerCase()
+
         st.countries.add(cc)
 
         const reg = continentFromCountry(cc)
@@ -343,8 +346,8 @@ export default async function handler(req, res) {
       FirstMentionUser: a.firstUserId || null,
       FirstMentionTime: a.firstTime || null,
 
-      Countries: a.countries.join(', '),
-      Regions: a.regions.join(', '),
+      Countries: a.countries.length ? a.countries.join(', ') : 'unknown',
+      Regions: a.regions.length ? a.regions.join(', ') : 'Unknown',
 
       IsRare: a.players <= 2,
       Rank: idx + 1,
