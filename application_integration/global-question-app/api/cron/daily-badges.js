@@ -245,10 +245,12 @@ export default async function handler(req, res) {
 
   const badgeRows = await fetchAll('UserDailyBadges', `{DateKey}='${dateKey}'`)
 
-  // collect badge ids per profile
   const profileIdToBadges = new Map()
 
   for (const b of badgeRows) {
+    const badgeId = b.id
+    if (!badgeId || typeof badgeId !== 'string') continue
+
     const userRecordId = b.fields.UserID?.[0]
     if (!userRecordId) continue
 
@@ -260,23 +262,26 @@ export default async function handler(req, res) {
 
     if (!profileIdToBadges.has(profileRec.id)) {
       const existing = Array.isArray(profileRec.fields.UserDailyBadges)
-        ? profileRec.fields.UserDailyBadges
+        ? profileRec.fields.UserDailyBadges.filter((x) => typeof x === 'string')
         : []
 
       profileIdToBadges.set(profileRec.id, new Set(existing))
     }
 
-    profileIdToBadges.get(profileRec.id).add(b.id)
+    profileIdToBadges.get(profileRec.id).add(badgeId)
   }
 
-  // build ONE update per profile
   const profileUpdates = []
 
   for (const [profileId, badgeSet] of profileIdToBadges.entries()) {
+    const arr = [...badgeSet].filter((x) => typeof x === 'string')
+
+    if (!arr.length) continue
+
     profileUpdates.push({
       id: profileId,
       fields: {
-        UserDailyBadges: Array.from(badgeSet),
+        UserDailyBadges: arr,
       },
     })
   }
