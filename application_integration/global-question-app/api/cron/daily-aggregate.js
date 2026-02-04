@@ -116,7 +116,9 @@ export default async function handler(req, res) {
 
   const countrySet = new Set()
   for (const r of rows) {
-    if (r.Country) countrySet.add(String(r.Country).toLowerCase())
+    const cc = r.Country || usersById.get(String(r.UserID))?.CountryCode || null
+
+    if (cc) countrySet.add(String(cc).toLowerCase())
   }
 
   // answer stats
@@ -145,7 +147,9 @@ export default async function handler(req, res) {
       st.mentions += 1
       st.players.add(userId)
 
-      const rawCountry = r.CountryCode || r.Country || r.country || null
+      const userMaster = usersById.get(String(userId))
+
+      const rawCountry = r.CountryCode || r.Country || r.country || userMaster?.CountryCode || null
 
       if (rawCountry && rawCountry !== 'xx') {
         const cc = String(rawCountry).toLowerCase()
@@ -208,7 +212,10 @@ export default async function handler(req, res) {
       completion > 0 &&
       (!userMaster || !userMaster.FirstSeenDate || userMaster.FirstSeenDate === dateKey)
 
-    const countryCode = String(logs.find((x) => x.Country)?.Country || 'xx').toLowerCase()
+    const logCountry = logs.find((x) => x.Country)?.Country
+
+    const countryCode = String(logCountry || userMaster?.CountryCode || 'xx').toLowerCase()
+
     const region = continentFromCountry(countryCode) || 'Unknown'
 
     let rareAnswers = 0
@@ -347,7 +354,7 @@ export default async function handler(req, res) {
       FirstMentionTime: a.firstTime || null,
 
       Countries: a.countries.length ? a.countries.join(', ') : 'unknown',
-      Regions: a.regions.length ? a.regions.join(', ') : 'Unknown',
+      Regions: a.regions.length ? a.regions.join(', ') : 'unknown',
 
       IsRare: a.players <= 2,
       Rank: idx + 1,

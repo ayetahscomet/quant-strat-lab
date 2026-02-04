@@ -2,6 +2,13 @@
 
 import { base } from '../../lib/airtable.js'
 import { pickDateKey } from '../../lib/dateKey.js'
+import { lookupCountry } from '../../src/data/countryMeta.js'
+import { continentFromCountry } from '../../src/data/continents.js'
+
+const cc = String(u.CountryCode || 'xx').toLowerCase()
+const countryName = lookupCountry(cc)?.name || (cc === 'xx' ? 'Unknown' : cc.toUpperCase())
+const region = continentFromCountry(cc) || 'Unknown'
+Intl.DateTimeFormat().resolvedOptions().timeZone
 
 /* =====================================================
    Helpers
@@ -184,6 +191,7 @@ export default async function handler(req, res) {
 
             CountryCode: country,
             Region: region,
+            Timezone: timezone,
 
             TotalDaysPlayed: totalDays,
             CurrentStreak: currentStreak,
@@ -191,6 +199,7 @@ export default async function handler(req, res) {
 
             StreakBrokenYesterday: streakBroken,
             NewLongestStreakToday: newRecord,
+            PushOptIn: pushOptIn,
 
             LastAccuracy: f.Accuracy,
             LastCompletion: f.Completion,
@@ -211,7 +220,9 @@ export default async function handler(req, res) {
             LastSeenDate: today,
             LastPlayedDate: today,
 
-            CountryCode: country,
+            CountryCode: cc,
+            CountryName: countryName,
+
             Region: region,
 
             TotalDaysPlayed: 1,
