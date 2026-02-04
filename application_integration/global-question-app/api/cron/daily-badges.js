@@ -237,16 +237,17 @@ export default async function handler(req, res) {
   if (toInsert.length) await createInBatches('UserDailyBadges', toInsert)
 
   /* =====================================================
-     🔗 Link badges back to UserDailyProfile.UserDailyBadges
-     (Profile keyed by user UUID, badges store Users record ID)
-  ===================================================== */
+   🔗 Link badges back to UserDailyProfile.UserDailyBadges
+===================================================== */
 
   const refreshedProfiles = await fetchAll('UserDailyProfile', `{DateKey}='${dateKey}'`)
   const profileByUserUuid = new Map(refreshedProfiles.map((p) => [String(p.fields.UserID), p]))
 
   const badgeRows = await fetchAll('UserDailyBadges', `{DateKey}='${dateKey}'`)
 
-  const profileUpdates = []
+  // collect badge ids per profile
+  const profileIdToBadges = new Map()
+
   for (const b of badgeRows) {
     const userRecordId = b.fields.UserID?.[0]
     if (!userRecordId) continue
@@ -257,21 +258,32 @@ export default async function handler(req, res) {
     const profileRec = profileByUserUuid.get(userUuid)
     if (!profileRec) continue
 
-    const existingLinks = Array.isArray(profileRec.fields.UserDailyBadges)
-      ? profileRec.fields.UserDailyBadges
-      : []
+    if (!profileIdToBadges.has(profileRec.id)) {
+      const existing = Array.isArray(profileRec.fields.UserDailyBadges)
+        ? profileRec.fields.UserDailyBadges
+        : []
 
-    if (existingLinks.includes(b.id)) continue
+      profileIdToBadges.set(profileRec.id, new Set(existing))
+    }
 
+    profileIdToBadges.get(profileRec.id).add(b.id)
+  }
+
+  // build ONE update per profile
+  const profileUpdates = []
+
+  for (const [profileId, badgeSet] of profileIdToBadges.entries()) {
     profileUpdates.push({
-      id: profileRec.id,
+      id: profileId,
       fields: {
-        UserDailyBadges: [...existingLinks, b.id],
+        UserDailyBadges: Array.from(badgeSet),
       },
     })
   }
 
-  if (profileUpdates.length) await updateInBatches('UserDailyProfile', profileUpdates)
+  if (profileUpdates.length) {
+    await updateInBatches('UserDailyProfile', profileUpdates)
+  }
 
   return res.status(200).json({
     ok: true,
