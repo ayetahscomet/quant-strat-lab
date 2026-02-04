@@ -57,6 +57,7 @@ export default async function handler(req, res) {
         Country: u.CountryCode || 'xx',
         Region: u.Region || 'Unknown',
 
+        // ✅ delivery pipeline defaults
         Delivered: false,
         DeliveredAt: null,
         Channel: 'web-push',
