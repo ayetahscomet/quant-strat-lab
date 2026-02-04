@@ -205,13 +205,12 @@ export default async function handler(req, res) {
       Region: region,
       AttemptsUsed: attempts.length,
       HintCount: hintCount,
-      Accuracy: completion, // keep if your Airtable expects 0-1; loaders normalise to %
+      Accuracy: completion,
       Completion: completion,
       SolveSeconds: solveSeconds,
       DistinctAnswers: submitted.size,
       RareAnswers: rareAnswers,
       Archetype: archetype,
-      StreakContinues: 1,
       GeneratedAt: new Date().toISOString(),
     })
   }
