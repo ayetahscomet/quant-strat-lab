@@ -5,19 +5,12 @@ import { pickDateKey } from '../../lib/dateKey.js'
 import { lookupCountry } from '../../src/data/countryMeta.js'
 import { continentFromCountry } from '../../src/data/continents.js'
 
-const cc = String(u.CountryCode || 'xx').toLowerCase()
-const countryName = lookupCountry(cc)?.name || (cc === 'xx' ? 'Unknown' : cc.toUpperCase())
-const region = continentFromCountry(cc) || 'Unknown'
-Intl.DateTimeFormat().resolvedOptions().timeZone
-
 /* =====================================================
    Helpers
 ===================================================== */
 
 async function fetchAll(table, formula) {
-  const opts = {
-    maxRecords: 5000,
-  }
+  const opts = { maxRecords: 5000 }
 
   if (typeof formula === 'string' && formula.length) {
     opts.filterByFormula = formula
@@ -75,7 +68,7 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       COMPUTE DAILY PERCENTILES (ON PROFILES)
+       COMPUTE DAILY PERCENTILES
     ===================================================== */
 
     const accVals = todayProfiles.map((r) => r.fields.Accuracy || 0)
@@ -130,10 +123,23 @@ export default async function handler(req, res) {
       if (!userId) continue
 
       const today = dateKey
-      const country = f.Country || 'xx'
-      const region = f.Region || 'Unknown'
+
+      const rawCC = f.Country || f.CountryCode || 'xx'
+      const cc = String(rawCC).toLowerCase()
+
+      const meta = lookupCountry(cc)
+
+      const countryName = meta?.name || (cc === 'xx' ? 'Unknown' : cc.toUpperCase())
+
+      const region = continentFromCountry(cc) || 'Unknown'
+
+      const timezone =
+        meta?.timezone ||
+        Intl.DateTimeFormat('en-US', { timeZone: 'UTC' }).resolvedOptions().timeZone
 
       const existing = usersById.get(userId)
+
+      const pushOptIn = existing?.fields?.PushOptIn ?? false
 
       let currentStreak = 1
       let longestStreak = 1
@@ -179,7 +185,7 @@ export default async function handler(req, res) {
 
         longestStreak = Math.max(prev.LongestStreak || 0, currentStreak)
 
-        if (currentStreak === longestStreak && currentStreak > (prev.LongestStreak || 0)) {
+        if (currentStreak > (prev.LongestStreak || 0)) {
           newRecord = true
         }
 
@@ -189,7 +195,9 @@ export default async function handler(req, res) {
             LastSeenDate: today,
             LastPlayedDate: today,
 
-            CountryCode: country,
+            CountryCode: cc,
+            CountryName: countryName,
+
             Region: region,
             Timezone: timezone,
 
@@ -199,6 +207,7 @@ export default async function handler(req, res) {
 
             StreakBrokenYesterday: streakBroken,
             NewLongestStreakToday: newRecord,
+
             PushOptIn: pushOptIn,
 
             LastAccuracy: f.Accuracy,
@@ -212,6 +221,7 @@ export default async function handler(req, res) {
         })
       } else {
         /* ---------------- New user ---------------- */
+
         creates.push({
           fields: {
             UserID: userId,
@@ -224,6 +234,9 @@ export default async function handler(req, res) {
             CountryName: countryName,
 
             Region: region,
+            Timezone: timezone,
+
+            PushOptIn: false,
 
             TotalDaysPlayed: 1,
             CurrentStreak: 1,
