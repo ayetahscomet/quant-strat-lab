@@ -8,12 +8,15 @@ import { pickDateKey } from '../../lib/dateKey.js'
 ===================================================== */
 
 async function fetchAll(table, formula) {
-  return base(table)
-    .select({
-      filterByFormula: typeof formula === 'string' ? formula : undefined,
-      maxRecords: 5000,
-    })
-    .all()
+  const opts = {
+    maxRecords: 5000,
+  }
+
+  if (typeof formula === 'string' && formula.length) {
+    opts.filterByFormula = formula
+  }
+
+  return base(table).select(opts).all()
 }
 
 async function createInBatches(table, rows, size = 10) {
