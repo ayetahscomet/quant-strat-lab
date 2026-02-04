@@ -51,6 +51,19 @@ export default async function handler(req, res) {
   const users = profiles.map((r) => r.fields)
 
   /* =====================================================
+   Resolve Users → Airtable record IDs
+===================================================== */
+
+  const userRecords = await base('Users')
+    .select({
+      fields: ['UserID'],
+      maxRecords: 5000,
+    })
+    .all()
+
+  const userIdToRecord = Object.fromEntries(userRecords.map((r) => [r.fields.UserID, r.id]))
+
+  /* =====================================================
      Prep percentiles
   ===================================================== */
 
@@ -106,9 +119,13 @@ export default async function handler(req, res) {
     badgeList.push('Played Today')
 
     for (const badge of badgeList) {
+      const userRecordId = userIdToRecord[u.UserID]
+
+      if (!userRecordId) continue
+
       awards.push({
         fields: {
-          UserID: u.UserID,
+          UserID: [userRecordId], // linked record array
           DateKey: dateKey,
 
           // TEXT fields
@@ -139,7 +156,7 @@ export default async function handler(req, res) {
     })
     .all()
 
-  const existingKeys = new Set(existing.map((r) => `${r.fields.UserID}::${r.fields.Badge}`))
+  const existingKeys = new Set(existing.map((r) => `${r.fields.UserID?.[0]}::${r.fields.Badge}`))
 
   const toInsert = awards.filter((r) => !existingKeys.has(`${r.fields.UserID}::${r.fields.Badge}`))
 
