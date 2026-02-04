@@ -22,9 +22,10 @@ function safeJsonArray(v) {
 async function fetchAll(table, formula) {
   return base(table)
     .select({
-      filterByFormula: formula || undefined,
+      ...(typeof formula === 'string' && formula.length ? { filterByFormula: formula } : {}),
       maxRecords: 5000,
     })
+
     .all()
 }
 
