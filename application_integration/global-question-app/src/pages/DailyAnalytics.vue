@@ -1333,30 +1333,31 @@ function buildGlobalBlocks(rng) {
    GLOBAL charts per block
 ========================= */
 function renderGlobalBlockCharts(rng) {
-  // For each block with chart: render mini chart in its canvas
   for (const b of globalBlocks.value) {
     if (!b.chart) continue
+
     const el = globalChartRefs.value.get(b.id)
     if (!el) continue
 
     const ctx = el.getContext('2d')
     if (!ctx) continue
 
-    // Render based on declared type
+    const data = Array.isArray(b.chart.data) ? b.chart.data : [40, 60, 55]
+
     let instance = null
+
     if (b.chart.type === 'bar') {
-      // bar expects 2 values
       instance = makeMiniBar(
         ctx,
-        ['You', 'Rest'],
-        Array.isArray(b.chart.data) ? b.chart.data : [60, 40],
+        data.map((_, i) => (i === 0 ? 'You' : `Rest ${i}`)),
+        data,
         b.chart.color || COLORS.blue,
       )
     } else {
       instance = makeMiniLine(
         ctx,
-        ['a', 'b', 'c', 'd', 'e'].slice(0, (b.chart.data || []).length || 3),
-        Array.isArray(b.chart.data) ? b.chart.data : [40, 60, 55],
+        data.map((_, i) => `p${i}`),
+        data,
         b.chart.color || COLORS.blue,
       )
     }
@@ -1391,9 +1392,6 @@ function renderPersonalCharts(rng) {
     const inst = chosen.render(ctx)
     chartInstances.push(inst)
   }
-
-  // Global block charts
-  renderGlobalBlockCharts(rng)
 }
 
 /* =========================
@@ -1408,62 +1406,87 @@ function renderPersonalCharts(rng) {
    }
 ========================= */
 function derivePersonalFromUserDailyProfile(payload) {
-  // payload shape expected from server:
-  // {
-  //   profile: { AttemptsUsed, HintCount, Accuracy, Completion, SolveSeconds, DistinctAnswers, RareAnswers, PercentileSpeed, PercentileAccuracy, Archetype, StreakContinues, FirstSolveToday, Country, Region },
-  //   question: { answerCount, correctAnswers } // optional but recommended for your pills/hero
-  // }
-
   const prof = payload?.profile || {}
   const q = payload?.question || {}
+  const attempts = Array.isArray(payload?.attempts) ? payload.attempts : []
 
+  // -------------------------
+  // Percent fields
+  // -------------------------
   const completion = normaliseAirtablePercent(prof.Completion) ?? 0
   const accuracy = normaliseAirtablePercent(prof.Accuracy) ?? 0
   const pSpeed = normaliseAirtablePercent(prof.PercentileSpeed)
   const pAcc = normaliseAirtablePercent(prof.PercentileAccuracy)
 
-  // Prefer the profile’s own country if present (keeps things consistent if user changes locale)
+  // -------------------------
+  // Attempts-derived stats
+  // -------------------------
+  const uniqueSubmitted = new Set()
+  const attemptsByWindow = {}
+  let duplicatePenalty = 0
+
+  for (const a of attempts) {
+    if (a.answer) {
+      const n = normalise(a.answer)
+      if (uniqueSubmitted.has(n)) duplicatePenalty++
+      uniqueSubmitted.add(n)
+    }
+
+    if (a.windowId) {
+      attemptsByWindow[a.windowId] ??= 0
+      attemptsByWindow[a.windowId]++
+    }
+  }
+
+  const submittedUnique = uniqueSubmitted.size
+  const windowsPlayed = Object.keys(attemptsByWindow).length
+
+  // -------------------------
+  // Country resolution
+  // -------------------------
   const profileCountryCode =
-    typeof prof.Country === 'string' && prof.Country.length
-      ? String(prof.Country).toLowerCase()
-      : null
+    typeof prof.Country === 'string' && prof.Country.length ? prof.Country.toLowerCase() : null
 
   const resolvedCountryCode = profileCountryCode || personal.value.countryCode || userCountryCode
+
   const resolvedCountryName =
     countries.find((c) => c.code.toLowerCase() === resolvedCountryCode)?.name || null
+
+  // -------------------------
+  // Question meta
+  // -------------------------
+  const totalSlots = Number(q.answerCount) || 0
+  const totalPossible = Array.isArray(q.correctAnswers) ? q.correctAnswers.length : totalSlots
 
   personal.value = {
     ...personal.value,
 
-    // Question meta
-    totalSlots: q.answerCount || 0,
-    correctAnswers: Array.isArray(q.correctAnswers) ? q.correctAnswers : [],
+    totalSlots,
+    _totalPossible: totalPossible,
 
-    // Profile metrics
-    attemptsTotal: prof.AttemptsUsed ?? 0,
-    hintsUsed: prof.HintCount ?? 0,
+    attemptsTotal: Number(prof.AttemptsUsed) || attempts.length,
+    hintsUsed: Number(prof.HintCount) || 0,
 
-    uniqueCorrect: prof.DistinctAnswers ?? 0,
-    rareAnswers: prof.RareAnswers ?? 0,
+    uniqueCorrect: Number(prof.DistinctAnswers) || 0,
+    rareAnswers: Number(prof.RareAnswers) || 0,
+
+    submittedUnique,
+    duplicatePenalty,
+    windowsPlayed,
+    _attemptsByWindow: attemptsByWindow,
 
     completion,
     accuracy,
 
     paceSeconds: prof.SolveSeconds ?? null,
-
     pacePercentile: pSpeed ?? null,
     accuracyPercentile: pAcc ?? null,
 
     archetype: prof.Archetype ?? null,
 
-    // ✅ These are the fields your API actually returns
     streakContinues: prof.StreakContinues ?? null,
     firstSolveToday: prof.FirstSolveToday ?? null,
 
-    // Keep if you later add it; otherwise don’t fake “unknown”
-    dayResult: personal.value.dayResult ?? null,
-
-    // Keep country coherent
     countryCode: resolvedCountryCode,
     countryName: resolvedCountryName,
   }
