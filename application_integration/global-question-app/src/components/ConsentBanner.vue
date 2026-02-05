@@ -8,7 +8,7 @@
 
       <p class="consent-body">
         Akinto uses small files to run the game, remember your country and timezone, analyse play
-        patterns, and (optionally) send one daily notification. Nothing more, nothing less.
+        patterns, and (optionally) send daily notifications. Nothing more, nothing less.
       </p>
 
       <div class="consent-actions">
