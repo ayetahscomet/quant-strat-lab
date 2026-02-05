@@ -76,7 +76,7 @@
 
               <button
                 class="notif-btn"
-                :disabled="notificationsEnabled"
+                :disabled="notificationsEnabled || !canPromptPush"
                 @click="enableNotifications"
               >
                 Enable Notifications
@@ -225,8 +225,8 @@ import {
   todayKey,
 } from '../utils/windows.js'
 import { onUnmounted } from 'vue'
-import { registerPush } from '@/push/registerPush'
 import { countryAliases } from '@/data/countryAliases'
+import { registerPush } from '@/push/registerPush'
 
 /* ======================================================
    CORE GAME STATE
@@ -275,6 +275,13 @@ const hintUsedThisWindow = ref(false)
 const triedIncorrectToday = ref(new Set())
 const lockoutMode = ref(null)
 const notificationsEnabled = ref(false)
+
+const canPromptPush = computed(() => {
+  return (
+    localStorage.getItem('akinto_consent') === 'true' &&
+    !localStorage.getItem('akinto_push_enabled')
+  )
+})
 
 /* ======================================================
    INPUT REFERENCES (arrow navigation)
@@ -471,18 +478,20 @@ const nextSlotShort = computed(() => {
 })
 
 async function enableNotifications() {
-  if (notificationsEnabled.value) return
+  if (!canPromptPush.value) return
 
   try {
     const ok = await registerPush()
 
     if (ok) {
+      localStorage.setItem('akinto_push_enabled', 'true')
       notificationsEnabled.value = true
     } else {
-      alert('Notifications coming soon — we’re still rolling this out.')
+      alert('Notifications are currently unavailable.')
     }
-  } catch {
-    alert('Notifications coming soon — we’re still rolling this out.')
+  } catch (err) {
+    console.error('enableNotifications failed', err)
+    alert('Notifications are currently unavailable.')
   }
 }
 
@@ -572,6 +581,14 @@ async function loadTodayQuestion() {
     loading.value = false
   }
 }
+// ===============================
+// ENABLE NOTIFS
+// ===============================
+onMounted(() => {
+  if (localStorage.getItem('akinto_push_enabled') === 'true') {
+    notificationsEnabled.value = true
+  }
+})
 
 async function loadSessionState() {
   if (hardLocked.value) return

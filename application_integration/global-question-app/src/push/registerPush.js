@@ -19,24 +19,50 @@ function getTimezone() {
   }
 }
 
+/* ======================================
+   GDPR Gate
+====================================== */
+function hasPushConsent() {
+  const consent = localStorage.getItem('akinto_consent')
+  return consent === 'true'
+}
+
+/* ======================================
+   Main registration
+====================================== */
 export async function registerPush() {
+  // ---- Consent check FIRST ----
+  if (!hasPushConsent()) {
+    console.log('🔕 Push skipped — no consent')
+    return false
+  }
+
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    alert('Push notifications are not supported in this browser.')
+    console.warn('Push not supported')
     return false
   }
 
   try {
-    // 1) Register service worker
-    const reg = await navigator.serviceWorker.register('/sw.js')
+    // 1) Register SW (or reuse)
+    const reg =
+      (await navigator.serviceWorker.getRegistration()) ||
+      (await navigator.serviceWorker.register('/sw.js'))
 
-    // 2) Ask permission
+    // 2) Already subscribed?
+    const existingSub = await reg.pushManager.getSubscription()
+    if (existingSub) {
+      console.log('📬 Push already registered')
+      return true
+    }
+
+    // 3) Ask permission
     const permission = await Notification.requestPermission()
     if (permission !== 'granted') {
-      alert('Notifications have been disabled.')
+      console.log('🔕 Notification permission denied')
       return false
     }
 
-    // 3) Fetch public VAPID key
+    // 4) Fetch public VAPID key
     const vapidRes = await fetch('/api/webpush-key')
     const { publicKey } = await vapidRes.json()
 
@@ -45,13 +71,16 @@ export async function registerPush() {
       return false
     }
 
-    // 4) Subscribe
+    // 5) Subscribe
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicKey),
     })
 
-    // 5) Save subscription to server
+    // persist local flag
+    localStorage.setItem('akinto_push_enabled', 'true')
+
+    // 6) Save to server
     const saveRes = await fetch('/api/save-push-sub', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

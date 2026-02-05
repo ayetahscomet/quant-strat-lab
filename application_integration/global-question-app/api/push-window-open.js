@@ -1,11 +1,9 @@
-// api/push-window-open.js
-
 import webpush from 'web-push'
 import Airtable from 'airtable'
 import { WINDOWS } from '../utils/windows.js'
 
 webpush.setVapidDetails(
-  'mailto:support@akinto.io',
+  'mailto:hello@akinto.io',
   process.env.VAPID_PUBLIC_KEY,
   process.env.VAPID_PRIVATE_KEY,
 )
@@ -13,6 +11,11 @@ webpush.setVapidDetails(
 const base = new Airtable({
   apiKey: process.env.AIRTABLE_API_KEY,
 }).base(process.env.AIRTABLE_BASE_ID)
+
+function getLocalTime(tz) {
+  const now = new Date().toLocaleString('en-GB', { timeZone: tz })
+  return new Date(now)
+}
 
 export default async function handler(req, res) {
   const isCron = req.headers['x-vercel-cron'] === '1'
@@ -22,41 +25,54 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Forbidden' })
   }
 
-  const now = new Date()
-  const hh = now.getHours()
-  const mm = now.getMinutes()
-  const current = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
-
-  const win = WINDOWS.find((w) => w.start === current)
-
-  if (!win) {
-    return res.status(200).json({ message: 'No window start at this minute' })
-  }
-
   const records = await base('PushSubscriptions').select().all()
 
+  let pushed = 0
+
   for (const r of records) {
+    const sub = JSON.parse(r.get('SubscriptionJSON'))
+    const tz = r.get('Timezone') || 'UTC'
+
+    const local = getLocalTime(tz)
+    const hhmm = `${String(local.getHours()).padStart(2, '0')}:${String(
+      local.getMinutes(),
+    ).padStart(2, '0')}`
+
+    const win = WINDOWS.find((w) => w.start === hhmm)
+
+    if (!win) continue
+
     try {
-      const sub = JSON.parse(r.get('SubscriptionJSON'))
+      const todayKey = local.toISOString().slice(0, 10)
+      const pushKey = `${todayKey}_${win.id}`
+
+      // skip duplicate pushes
+      if (r.get('LastPushedKey') === pushKey) continue
 
       await webpush.sendNotification(
         sub,
         JSON.stringify({
-          title: `Akinto · ${win.label} Window Open`,
-          body: `Your ${win.label} window just opened!`,
+          title: `Akinto · ${win.label} window open`,
+          body: `Your ${win.label} window just started.`,
           icon: '/push-icon.png',
           url: 'https://akinto.io/play',
         }),
       )
+
+      await base('PushSubscriptions').update(r.id, {
+        LastPushedKey: pushKey,
+        LastWindowId: win.id,
+      })
+
+      pushed++
     } catch (err) {
-      console.warn('❌ Push failed:', err.statusCode)
+      console.warn('Push failed', err.statusCode)
+
+      if (err.statusCode === 404 || err.statusCode === 410) {
+        await base('PushSubscriptions').destroy(r.id)
+      }
     }
   }
 
-  return res.status(200).json({
-    status: 'ok',
-    window: win.id,
-    label: win.label,
-    count: records.length,
-  })
+  res.status(200).json({ pushed })
 }
