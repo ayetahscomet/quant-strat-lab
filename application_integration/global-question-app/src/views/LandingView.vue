@@ -4,20 +4,23 @@
     <div class="landing-inner">
       <!-- Logo + Title -->
       <div class="brand-row">
-        <img class="logo" src="/logo-800-full.svg" alt="Logo" />
+        <img class="logo" src="/logo-800-full.svg" alt="Akinto logo" />
         <div class="text-block">
           <h1 class="app-name">AKINTO</h1>
           <p class="motto">A Global Knowledge Game</p>
         </div>
       </div>
 
-      <button class="play-btn" @click="goToGame">Play</button>
+      <!-- PLAY (gated by country) -->
+      <button class="play-btn" :disabled="!country" @click="goToGame">Play</button>
+      <p class="gate-note" v-if="!country">Select your country to begin.</p>
+
       <p class="date">{{ today }}</p>
 
-      <!-- Country selector (unchanged) -->
-      <div class="country-row" @click="showDropdown = !showDropdown">
+      <!-- Country selector -->
+      <div class="country-row" @click="toggleDropdown">
         <div class="flag-circle" :class="{ empty: !country }">
-          <img v-if="country" :src="getFlag(country)" />
+          <img v-if="country" :src="getFlag(country)" :alt="`${getName(country)} flag`" />
         </div>
 
         <span class="country-text">
@@ -26,17 +29,35 @@
         <span class="chevron">▼</span>
       </div>
 
-      <div v-if="showDropdown" class="dropdown-list">
-        <div
-          v-for="c in countries"
-          :key="c.code"
-          class="dropdown-item"
-          @click="selectCountry(c.code)"
-        >
-          <img class="drop-flag" :src="getFlag(c.code)" />
-          <span>{{ c.name }}</span>
+      <!-- Dropdown -->
+      <div v-if="showDropdown" class="dropdown-wrapper" @click="closeDropdown">
+        <div class="country-select-container" @click.stop>
+          <input
+            class="dropdown-search"
+            v-model="search"
+            type="text"
+            placeholder="Search country…"
+            autocomplete="off"
+          />
+
+          <div class="dropdown-list">
+            <div
+              v-for="c in filteredCountries"
+              :key="c.code"
+              class="dropdown-item"
+              @click="selectCountry(c.code)"
+            >
+              <img class="drop-flag" :src="getFlag(c.code)" :alt="`${c.name} flag`" />
+              <span>{{ c.name }}</span>
+            </div>
+
+            <div v-if="filteredCountries.length === 0" class="no-results">No matches.</div>
+          </div>
         </div>
       </div>
+
+      <!-- Subtle hint if they open dropdown while already set -->
+      <p class="micro" v-if="country">You can change this any time.</p>
     </div>
   </div>
 </template>
@@ -48,9 +69,13 @@ import { countries } from '../data/countries.js'
 
 const router = useRouter()
 
-function goToGame() {
-  router.push('/play')
-}
+/**
+ * Single source of truth:
+ * - country is always a LOWERCASE ISO code, e.g. "gb"
+ */
+const country = ref('')
+const showDropdown = ref(false)
+const search = ref('')
 
 const today = computed(() =>
   new Date().toLocaleDateString('en-GB', {
@@ -61,16 +86,69 @@ const today = computed(() =>
   }),
 )
 
-const country = ref(localStorage.getItem('akinto_country') || '')
-const showDropdown = ref(false)
+function normaliseCode(code) {
+  return String(code || '')
+    .trim()
+    .toLowerCase()
+}
 
-const getFlag = (code) => `https://flagcdn.com/${code}.svg`
-const getName = (code) => countries.find((c) => c.code === code)?.name
+function getFlag(code) {
+  const c = normaliseCode(code)
+  // FlagCDN expects lowercase ISO code.
+  return c ? `https://flagcdn.com/${c}.svg` : ''
+}
+
+function getName(code) {
+  const c = normaliseCode(code)
+  return countries.find((x) => normaliseCode(x.code) === c)?.name || 'Unknown'
+}
+
+const filteredCountries = computed(() => {
+  const q = String(search.value || '')
+    .trim()
+    .toLowerCase()
+  if (!q) return countries
+  return countries.filter((c) =>
+    String(c.name || '')
+      .toLowerCase()
+      .includes(q),
+  )
+})
+
+function persistCountry(code) {
+  const c = normaliseCode(code)
+  if (!c) return
+
+  localStorage.setItem('akinto_country', c)
+
+  // Cookie mirror (formal consent banner later)
+  document.cookie = `akinto_country=${c}; path=/; max-age=31536000`
+}
 
 function selectCountry(code) {
-  country.value = code
-  localStorage.setItem('akinto_country', code)
+  const c = normaliseCode(code)
+  country.value = c
+  persistCountry(c)
+  search.value = ''
   showDropdown.value = false
+}
+
+function toggleDropdown() {
+  showDropdown.value = !showDropdown.value
+}
+
+function closeDropdown() {
+  showDropdown.value = false
+  search.value = ''
+}
+
+function goToGame() {
+  if (!country.value) {
+    // If they try anyway, guide them by opening the selector.
+    showDropdown.value = true
+    return
+  }
+  router.push('/play')
 }
 
 function handleLandingKey(e) {
@@ -78,20 +156,26 @@ function handleLandingKey(e) {
     e.preventDefault()
     goToGame()
   }
-  if (e.key === 'Escape') showDropdown.value = false
+  if (e.key === 'Escape') closeDropdown()
 }
 
-onMounted(() => window.addEventListener('keydown', handleLandingKey))
-onBeforeUnmount(() => window.removeEventListener('keydown', handleLandingKey))
+onMounted(() => {
+  // Load existing selection
+  const existing = localStorage.getItem('akinto_country')
+  if (existing) country.value = normaliseCode(existing)
+
+  window.addEventListener('keydown', handleLandingKey)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleLandingKey)
+})
 </script>
 
 <style scoped>
 :global(body) {
   background: #fff;
   margin: 0;
-}
-
-:global(body) {
   color: #242227;
   font-family:
     system-ui,
@@ -142,9 +226,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleLandingKey))
   color: #242227;
 }
 
-/* PLAY BUTTON — more breathing space */
+/* PLAY BUTTON */
 .play-btn {
-  margin-top: 30px; /* ⬅ increased distance from the logo */
+  margin-top: 30px;
   padding: 12px 68px;
   background: #000;
   color: #fff;
@@ -153,10 +237,24 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleLandingKey))
   border-radius: 10px;
   border: none;
   cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    opacity 0.12s ease;
 }
 .play-btn:hover {
   opacity: 0.92;
   transform: translateY(-2px);
+}
+.play-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.gate-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  opacity: 0.7;
 }
 
 /* DATE */
@@ -176,6 +274,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleLandingKey))
   gap: 10px;
   cursor: pointer;
   color: #242227;
+  user-select: none;
 }
 
 .flag-circle {
@@ -194,6 +293,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleLandingKey))
   object-fit: cover;
 }
 
+.flag-circle.empty {
+  background: #ffffff;
+  border: 2px solid #242227;
+}
+
 .country-text {
   font-size: 15px;
   color: #242227;
@@ -203,54 +307,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleLandingKey))
   color: #242227;
 }
 
-/* DROPDOWN LIST */
-.dropdown-list {
-  margin-top: 10px;
-  max-height: 260px;
-  overflow-y: auto;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  width: 200px;
-  background: white;
-  margin-inline: auto;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #242227;
-}
-.dropdown-item:hover {
-  background: #f3f3f3;
-}
-
-.drop-flag {
-  width: 20px;
-  border-radius: 3px;
-}
-
-/* Blank white appearance until a country is selected */
-.flag-circle.empty {
-  background: #ffffff; /* white fill */
-  border: 2px solid #242227;
-}
-
 .country-row:hover .flag-circle {
   transform: scale(1.05);
   transition: 0.15s;
 }
-
-/* Overlay behind dropdown */
 .dropdown-wrapper {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(4px);
+  background: transparent;
+  backdrop-filter: none;
+
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -288,9 +354,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleLandingKey))
 .dropdown-list {
   max-height: 210px;
   overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 10px;
 }
 
-/* Country row */
 .dropdown-item {
   display: flex;
   align-items: center;
@@ -298,6 +365,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleLandingKey))
   padding: 8px 10px;
   cursor: pointer;
   border-radius: 8px;
+  font-size: 14px;
+  color: #242227;
 }
 
 .dropdown-item:hover {
@@ -309,12 +378,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleLandingKey))
   border-radius: 3px;
 }
 
-/* Empty search */
 .no-results {
   padding: 12px;
-  text-align: center;
+  text-align: centre;
   opacity: 0.6;
   font-size: 14px;
+}
+
+.micro {
+  margin-top: 12px;
+  font-size: 12px;
+  opacity: 0.55;
 }
 
 /* Animation */
