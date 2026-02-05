@@ -1422,31 +1422,50 @@ function derivePersonalFromUserDailyProfile(payload) {
   const pSpeed = normaliseAirtablePercent(prof.PercentileSpeed)
   const pAcc = normaliseAirtablePercent(prof.PercentileAccuracy)
 
+  // Prefer the profile’s own country if present (keeps things consistent if user changes locale)
+  const profileCountryCode =
+    typeof prof.Country === 'string' && prof.Country.length
+      ? String(prof.Country).toLowerCase()
+      : null
+
+  const resolvedCountryCode = profileCountryCode || personal.value.countryCode || userCountryCode
+  const resolvedCountryName =
+    countries.find((c) => c.code.toLowerCase() === resolvedCountryCode)?.name || null
+
   personal.value = {
     ...personal.value,
 
+    // Question meta
     totalSlots: q.answerCount || 0,
+    correctAnswers: Array.isArray(q.correctAnswers) ? q.correctAnswers : [],
 
-    attemptsTotal: prof.AttemptsUsed || 0,
-    hintsUsed: prof.HintCount || 0,
+    // Profile metrics
+    attemptsTotal: prof.AttemptsUsed ?? 0,
+    hintsUsed: prof.HintCount ?? 0,
 
-    uniqueCorrect: prof.DistinctAnswers || 0,
-    rareAnswers: prof.RareAnswers || 0,
+    uniqueCorrect: prof.DistinctAnswers ?? 0,
+    rareAnswers: prof.RareAnswers ?? 0,
 
     completion,
     accuracy,
 
     paceSeconds: prof.SolveSeconds ?? null,
 
-    pacePercentile: pSpeed,
-    accuracyPercentile: pAcc,
+    pacePercentile: pSpeed ?? null,
+    accuracyPercentile: pAcc ?? null,
 
     archetype: prof.Archetype ?? null,
 
-    streakContinues: prof.StreakBrokenYesterday === false,
-    firstSolveToday: prof.NewLongestStreakToday === true,
+    // ✅ These are the fields your API actually returns
+    streakContinues: prof.StreakContinues ?? null,
+    firstSolveToday: prof.FirstSolveToday ?? null,
 
-    dayResult: prof.DayResult || 'unknown',
+    // Keep if you later add it; otherwise don’t fake “unknown”
+    dayResult: personal.value.dayResult ?? null,
+
+    // Keep country coherent
+    countryCode: resolvedCountryCode,
+    countryName: resolvedCountryName,
   }
 }
 
@@ -1455,7 +1474,7 @@ function derivePersonalFromUserDailyProfile(payload) {
    IMPORTANT: keep Airtable keys on server.
 ========================= */
 async function fetchPersonalAnalytics() {
-  const res = await fetch('/api/load-user-daily', {
+  const res = await fetch('/api/load-personal-analytics', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1464,7 +1483,7 @@ async function fetchPersonalAnalytics() {
     }),
   })
 
-  if (!res.ok) throw new Error('load-user-daily failed')
+  if (!res.ok) throw new Error('load-personal-analytics failed')
   return res.json()
 }
 
@@ -1556,27 +1575,34 @@ onMounted(async () => {
     const g = await fetchGlobalAnalytics()
 
     if (g) {
+      // g is already UI-shaped by /api/load-global-analytics
       global.value = {
-        totalPlayers: g.TotalPlayers,
-        totalAttempts: g.TotalAttempts,
+        totalPlayers: typeof g.totalPlayers === 'number' ? g.totalPlayers : 0,
+        totalAttempts: typeof g.totalAttempts === 'number' ? g.totalAttempts : null,
 
-        avgCompletion: normaliseAirtablePercent(g.AvgCompletion),
-        avgAccuracy: normaliseAirtablePercent(g.AvgAccuracy),
+        // These come back as 0–100 already (integers), but normalise defensively anyway
+        avgCompletion:
+          typeof g.avgCompletion === 'number' ? normaliseAirtablePercent(g.avgCompletion) : null,
+        avgAccuracy:
+          typeof g.avgAccuracy === 'number' ? normaliseAirtablePercent(g.avgAccuracy) : null,
 
-        countryLeaderboard: g.CountryLeaderboard || [],
+        // Expecting [{ country, name, users, value }]
+        countryLeaderboard: Array.isArray(g.countryLeaderboard) ? g.countryLeaderboard : [],
 
-        yourCountryRank: g.YourCountryRank ?? null,
-        yourCountryAvgCompletion: normaliseAirtablePercent(g.YourCountryAvgCompletion),
+        yourCountryRank: typeof g.yourCountryRank === 'number' ? g.yourCountryRank : null,
+        yourCountryAvgCompletion:
+          typeof g.yourCountryAvgCompletion === 'number'
+            ? normaliseAirtablePercent(g.yourCountryAvgCompletion)
+            : null,
+
+        // optional fields your endpoint may include
+        speedPercentiles: g.distributions?.paceBuckets || null,
+        globalStreak: null,
       }
 
-      // Prefer Airtable-stored percentiles,
-      // but allow server override if returned
+      // If the endpoint computed pace percentile for THIS user, wire it into personal
       if (typeof g.pacePercentileForUser === 'number') {
         personal.value.pacePercentile = normaliseAirtablePercent(g.pacePercentileForUser)
-      }
-
-      if (typeof g.accuracyPercentileForUser === 'number') {
-        personal.value.accuracyPercentile = normaliseAirtablePercent(g.accuracyPercentileForUser)
       }
     }
 
