@@ -457,13 +457,13 @@ function buildHeroCopy(rng) {
 
   completionFoot.value =
     required > 0 && foundTowardCompletion >= required
-      ? `All required answers found. (${p.uniqueCorrect} of ${possible} possible discovered today.)`
+      ? `All required answers found. (${Math.min(personal.uniqueCorrect, personal.totalSlots)} of ${personal.totalSlots} possible discovered today.)`
       : `${p.uniqueCorrect} of ${possible} discovered throughout today.`
 
   accuracyFoot.value =
     p.submittedUnique > 0
       ? `${p.uniqueCorrect} correct out of ${p.submittedUnique} unique submissions.`
-      : 'No submissions recorded.'
+      : 'Submission breakdown is still syncing — check back in a moment.'
 
   speedFoot.value =
     typeof p.pacePercentile === 'number'
@@ -1567,8 +1567,11 @@ function derivePersonalFromUserDailyProfile(payload) {
   let duplicatePenalty = 0
 
   for (const a of attempts) {
-    if (a.answer) {
-      const n = normalise(a.answer)
+    const rawAnswers = Array.isArray(a.answers) ? a.answers : a.answer ? [a.answer] : []
+
+    for (const ans of rawAnswers) {
+      if (!ans) continue
+      const n = normalise(ans)
       if (uniqueSubmitted.has(n)) duplicatePenalty++
       uniqueSubmitted.add(n)
     }
@@ -1580,6 +1583,7 @@ function derivePersonalFromUserDailyProfile(payload) {
   }
 
   const submittedUnique = uniqueSubmitted.size
+
   const windowsPlayed = Object.keys(attemptsByWindow).length
 
   // -------------------------
