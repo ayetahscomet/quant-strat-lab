@@ -166,7 +166,7 @@
             </div>
 
             <!-- Mini chart -->
-            <div v-if="block.chart" class="g-chart">
+            <div v-if="block.chart" class="g-chart" :class="block.chart.size || 'sm'">
               <canvas :ref="(el) => registerGlobalChartRef(el, block.id)"></canvas>
             </div>
 
@@ -798,6 +798,27 @@ function makeMiniLine(ctx, labels, data, color) {
   })
 }
 
+function makeMiniDoughnut(ctx, data, colors) {
+  return new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      datasets: [
+        {
+          data,
+          backgroundColor: colors,
+          borderWidth: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    },
+  })
+}
+
 /* =========================
    PERSONAL DYNAMIC CHART (10 types)
 ========================= */
@@ -1124,6 +1145,106 @@ function buildGlobalBlocks(rng) {
   // Extend to “50” feeling via pattern expansion (headline factories)
   const extraFactories = []
 
+  // 5) mini chart strips (12) — always visual
+  for (let i = 0; i < 12; i++) {
+    extraFactories.push(() => {
+      const roll = rng()
+
+      // synthetic-but-consistent series so the UI always looks alive
+      const base = clamp((pct(g.avgCompletion ?? 62) + pct(p.completion)) / 2, 10, 95)
+      const series = [
+        clamp(base - 10 + rng() * 8, 5, 98),
+        clamp(base - 4 + rng() * 8, 5, 98),
+        clamp(base + rng() * 8, 5, 98),
+        clamp(base + 6 + rng() * 6, 5, 98),
+        clamp(base + 2 + rng() * 6, 5, 98),
+      ].map((x) => Math.round(x))
+
+      // quick league-ish rows from leaderboard if present, else placeholders
+      const leagueRows =
+        Array.isArray(g.countryLeaderboard) && g.countryLeaderboard.length
+          ? g.countryLeaderboard
+              .slice(0, 6)
+              .map((x, idx) => [`${idx + 1}. ${x.name}`, `${pct(x.value)}%`])
+          : [
+              ['1. —', '—'],
+              ['2. —', '—'],
+              ['3. —', '—'],
+              ['4. —', '—'],
+              ['5. —', '—'],
+              ['6. —', '—'],
+            ]
+
+      // pick a visual motif
+      if (roll < 0.33) {
+        return {
+          topic: 'sparkline',
+          kicker: 'Pulse',
+          title: pick(rng, ['Global difficulty curve', 'Today’s solve rhythm', 'Completion tide']),
+          body: '',
+          tier: 'minor',
+          shape: pick(rng, ['wide', 'square']),
+          chart: {
+            type: 'line',
+            size: pick(rng, ['md', 'lg']),
+            color: pick(rng, [COLORS.orange, COLORS.blue, COLORS.royal]),
+            labels: ['a', 'b', 'c', 'd', 'e'],
+            data: series,
+          },
+          caption: pick(rng, [
+            'Stylised trend — daily fresh.',
+            'Not finance. Still a chart.',
+            'The world had a tempo.',
+          ]),
+        }
+      }
+
+      if (roll < 0.66) {
+        const you = pct(p.completion)
+        const world = pct(g.avgCompletion ?? 62)
+        const gap = clamp(Math.abs(you - world), 0, 100)
+
+        return {
+          topic: 'gap',
+          kicker: 'Gap',
+          title: pick(rng, ['You vs World (spread)', 'Distance from average', 'The differential']),
+          body: '',
+          tier: 'minor',
+          shape: 'square',
+          chart: {
+            type: 'doughnut',
+            size: 'md',
+            colors: [COLORS.green, 'rgba(0,0,0,0.08)'],
+            data: [gap, 100 - gap],
+          },
+          mini: { big: `${gap}%`, sub: 'Spread' },
+          caption: 'A clean “difference” widget.',
+        }
+      }
+
+      return {
+        topic: 'league',
+        kicker: 'League table',
+        title: pick(rng, ['Top countries (today)', 'Global leaderboard', 'Completion league']),
+        body: 'Small table, big ego.',
+        tier: 'major',
+        shape: pick(rng, ['tall', 'square']),
+        table: { head: ['Country', 'Avg'], rows: leagueRows },
+        chart: {
+          type: 'bar',
+          size: 'md',
+          color: COLORS.lilac,
+          labels: leagueRows.slice(0, 5).map((r) => r[0].split('. ')[1] || r[0]),
+          data: leagueRows.slice(0, 5).map((r) => {
+            const n = Number(String(r[1]).replace('%', ''))
+            return isFinite(n) ? n : 0
+          }),
+        },
+        caption: 'Table + chart = front page energy.',
+      }
+    })
+  }
+
   // 1) completion comparisons (10)
   for (let i = 0; i < 10; i++) {
     extraFactories.push(() => ({
@@ -1254,7 +1375,7 @@ function buildGlobalBlocks(rng) {
   shuffleInPlace(rng, pool)
 
   // editorial structure: 1 hero, 2 majors, 4 minors, 2 tickers, 1 badge
-  const want = { hero: 1, major: 2, minor: 4, ticker: 2, badge: 1 }
+  const want = { hero: 1, major: 3, minor: 7, ticker: 2, badge: 1 }
   const blocks = []
   const counts = { hero: 0, major: 0, minor: 0, ticker: 0, badge: 0 }
 
@@ -1342,24 +1463,21 @@ function renderGlobalBlockCharts(rng) {
     const ctx = el.getContext('2d')
     if (!ctx) continue
 
+    // normalise defaults
     const data = Array.isArray(b.chart.data) ? b.chart.data : [40, 60, 55]
+    const labels = Array.isArray(b.chart.labels) ? b.chart.labels : data.map((_, i) => `p${i}`)
 
     let instance = null
 
-    if (b.chart.type === 'bar') {
-      instance = makeMiniBar(
-        ctx,
-        data.map((_, i) => (i === 0 ? 'You' : `Rest ${i}`)),
-        data,
-        b.chart.color || COLORS.blue,
-      )
+    if (b.chart.type === 'doughnut') {
+      const colors = Array.isArray(b.chart.colors)
+        ? b.chart.colors
+        : [b.chart.color || COLORS.blue, 'rgba(0,0,0,0.08)']
+      instance = makeMiniDoughnut(ctx, data, colors)
+    } else if (b.chart.type === 'bar') {
+      instance = makeMiniBar(ctx, labels, data, b.chart.color || COLORS.blue)
     } else {
-      instance = makeMiniLine(
-        ctx,
-        data.map((_, i) => `p${i}`),
-        data,
-        b.chart.color || COLORS.blue,
-      )
+      instance = makeMiniLine(ctx, labels, data, b.chart.color || COLORS.blue)
     }
 
     chartInstances.push(instance)
@@ -2231,6 +2349,15 @@ function blockStyle(block) {
   margin-top: 10px;
   height: 64px;
 }
+
+.g-chart.md {
+  height: 110px;
+}
+
+.g-chart.lg {
+  height: 170px;
+}
+
 .g-chart canvas {
   width: 100%;
   height: 100%;
