@@ -26,7 +26,8 @@
             💡 {{ personal.hintsUsed }} hint{{ personal.hintsUsed === 1 ? '' : 's' }}
           </span>
           <span class="pill" v-if="typeof personal.uniqueCorrect === 'number'">
-            ✅ {{ personal.uniqueCorrect }}/{{ personal.totalSlots }} found
+            ✅ {{ Math.min(personal.uniqueCorrect, personal.totalSlots) }}/{{ personal.totalSlots }}
+            found
           </span>
         </div>
       </div>
@@ -69,7 +70,9 @@
           <div class="stat-row">
             <div class="ring-stack">
               <canvas ref="speedRing"></canvas>
-              <span class="ring-center">{{ displaySpeed }}%</span>
+              <span class="ring-center">
+                {{ typeof personal.pacePercentile === 'number' ? displaySpeed + '%' : '—' }}
+              </span>
             </div>
 
             <div class="stat-copy">
@@ -1004,6 +1007,24 @@ function buildGlobalBlocks(rng) {
     }),
 
     () => ({
+      kicker: 'Today',
+      title: personal.value.firstSolveToday
+        ? 'You broke new ground.'
+        : personal.value.streakContinues
+          ? 'Streak maintained.'
+          : 'Another data point logged.',
+      body: personal.value.rareAnswers
+        ? `You found ${personal.value.rareAnswers} rare answer${
+            personal.value.rareAnswers === 1 ? '' : 's'
+          }. That’s alpha.`
+        : personal.value.duplicatePenalty === 0
+          ? 'Every submission was unique — clean work.'
+          : `Duplicates cropped up ${personal.value.duplicatePenalty} times.`,
+      tier: 'minor',
+      shape: 'square',
+    }),
+
+    () => ({
       kicker: 'Your Country',
       title: p.countryName ? `${p.countryName} on the board` : 'Set your country to unlock this',
       body:
@@ -1059,9 +1080,9 @@ function buildGlobalBlocks(rng) {
       kicker: 'Accuracy',
       title: p.accuracy >= 85 ? 'Global-grade precision' : 'Your accuracy footprint',
       body:
-        typeof g.avgAccuracy === 'number'
+        typeof g.avgAccuracy === 'number' && g.totalPlayers > 5
           ? `World average accuracy: ${pct(g.avgAccuracy)}%. You: ${pct(p.accuracy)}%.`
-          : `You: ${pct(p.accuracy)}%. Processing global accuracy…`,
+          : `We’re still waiting on your peers to catch up — global accuracy will firm up soon.`,
 
       tier: 'major',
       shape: 'wide',
@@ -1106,7 +1127,7 @@ function buildGlobalBlocks(rng) {
     () => ({
       kicker: 'Leaderboard',
       title: 'Top countries (completion)',
-      body: 'A tiny league table. Big ego energy.',
+      body: 'A tiny league table. Big energy.',
       tier: 'major',
       shape: 'square',
       table:
@@ -1413,20 +1434,22 @@ function buildGlobalBlocks(rng) {
   }
 
   // If global endpoint missing, still ensure we have blocks
-  while (blocks.length < 10) {
-    blocks.push({
-      id: `gb_fallback_${blocks.length}`,
-      kicker: 'Global',
-      title: 'Today’s global totals are processing',
-      body: 'We’re aggregating worldwide play right now — refresh in a moment.',
-      tier: 'minor',
-      shape: 'square',
-      mini: null,
-      table: null,
-      chart: null,
-      caption: null,
-      rot: 0,
-    })
+  if (!totalPlayers || totalPlayers === 0) {
+    while (blocks.length < 10) {
+      blocks.push({
+        id: `gb_fallback_${blocks.length}`,
+        kicker: 'Global',
+        title: 'Today’s global totals are processing',
+        body: 'We’re aggregating worldwide play right now — refresh in a moment.',
+        tier: 'minor',
+        shape: 'square',
+        mini: null,
+        table: null,
+        chart: null,
+        caption: null,
+        rot: 0,
+      })
+    }
   }
 
   // Choose varied shapes for visual rhythm
@@ -1500,7 +1523,7 @@ function renderPersonalCharts(rng) {
   chartInstances.push(makeDoughnut(completionCtx, pct(p.completion), '#18E2A4', 'rgba(0,0,0,0.22)'))
   chartInstances.push(makeDoughnut(accuracyCtx, pct(p.accuracy), '#5C82FF', 'rgba(0,0,0,0.22)'))
 
-  const speedVal = typeof p.pacePercentile === 'number' ? pct(p.pacePercentile) : 55
+  const speedVal = typeof p.pacePercentile === 'number' ? pct(p.pacePercentile) : 0
   chartInstances.push(makeDoughnut(speedCtx, speedVal, '#FFB938', 'rgba(0,0,0,0.22)'))
 
   // Personal dynamic chart
