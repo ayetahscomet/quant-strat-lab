@@ -26,13 +26,33 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
 
 const mounted = ref(false)
 const closing = ref(false)
+
+// =====================================================
+// OPEN VIA GLOBAL EVENT (from Enable Notifications)
+// =====================================================
+
+function openCookieBanner() {
+  mounted.value = true
+}
+
+onMounted(() => {
+  window.addEventListener('akinto:open-cookie-consent', openCookieBanner)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('akinto:open-cookie-consent', openCookieBanner)
+})
+
+// =====================================================
+// CONSENT STORAGE
+// =====================================================
 
 function setConsent(val) {
   localStorage.setItem('akinto_consent', val)
@@ -48,10 +68,14 @@ function acceptEssential() {
   setConsent('essential')
 }
 
-/* soft dismiss (no consent stored yet) */
+// soft dismiss
 function dismiss() {
   closeCard()
 }
+
+// =====================================================
+// CLOSE ANIMATION
+// =====================================================
 
 function closeCard() {
   closing.value = true
@@ -62,8 +86,11 @@ function closeCard() {
   }, 260)
 }
 
+// =====================================================
+// AUTO OPEN ON FIRST LANDING
+// =====================================================
+
 onMounted(() => {
-  // ONLY on landing
   if (route.path !== '/') return
 
   const existing =
@@ -71,7 +98,6 @@ onMounted(() => {
 
   if (existing) return
 
-  // delay 1.2s
   setTimeout(() => {
     mounted.value = true
   }, 1200)

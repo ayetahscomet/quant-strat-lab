@@ -478,12 +478,13 @@ const nextSlotShort = computed(() => {
 })
 
 async function enableNotifications() {
-  console.log('[UI] enableNotifications clicked')
-
+  // If consent not given, open the same cookie banner UI and stop
   if (localStorage.getItem('akinto_consent') !== 'true') {
-    alert('Please accept cookies to enable notifications.')
+    window.dispatchEvent(new Event('akinto:open-cookie-consent'))
     return
   }
+
+  if (!canPromptPush.value) return
 
   try {
     const ok = await registerPush()
