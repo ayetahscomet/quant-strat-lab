@@ -56,7 +56,7 @@
         </div>
       </div>
 
-      <!-- Subtle hint if they open dropdown while already set -->
+      <!-- Subtle hint if they open dropdown while already set   -->
       <p class="micro" v-if="country">You can change this any time.</p>
     </div>
   </div>
