@@ -207,7 +207,7 @@ import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Chart from 'chart.js/auto'
 import { countries } from '@/data/countries.js'
-import { getTimezone, todayKey } from '../lib/windows.js'
+import { getTimezone, todayKey } from '@/lib/windows.js'
 
 /* =========================
    ROUTING
