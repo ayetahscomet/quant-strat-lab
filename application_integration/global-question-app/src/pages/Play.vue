@@ -76,7 +76,7 @@
 
               <button
                 class="notif-btn"
-                :disabled="notificationsEnabled || !canPromptPush"
+                :disabled="notificationsEnabled"
                 @click="enableNotifications"
               >
                 Enable Notifications
@@ -478,7 +478,12 @@ const nextSlotShort = computed(() => {
 })
 
 async function enableNotifications() {
-  if (!canPromptPush.value) return
+  console.log('[UI] enableNotifications clicked')
+
+  if (localStorage.getItem('akinto_consent') !== 'true') {
+    alert('Please accept cookies to enable notifications.')
+    return
+  }
 
   try {
     const ok = await registerPush()
