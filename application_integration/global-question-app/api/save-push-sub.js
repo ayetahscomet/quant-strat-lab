@@ -1,10 +1,16 @@
+// /api/save-push-sub.js
+
 import { base } from '../lib/airtable.js'
 
 export default async function handler(req, res) {
+  console.log('[SAVE PUSH] hit')
+
   if (req.method !== 'POST') return res.status(405).end()
 
   try {
     const { sub, timezone } = req.body || {}
+
+    console.log('[SAVE PUSH] body:', sub?.endpoint)
 
     if (!sub?.endpoint) {
       return res.status(400).json({ error: 'Missing subscription payload' })
@@ -12,7 +18,6 @@ export default async function handler(req, res) {
 
     const tz = typeof timezone === 'string' && timezone.length ? timezone : 'Europe/London'
 
-    // Check if already exists
     const existing = await base('PushSubscriptions')
       .select({
         filterByFormula: `{Endpoint} = '${sub.endpoint}'`,
@@ -20,7 +25,6 @@ export default async function handler(req, res) {
       .firstPage()
 
     if (existing.length) {
-      // update timezone
       await base('PushSubscriptions').update(existing[0].id, {
         Timezone: tz,
       })
@@ -28,7 +32,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, reused: true })
     }
 
-    // Create new
     await base('PushSubscriptions').create([
       {
         fields: {
@@ -41,8 +44,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ ok: true, created: true })
   } catch (err) {
-    console.error('save-push-sub error:', err)
+    console.error('[SAVE PUSH] error:', err)
     return res.status(500).json({ error: 'Failed to save push sub' })
   }
 }
-console.log('SAVE PUSH BODY:', req.body)

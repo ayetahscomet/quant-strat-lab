@@ -3,12 +3,8 @@
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const rawData = window.atob(base64)
-  const outputArray = new Uint8Array(rawData.length)
-  for (let i = 0; i < rawData.length; i++) {
-    outputArray[i] = rawData.charCodeAt(i)
-  }
-  return outputArray
+  const raw = window.atob(base64)
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)))
 }
 
 function getTimezone() {
@@ -19,68 +15,59 @@ function getTimezone() {
   }
 }
 
-/* ======================================
-   GDPR Gate
-====================================== */
 function hasPushConsent() {
-  const consent = localStorage.getItem('akinto_consent')
-  return consent === 'true'
+  return localStorage.getItem('akinto_consent') === 'true'
 }
 
-/* ======================================
-   Main registration
-====================================== */
 export async function registerPush() {
-  // ---- Consent check FIRST ----
+  console.log('[PUSH] registerPush() start')
+
   if (!hasPushConsent()) {
-    console.log('🔕 Push skipped — no consent')
+    console.log('[PUSH] blocked — no GDPR consent')
     return false
   }
 
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    console.warn('Push not supported')
+    console.warn('[PUSH] not supported in browser')
     return false
   }
 
   try {
-    // 1) Register SW (or reuse)
+    // ensure SW is active
     const reg =
       (await navigator.serviceWorker.getRegistration()) ||
       (await navigator.serviceWorker.register('/sw.js'))
 
-    // 2) Already subscribed?
-    const existingSub = await reg.pushManager.getSubscription()
-    if (existingSub) {
-      console.log('📬 Push already registered')
+    await navigator.serviceWorker.ready
+
+    console.log('[PUSH] service worker ready')
+
+    const existing = await reg.pushManager.getSubscription()
+    if (existing) {
+      console.log('[PUSH] already subscribed')
       return true
     }
 
-    // 3) Ask permission
     const permission = await Notification.requestPermission()
-    if (permission !== 'granted') {
-      console.log('🔕 Notification permission denied')
-      return false
-    }
+    console.log('[PUSH] permission:', permission)
 
-    // 4) Fetch public VAPID key
+    if (permission !== 'granted') return false
+
     const vapidRes = await fetch('/api/webpush-key')
     const { publicKey } = await vapidRes.json()
 
     if (!publicKey) {
-      console.error('❌ Missing VAPID public key.')
+      console.error('[PUSH] missing VAPID key')
       return false
     }
 
-    // 5) Subscribe
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicKey),
     })
 
-    // persist local flag
-    localStorage.setItem('akinto_push_enabled', 'true')
+    console.log('[PUSH] subscribed:', sub.endpoint)
 
-    // 6) Save to server
     const saveRes = await fetch('/api/save-push-sub', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -91,13 +78,17 @@ export async function registerPush() {
     })
 
     if (!saveRes.ok) {
-      console.error('❌ Failed to save push subscription')
+      console.error('[PUSH] save failed', await saveRes.text())
       return false
     }
 
+    localStorage.setItem('akinto_push_enabled', 'true')
+
+    console.log('[PUSH] saved to backend')
+
     return true
   } catch (err) {
-    console.error('❌ registerPush error:', err)
+    console.error('[PUSH] fatal error', err)
     return false
   }
 }
