@@ -2,7 +2,7 @@
 
 import webpush from 'web-push'
 import { base } from '../lib/airtable.js'
-import { WINDOWS } from '../utils/windows.js'
+import { WINDOWS } from '../lib/windows.js'
 
 webpush.setVapidDetails(
   'mailto:hello@akinto.io',

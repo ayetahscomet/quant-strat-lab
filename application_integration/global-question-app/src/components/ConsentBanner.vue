@@ -34,9 +34,9 @@ const route = useRoute()
 const mounted = ref(false)
 const closing = ref(false)
 
-// =====================================================
-// OPEN VIA GLOBAL EVENT (from Enable Notifications)
-// =====================================================
+/* ============================
+   EVENT OPEN SUPPORT
+============================ */
 
 function openCookieBanner() {
   mounted.value = true
@@ -50,9 +50,9 @@ onUnmounted(() => {
   window.removeEventListener('akinto:open-cookie-consent', openCookieBanner)
 })
 
-// =====================================================
-// CONSENT STORAGE
-// =====================================================
+/* ============================
+   CONSENT ACTIONS
+============================ */
 
 function setConsent(val) {
   localStorage.setItem('akinto_consent', val)
@@ -68,14 +68,9 @@ function acceptEssential() {
   setConsent('essential')
 }
 
-// soft dismiss
 function dismiss() {
   closeCard()
 }
-
-// =====================================================
-// CLOSE ANIMATION
-// =====================================================
 
 function closeCard() {
   closing.value = true
@@ -86,13 +81,11 @@ function closeCard() {
   }, 260)
 }
 
-// =====================================================
-// AUTO OPEN ON FIRST LANDING
-// =====================================================
+/* ============================
+   AUTO OPEN (ANY PAGE)
+============================ */
 
 onMounted(() => {
-  if (route.path !== '/') return
-
   const existing =
     localStorage.getItem('akinto_consent') || document.cookie.includes('akinto_consent=')
 
@@ -100,7 +93,7 @@ onMounted(() => {
 
   setTimeout(() => {
     mounted.value = true
-  }, 1200)
+  }, 900)
 })
 </script>
 
