@@ -223,7 +223,7 @@ import {
   getNextWindow,
   getTimeRemainingToNextWindow,
   todayKey,
-} from '../utils/windows.js'
+} from '../../lib/windows.js'
 import { onUnmounted } from 'vue'
 import { countryAliases } from '@/data/countryAliases'
 import { registerPush } from '@/push/registerPush'
