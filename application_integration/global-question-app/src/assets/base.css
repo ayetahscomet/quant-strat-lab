@@ -1,3 +1,4 @@
+/* /src/assets/base.css */
 /* color palette from <https://github.com/vuejs/theme> */
 :root {
   --vt-c-white: #ffffff;
@@ -93,7 +94,7 @@ body {
   font-size: 16px;
 
   /* spacing scale */
-  --space-xs: .5rem;
+  --space-xs: 0.5rem;
   --space-sm: 1rem;
   --space-md: 1.5rem;
   --space-lg: 2rem;
@@ -121,4 +122,3 @@ body {
     font-size: 13px;
   }
 }
-

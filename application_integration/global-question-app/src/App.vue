@@ -1,5 +1,8 @@
 <template>
   <div class="app-shell">
+    <!-- GLOBAL COOKIE CONSENT -->
+    <ConsentBanner />
+
     <transition name="route-fade" mode="out-in">
       <RouterView />
     </transition>

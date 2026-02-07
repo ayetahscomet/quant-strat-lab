@@ -478,26 +478,35 @@ const nextSlotShort = computed(() => {
 })
 
 async function enableNotifications() {
-  // If consent not given, open the same cookie banner UI and stop
-  if (localStorage.getItem('akinto_consent') !== 'true') {
+  const consent = localStorage.getItem('akinto_consent')
+
+  // If cookies not accepted → open banner
+  if (consent !== 'true') {
+    console.log('[PUSH] opening cookie banner')
     window.dispatchEvent(new Event('akinto:open-cookie-consent'))
     return
   }
 
-  if (!canPromptPush.value) return
+  // Already enabled
+  if (localStorage.getItem('akinto_push_enabled') === 'true') {
+    notificationsEnabled.value = true
+    return
+  }
 
   try {
+    console.log('[PUSH] attempting registration')
+
     const ok = await registerPush()
 
     if (ok) {
       localStorage.setItem('akinto_push_enabled', 'true')
       notificationsEnabled.value = true
+      console.log('[PUSH] enabled')
     } else {
-      alert('Notifications are currently unavailable.')
+      console.warn('[PUSH] registerPush returned false')
     }
   } catch (err) {
-    console.error('enableNotifications failed', err)
-    alert('Notifications are currently unavailable.')
+    console.error('[PUSH] enableNotifications failed', err)
   }
 }
 
@@ -1030,7 +1039,7 @@ body,
   margin: 0;
   padding: 0;
   width: 100vw;
-  height: 100vh;
+  min-height: 100svh;
 }
 </style>
 

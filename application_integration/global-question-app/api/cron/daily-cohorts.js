@@ -1,3 +1,5 @@
+// /api/cron/daily-cohorts.js
+
 import { base } from '../../lib/airtable.js'
 import { pickDateKey, dateKeyOffsetDays } from '../../lib/dateKey.js'
 
