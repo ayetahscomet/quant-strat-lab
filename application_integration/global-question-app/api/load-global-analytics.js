@@ -155,6 +155,11 @@ export default async function handler(req, res) {
   ============================================================ */
 
     // 1) DailyAggregates (1 row per date)
+    /* ============================================================
+ PATH A (REAL TABLES): DailyAggregates + DailyCountryStats
+============================================================ */
+
+    // 1) DailyAggregates (1 row per date)
     const aggRows = await base('DailyAggregates')
       .select({
         maxRecords: 1,
@@ -163,8 +168,8 @@ export default async function handler(req, res) {
       })
       .all()
 
-    // 2) DailyRegionStats (many rows per date — used as leaderboard proxy)
-    const regionRows = await base('DailyRegionStats')
+    // 2) DailyCountryStats (country leaderboard)
+    const countryRows = await base('DailyCountryStats')
       .select({
         maxRecords: 200,
         filterByFormula: `{DateKey} = '${dateKey}'`,
@@ -182,22 +187,36 @@ export default async function handler(req, res) {
       const avgHints = Number(readField(f, ['AvgHints'], null))
       const medianPaceSeconds = Number(readField(f, ['MedianPaceSeconds', 'AvgSolveSeconds'], null))
 
-      const countryLeaderboard = (regionRows || [])
+      const countryLeaderboard = (countryRows || [])
         .map((r) => {
           const rf = r.fields || {}
-          const name = readField(rf, ['Region'], 'Unknown')
+
+          const code = normalise(readField(rf, ['Country'], ''))
           const users = Number(readField(rf, ['Players'], 0)) || 0
           const value = Number(readField(rf, ['AvgCompletion'], null))
 
           return {
-            country: normalise(name),
-            name,
+            country: code,
+            name: code, // frontend maps code → full name
             users,
             value: typeof value === 'number' ? pct(value) : 0,
           }
         })
         .sort((a, b) => b.value - a.value)
         .slice(0, 10)
+
+      // find your country rank
+      let yourCountryRank = null
+      let yourCountryAvgCompletion = null
+
+      if (userCountry) {
+        const idx = countryLeaderboard.findIndex((x) => normalise(x.country) === userCountry)
+
+        if (idx !== -1) {
+          yourCountryRank = idx + 1
+          yourCountryAvgCompletion = countryLeaderboard[idx].value
+        }
+      }
 
       return res.status(200).json(
         buildResponse({
@@ -210,9 +229,9 @@ export default async function handler(req, res) {
           medianPaceSeconds,
           countryLeaderboard,
 
-          // MVP placeholders
-          yourCountryRank: null,
-          yourCountryAvgCompletion: null,
+          yourCountryRank,
+          yourCountryAvgCompletion,
+
           pacePercentileForUser: null,
           accuracyBuckets: null,
           completionBuckets: null,
