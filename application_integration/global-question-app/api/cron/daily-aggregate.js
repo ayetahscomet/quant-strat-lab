@@ -72,14 +72,26 @@ function classifyArchetype(u) {
 }
 
 export default async function handler(req, res) {
-  const secret = req.headers.authorization
-  if (secret !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (req.method !== 'GET') return res.status(405).send('Method Not Allowed')
+
+  // Vercel Cron calls don't support custom Authorisation headers.
+  // Vercel sets x-vercel-cron: 1 on Cron requests, so we trust that.
+  const isVercelCron = req.headers['x-vercel-cron'] === '1'
+
+  // Still allow manual triggering via Bearer header or ?secret=...
+  const headerSecret = req.headers.authorization
+  const querySecret = req.query?.secret ? `Bearer ${req.query.secret}` : null
+  const expected = `Bearer ${process.env.CRON_SECRET || 'akinto-to-the-moon'}`
+
+  if (!isVercelCron && headerSecret !== expected && querySecret !== expected) {
     return res.status(401).json({ error: 'unauthorised' })
   }
 
   // ✅ Default to TODAY in Europe/London (aligns with frontend)
   const { dateKey } = pickDateKey(req, { defaultOffsetDays: 0 })
   console.log('📊 Aggregating DateKey:', dateKey)
+
+  // ... keep the rest of your file unchanged
 
   const records = await fetchAll('UserAnswers', `{DateKey}='${dateKey}'`)
   if (!records.length) return res.status(200).json({ ok: true, message: 'no data', dateKey })

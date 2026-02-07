@@ -216,6 +216,12 @@ function countryNameFromCode(code) {
   return COUNTRY_MAP[String(code).toLowerCase()] || code
 }
 
+const countryMap = Object.fromEntries(countries.map((c) => [c.code.toLowerCase(), c.name]))
+
+function countryName(code) {
+  return countryMap[code?.toLowerCase()] || code
+}
+
 /* =========================
    ROUTING
 ========================= */
