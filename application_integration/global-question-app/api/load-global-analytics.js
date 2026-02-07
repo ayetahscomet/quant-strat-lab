@@ -155,11 +155,6 @@ export default async function handler(req, res) {
   ============================================================ */
 
     // 1) DailyAggregates (1 row per date)
-    /* ============================================================
- PATH A (REAL TABLES): DailyAggregates + DailyCountryStats
-============================================================ */
-
-    // 1) DailyAggregates (1 row per date)
     const aggRows = await base('DailyAggregates')
       .select({
         maxRecords: 1,
@@ -168,7 +163,7 @@ export default async function handler(req, res) {
       })
       .all()
 
-    // 2) DailyCountryStats (country leaderboard)
+    // 2) DailyRegionStats (many rows per date — used as leaderboard proxy)
     const countryRows = await base('DailyCountryStats')
       .select({
         maxRecords: 200,
@@ -205,19 +200,6 @@ export default async function handler(req, res) {
         .sort((a, b) => b.value - a.value)
         .slice(0, 10)
 
-      // find your country rank
-      let yourCountryRank = null
-      let yourCountryAvgCompletion = null
-
-      if (userCountry) {
-        const idx = countryLeaderboard.findIndex((x) => normalise(x.country) === userCountry)
-
-        if (idx !== -1) {
-          yourCountryRank = idx + 1
-          yourCountryAvgCompletion = countryLeaderboard[idx].value
-        }
-      }
-
       return res.status(200).json(
         buildResponse({
           dateKey,
@@ -229,9 +211,9 @@ export default async function handler(req, res) {
           medianPaceSeconds,
           countryLeaderboard,
 
-          yourCountryRank,
-          yourCountryAvgCompletion,
-
+          // MVP placeholders
+          yourCountryRank: null,
+          yourCountryAvgCompletion: null,
           pacePercentileForUser: null,
           accuracyBuckets: null,
           completionBuckets: null,
