@@ -200,6 +200,19 @@ export default async function handler(req, res) {
         .sort((a, b) => b.value - a.value)
         .slice(0, 10)
 
+      // find your country rank
+      let yourCountryRank = null
+      let yourCountryAvgCompletion = null
+
+      if (userCountry) {
+        const idx = countryLeaderboard.findIndex((x) => normalise(x.country) === userCountry)
+
+        if (idx !== -1) {
+          yourCountryRank = idx + 1
+          yourCountryAvgCompletion = countryLeaderboard[idx].value
+        }
+      }
+
       return res.status(200).json(
         buildResponse({
           dateKey,
