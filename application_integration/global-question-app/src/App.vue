@@ -7,6 +7,9 @@
       <RouterView />
     </transition>
 
+    <!-- GLOBAL GDPR -->
+    <ConsentBanner />
+
     <!-- GLOBAL FOOTER -->
     <footer class="trust-footer">
       <span>No ads. No paywalls. We only store gameplay data.</span>

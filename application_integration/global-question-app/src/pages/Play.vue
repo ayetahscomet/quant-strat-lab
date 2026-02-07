@@ -527,14 +527,35 @@ const timeClass = computed(() => {
 ====================================================== */
 
 onMounted(async () => {
-  // FIRST: check if today already ended
-  const handled = await resolveDailyStateBeforePlay()
-  if (handled) return
+  // check day-end OR window lockout FIRST
+  const blocked = await resolveDailyStateBeforePlay()
 
-  // otherwise continue normal game load
+  const lockRes = await fetch('/api/load-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      dateKey: dateKey.value,
+      windowId: curWin.value.id,
+    }),
+  })
+
+  if (lockRes.ok) {
+    const data = await lockRes.json()
+
+    if (!data.dayEnded && data.attempts?.length >= MAX_ATTEMPTS) {
+      screenState.value = 'split-lockout'
+      hardLocked.value = true
+      lockoutMode.value = 'return'
+      loading.value = false
+      return
+    }
+  }
+
+  if (blocked) return
+
   await loadTodayQuestion()
   await loadSessionState()
-
   applyHydratedState()
 })
 
@@ -1045,6 +1066,12 @@ body,
 
 <style scoped>
 /** Main Layout **/
+
+:global(html),
+:global(body),
+:global(#app) {
+  background: var(--bg-color) !important;
+}
 
 .play-wrapper {
   width: 100vw;
@@ -2438,11 +2465,6 @@ body {
     height: auto;
     padding-top: 100px;
     padding-bottom: 100px;
-  }
-
-  html,
-  body {
-    background: var(--bg-color);
   }
 
   /* ---------- HEADER CLUSTER ---------- */

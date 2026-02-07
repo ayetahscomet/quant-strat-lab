@@ -209,6 +209,13 @@ import Chart from 'chart.js/auto'
 import { countries } from '@/data/countries.js'
 import { getTimezone, todayKey } from '../utils/windows.js'
 
+const COUNTRY_MAP = Object.fromEntries(countries.map((c) => [c.code.toLowerCase(), c.name]))
+
+function countryNameFromCode(code) {
+  if (!code) return null
+  return COUNTRY_MAP[String(code).toLowerCase()] || code
+}
+
 /* =========================
    ROUTING
 ========================= */
@@ -313,9 +320,7 @@ const tz = ref(getTimezone())
 const dateKeyRef = ref(todayKey(tz.value))
 const userId = getOrCreateUUID()
 const userCountryCode = (localStorage.getItem('akinto_country') || 'XX').toLowerCase()
-
-const countryName =
-  countries.find((c) => String(c.code || '').toLowerCase() === userCountryCode)?.name || null
+const countryName = countryNameFromCode(userCountryCode)
 
 /* =========================
    STATE
@@ -1594,8 +1599,7 @@ function derivePersonalFromUserDailyProfile(payload) {
 
   const resolvedCountryCode = profileCountryCode || personal.value.countryCode || userCountryCode
 
-  const resolvedCountryName =
-    countries.find((c) => c.code.toLowerCase() === resolvedCountryCode)?.name || null
+  const resolvedCountryName = countryNameFromCode(resolvedCountryCode)
 
   // -------------------------
   // Question meta
