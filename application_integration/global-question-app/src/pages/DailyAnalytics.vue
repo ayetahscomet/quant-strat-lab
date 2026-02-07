@@ -326,7 +326,6 @@ const tz = ref(getTimezone())
 const dateKeyRef = ref(todayKey(tz.value))
 const userId = getOrCreateUUID()
 const userCountryCode = (localStorage.getItem('akinto_country') || 'XX').toLowerCase()
-const countryName = countryNameFromCode(userCountryCode)
 
 /* =========================
    STATE
