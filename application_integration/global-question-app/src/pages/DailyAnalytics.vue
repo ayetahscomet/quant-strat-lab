@@ -310,6 +310,21 @@ function normaliseAirtablePercent(x) {
   return n
 }
 
+function countryDisplay(codeOrName) {
+  const raw = String(codeOrName || '').trim()
+  if (!raw) return '—'
+
+  const lower = raw.toLowerCase()
+
+  // If it's a 2-letter code (gb, af, etc), map to full name
+  if (/^[a-z]{2}$/.test(lower)) {
+    return countries.find((c) => String(c.code || '').toLowerCase() === lower)?.name || raw
+  }
+
+  // Already a name
+  return raw
+}
+
 /* =========================
    USER + DATE CONTEXT
 ========================= */
@@ -1054,7 +1069,9 @@ function buildGlobalBlocks(rng) {
         Array.isArray(g.countryLeaderboard) && g.countryLeaderboard.length
           ? {
               head: ['Country', 'Avg'],
-              rows: g.countryLeaderboard.slice(0, 5).map((x) => [x.name, `${pct(x.value)}%`]),
+              rows: g.countryLeaderboard
+                .slice(0, 5)
+                .map((x) => [countryDisplay(x.country ?? x.name), `${pct(x.value)}%`]),
             }
           : null,
       caption: p.countryName ? `Rank: ${countryRank}` : '',
@@ -1146,7 +1163,10 @@ function buildGlobalBlocks(rng) {
               head: ['Country', 'Avg'],
               rows: g.countryLeaderboard
                 .slice(0, 6)
-                .map((x, i) => [`${i + 1}. ${x.name}`, `${pct(x.value)}%`]),
+                .map((x, i) => [
+                  `${i + 1}. ${countryDisplay(x.country ?? x.name)}`,
+                  `${pct(x.value)}%`,
+                ]),
             }
           : {
               head: ['Country', 'Avg'],
