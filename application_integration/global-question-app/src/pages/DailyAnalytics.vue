@@ -329,16 +329,29 @@ function countryDisplay(codeOrName) {
    USER + DATE CONTEXT
 ========================= */
 function getOrCreateUUID() {
-  let id = localStorage.getItem('akinto_uuid')
+  // ✅ single source of truth across the whole app
+  let id = localStorage.getItem('akinto_user_id')
+
+  // Backwards-compat: if an old key exists, migrate it once
+  if (!id) {
+    const legacy = localStorage.getItem('akinto_uuid')
+    if (legacy) {
+      id = legacy
+      localStorage.setItem('akinto_user_id', legacy)
+    }
+  }
+
   if (!id) {
     id = crypto.randomUUID()
-    localStorage.setItem('akinto_uuid', id)
+    localStorage.setItem('akinto_user_id', id)
   }
+
   return id
 }
 
 const tz = ref(getTimezone())
-const dateKeyRef = ref(todayKey(tz.value))
+const dateKeyRef = ref(todayKey('Europe/London'))
+
 const userId = getOrCreateUUID()
 const userCountryCode = (localStorage.getItem('akinto_country') || 'XX').toLowerCase()
 
