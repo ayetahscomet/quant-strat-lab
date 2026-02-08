@@ -63,6 +63,11 @@ export async function registerPush() {
       cache: 'no-store',
     })
 
+    if (!vapidRes.ok) {
+      console.error('[PUSH] ❌ webpush-key failed:', vapidRes.status)
+      return false
+    }
+
     const json = await vapidRes.json()
 
     console.log('[PUSH] vapid response:', json)

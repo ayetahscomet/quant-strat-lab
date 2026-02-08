@@ -41,6 +41,8 @@ export default async function handler(req, res) {
           UserID: userId || null,
           Country: country || null,
           FirstSeenAt: new Date().toISOString(),
+          LastPushedKey: null,
+          LastWindowId: null,
         },
       },
     ])

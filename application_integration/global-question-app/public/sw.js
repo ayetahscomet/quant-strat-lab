@@ -1,18 +1,27 @@
 // /public/sw.js
 
 self.addEventListener('push', function (event) {
-  let data = {}
+  let payload = {}
+
   try {
-    data = event.data.json()
+    payload = event.data.json()
   } catch {
-    data = { title: 'Akinto.io', body: 'Check-in is open!' }
+    payload = {}
   }
 
+  const title = payload.title || 'Akinto.io'
+  const body = payload.body || 'Check-in is open!'
+
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: data.icon || '/push-icon.png',
-      badge: data.badge || '/push-badge.png',
+    self.registration.showNotification(title, {
+      body,
+      icon: payload.icon || '/push-icon.png',
+      badge: payload.badge || '/push-badge.png',
+
+      // ✅ REQUIRED so notificationclick can route correctly
+      data: {
+        url: payload.url || '/play',
+      },
     }),
   )
 })

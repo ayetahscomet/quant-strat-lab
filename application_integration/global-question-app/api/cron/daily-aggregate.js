@@ -20,6 +20,34 @@ function safeJsonArray(v) {
   }
 }
 
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n))
+}
+
+function pct(x) {
+  if (!Number.isFinite(x)) return 0
+  return Math.max(0, Math.min(100, Math.round(x)))
+}
+
+function pct100(x) {
+  // x is 0–1 fraction -> 0–100 integer
+  if (!Number.isFinite(x)) return 0
+  return clamp(Math.round(x * 100), 0, 100)
+}
+
+function median(nums) {
+  const arr = nums.filter((x) => typeof x === 'number' && isFinite(x)).sort((a, b) => a - b)
+  if (!arr.length) return null
+  const mid = Math.floor(arr.length / 2)
+  return arr.length % 2 ? arr[mid] : Math.round((arr[mid - 1] + arr[mid]) / 2)
+}
+
+function mean(nums) {
+  const arr = nums.filter((x) => typeof x === 'number' && isFinite(x))
+  if (!arr.length) return null
+  return arr.reduce((a, b) => a + b, 0) / arr.length
+}
+
 async function fetchAll(table, formula) {
   return base(table)
     .select({
@@ -64,10 +92,11 @@ function computeDiversity(regionCounts) {
 }
 
 function classifyArchetype(u) {
+  // u.Accuracy / u.Completion are now stored as 0–100 (%)
   if (u.HintCount >= 2) return 'Hint-lover'
-  if (u.SolveSeconds && u.SolveSeconds < 40 && u.Accuracy > 0.8) return 'Speedrunner'
-  if (u.Accuracy > 0.8 && u.AttemptsUsed <= 2) return 'Sniper'
-  if (u.Completion < 0.4) return 'Struggler'
+  if (u.SolveSeconds && u.SolveSeconds < 40 && u.Accuracy >= 80) return 'Speedrunner'
+  if (u.Accuracy >= 80 && u.AttemptsUsed <= 2) return 'Sniper'
+  if (u.Completion < 40) return 'Struggler'
   if (u.DistinctAnswers >= 8) return 'Explorer'
   return 'Balanced'
 }
@@ -90,6 +119,13 @@ export default async function handler(req, res) {
 
   // ✅ Default to TODAY in Europe/London (aligns with frontend)
   const { dateKey } = pickDateKey(req, { defaultOffsetDays: 0 })
+
+  const yesterdayKey = dateKeyOffsetDays(-1)
+
+  // Prefetch yesterday profiles once (fast)
+  const yesterdayProfiles = await fetchAll('UserDailyProfile', `{DateKey}='${yesterdayKey}'`)
+  const yesterdayUserSet = new Set(yesterdayProfiles.map((r) => String(r.fields?.UserID || '')))
+
   console.log('📊 Aggregating DateKey:', dateKey)
 
   // ... keep the rest of your file unchanged
@@ -216,13 +252,16 @@ export default async function handler(req, res) {
       solveSeconds = Math.round((attempts.at(-1)._t - attempts[0]._t) / 1000)
     }
 
-    const completion = totalSlots ? correct.size / totalSlots : 0
-    const accuracy = submitted.size ? correct.size / submitted.size : 0
+    const completionRaw = totalSlots ? correct.size / totalSlots : 0
+    const accuracyRaw = submitted.size ? correct.size / submitted.size : 0
+
+    const completion = pct(completionRaw * 100)
+    const accuracy = pct(accuracyRaw * 100)
 
     const userMaster = usersById.get(String(userId))
 
     const firstSolveToday =
-      completion > 0 &&
+      completion >= 1 &&
       (!userMaster || !userMaster.FirstSeenDate || userMaster.FirstSeenDate === dateKey)
 
     const logCountry = logs.find((x) => x.Country)?.Country
@@ -246,9 +285,7 @@ export default async function handler(req, res) {
       HintCount: hintCount,
     })
 
-    const yesterdayKey = dateKeyOffsetDays(-1)
-
-    const streakContinues = logs.some((x) => x.DateKey === yesterdayKey)
+    const streakContinues = yesterdayUserSet.has(String(userId))
 
     userProfiles.push({
       UserID: String(userId),
@@ -258,8 +295,8 @@ export default async function handler(req, res) {
       AttemptsUsed: attempts.length,
       HintCount: hintCount,
 
-      Accuracy: accuracy,
-      Completion: completion,
+      AvgAccuracy: pct(mean(ps.map((x) => x.Accuracy || 0))),
+      AvgCompletion: pct(mean(ps.map((x) => x.Completion || 0))),
 
       SolveSeconds: solveSeconds,
       DistinctAnswers: submitted.size,
@@ -385,11 +422,37 @@ export default async function handler(req, res) {
   const regionCounts = {}
   for (const p of userProfiles) regionCounts[p.Region] = (regionCounts[p.Region] || 0) + 1
 
+  // headline aggregates (0–100)
+  const completionVals = userProfiles
+    .map((p) => Number(p.Completion))
+    .filter((x) => Number.isFinite(x))
+  const accuracyVals = userProfiles.map((p) => Number(p.Accuracy)).filter((x) => Number.isFinite(x))
+  const hintVals = userProfiles.map((p) => Number(p.HintCount)).filter((x) => Number.isFinite(x))
+  const solveVals = userProfiles
+    .map((p) => (Number.isFinite(p.SolveSeconds) ? Number(p.SolveSeconds) : null))
+    .filter((x) => typeof x === 'number' && x > 0)
+
+  const AvgCompletion = mean(completionVals)
+  const AvgAccuracy = mean(accuracyVals)
+  const AvgHints = mean(hintVals)
+
+  const MedianPaceSeconds = median(solveVals)
+  const AvgSolveSeconds = mean(solveVals)
+
   const dailyAgg = {
     DateKey: dateKey,
     TotalPlayers: totalPlayers,
     TotalAttempts: totalAttempts,
     TotalHints: totalHints,
+
+    // ✅ headline metrics used by /api/load-global-analytics Path A
+    AvgAccuracy: pct(AvgAccuracy),
+    AvgCompletion: pct(AvgCompletion),
+
+    AvgHints: AvgHints, // numeric (can be decimal)
+    MedianPaceSeconds: MedianPaceSeconds, // seconds
+    AvgSolveSeconds: AvgSolveSeconds, // seconds
+
     DistinctAnswers: answerStats.size,
     DistinctCountriesCount: countrySet.size,
     CountriesMentioned: Array.from(countrySet).join(', '),

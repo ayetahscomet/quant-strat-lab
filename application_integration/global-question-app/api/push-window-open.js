@@ -11,6 +11,11 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY,
 )
 
+console.log('[WINDOW PUSH]', {
+  tz,
+  hhmm,
+})
+
 function getLocalTime(tz) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: tz,
@@ -50,7 +55,11 @@ export default async function handler(req, res) {
       const { hour, minute } = getLocalTime(tz)
       const hhmm = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
 
-      const win = WINDOWS.find((w) => w.start === hhmm)
+      const win = WINDOWS.find((w) => {
+        const [h, m] = w.start.split(':').map(Number)
+        return hour === h && minute >= m && minute < m + 5 // 5-min firing window
+      })
+
       if (!win) continue
 
       const todayKey = dateKeyToday(tz)
@@ -65,10 +74,10 @@ export default async function handler(req, res) {
           title: `Akinto · ${win.label} window open`,
           body: `Your ${win.label} window just started.`,
           icon: '/push-icon.png',
-          data: {
-            url: 'https://akinto.io/play',
-            windowId: win.id,
-          },
+
+          // ✅ flattened for service worker
+          url: 'https://akinto.io/play',
+          windowId: win.id,
         }),
       )
 
