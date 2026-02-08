@@ -3,6 +3,8 @@
 // TIME WINDOW DEFINITIONS
 // =====================================================
 
+import { dateKeyToday } from './dateKey.js'
+
 export const WINDOWS = [
   { id: 'nightowl', label: 'Night Owl', start: '00:00', end: '04:30' },
   { id: 'early', label: 'Early Bird', start: '04:30', end: '10:00' },
@@ -139,14 +141,9 @@ export function getTimeRemainingToEndOfCurrent(tz = getTimezone()) {
 }
 
 // =====================================================
-// DATE KEY FOR STORAGE
+// DATE KEY FOR STORAGE (CANONICAL)
 // =====================================================
 
 export function todayKey(tz = getTimezone()) {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: tz,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
+  return dateKeyToday(tz)
 }
