@@ -1,7 +1,7 @@
 // /api/cron/daily-push.js
 
 import { base } from '../../lib/airtable.js'
-import { dateKeyToday } from '../../lib/dateKey.js'
+import { pickDateKey } from '../../lib/dateKey.js'
 
 async function createInBatches(table, rows, size = 10) {
   for (let i = 0; i < rows.length; i += size) {
@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'unauthorised' })
   }
 
-  const dateKey = req.query.dateKey || dateKeyToday()
+  const { dateKey } = pickDateKey(req, { defaultOffsetDays: 0 })
 
   console.log('🔔 Push generation:', dateKey)
 

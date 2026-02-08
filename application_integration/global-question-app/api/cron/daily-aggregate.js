@@ -2,7 +2,8 @@
 
 import { base } from '../../lib/airtable.js'
 import { pickDateKey } from '../../lib/dateKey.js'
-import { continentFromCountry } from '../../src/data/continents.js'
+import { continentFromCountry } from '../../lib/continents.js'
+import { dateKeyOffsetDays } from '../../lib/dateKey.js'
 
 function normalise(s) {
   return String(s || '')
@@ -245,9 +246,7 @@ export default async function handler(req, res) {
       HintCount: hintCount,
     })
 
-    const yesterday = new Date(dateKey)
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1)
-    const yesterdayKey = yesterday.toISOString().slice(0, 10)
+    const yesterdayKey = dateKeyOffsetDays(-1)
 
     const streakContinues = logs.some((x) => x.DateKey === yesterdayKey)
 
