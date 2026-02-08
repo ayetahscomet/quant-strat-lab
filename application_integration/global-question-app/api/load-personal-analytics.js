@@ -1,6 +1,11 @@
-// /api/load-personal-analytics.js
+/* /api/load-personal-analytics.js */
+
 import { base } from '../lib/airtable.js'
 import { pickDateKey } from '../lib/dateKey.js'
+
+/* ======================================================
+   Utils
+====================================================== */
 
 function normalise(s) {
   return String(s || '')
@@ -9,13 +14,149 @@ function normalise(s) {
     .replace(/\s+/g, ' ')
 }
 
-function safeJson(x) {
+function safeJsonArray(v) {
   try {
-    return x ? JSON.parse(x) : []
+    const arr = v ? JSON.parse(v) : []
+    return Array.isArray(arr) ? arr : []
   } catch {
     return []
   }
 }
+
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n))
+}
+
+function pct(n) {
+  if (!isFinite(n)) return 0
+  return clamp(Math.round(n), 0, 100)
+}
+
+/* ======================================================
+   Core derivations from UserAnswers
+====================================================== */
+
+function deriveFromAttempts(attemptRows) {
+  const attempts = []
+  const submittedSet = new Set()
+  const correctSet = new Set()
+  const incorrectSet = new Set()
+
+  let firstAt = null
+  let lastAt = null
+  let hintsUsed = 0
+
+  let requiredSlotsGuess = 0
+
+  for (const r of attemptRows) {
+    const f = r.fields || {}
+
+    const createdAt = f.CreatedAt ? new Date(f.CreatedAt) : null
+
+    const answers = safeJsonArray(f.AnswersJSON)
+    const correctAnswers = safeJsonArray(f.CorrectAnswersJSON)
+    const incorrectAnswers = safeJsonArray(f.IncorrectAnswersJSON)
+
+    if (correctAnswers.length > requiredSlotsGuess) {
+      requiredSlotsGuess = correctAnswers.length
+    }
+
+    for (const a of answers) submittedSet.add(normalise(a))
+    for (const c of correctAnswers) correctSet.add(normalise(c))
+    for (const i of incorrectAnswers) incorrectSet.add(normalise(i))
+
+    if (createdAt && !isNaN(createdAt)) {
+      if (!firstAt || createdAt < firstAt) firstAt = createdAt
+      if (!lastAt || createdAt > lastAt) lastAt = createdAt
+    }
+
+    if (f.HintUsed === true) hintsUsed++
+
+    attempts.push({
+      windowId: f.WindowID || null,
+      result: f.Result || null,
+      createdAt: f.CreatedAt || null,
+      attemptIndex: f.AttemptIndex ?? null,
+      answers,
+      correctAnswers,
+      incorrectAnswers,
+      hintUsed: f.HintUsed === true,
+    })
+  }
+
+  if (!requiredSlotsGuess) requiredSlotsGuess = 1
+
+  const uniqueSubmitted = submittedSet.size
+  const uniqueCorrect = Math.min(correctSet.size, requiredSlotsGuess)
+
+  // sane accuracy
+  const denom = Math.max(uniqueSubmitted, requiredSlotsGuess)
+  const accuracyPct = denom > 0 ? pct((uniqueCorrect / denom) * 100) : 0
+
+  // completion
+  const completionPct = pct((uniqueCorrect / requiredSlotsGuess) * 100)
+
+  // pace
+  const paceSeconds =
+    firstAt && lastAt
+      ? Math.max(0, Math.round((lastAt.getTime() - firstAt.getTime()) / 1000))
+      : null
+
+  return {
+    attempts,
+    uniqueSubmitted,
+    uniqueCorrect,
+    completionPct,
+    accuracyPct,
+    paceSeconds,
+    hintsUsed,
+    incorrectCount: incorrectSet.size,
+    requiredSlotsGuess,
+    submittedList: [...submittedSet],
+    correctList: [...correctSet],
+  }
+}
+
+/* ======================================================
+   Archetype classifier
+====================================================== */
+
+function classifyArchetype({ completionPct, accuracyPct, paceSeconds }) {
+  if (completionPct === 100 && accuracyPct >= 90 && paceSeconds && paceSeconds < 180)
+    return 'Speedrunner'
+
+  if (completionPct === 100 && accuracyPct >= 90) return 'Sniper'
+
+  if (completionPct === 100 && accuracyPct < 60) return 'Explorer'
+
+  if (completionPct >= 70 && paceSeconds && paceSeconds > 600) return 'Scholar'
+
+  return 'Learner'
+}
+
+/* ======================================================
+   Header narrative builder
+====================================================== */
+
+function buildHeaderSentence({ completionPct, accuracyPct, paceSeconds, paceRelation }) {
+  if (completionPct === 100 && paceRelation === 'faster') {
+    return 'Perfect day. You cleared the board and beat the global pace.'
+  }
+
+  if (completionPct === 100) {
+    return 'All answers found. Calm, deliberate work.'
+  }
+
+  if (completionPct >= 60) {
+    return 'Strong showing. You stayed in the hunt.'
+  }
+
+  return 'One of those days — tomorrow tells a new story.'
+}
+
+/* ======================================================
+   Handler
+====================================================== */
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' })
@@ -26,25 +167,24 @@ export default async function handler(req, res) {
 
     if (!userId) return res.status(400).json({ error: 'Missing userId' })
 
-    // 1) UserDailyProfile
-    const profileRows = await base('UserDailyProfile')
-      .select({
-        maxRecords: 1,
-        filterByFormula: `AND({UserID}='${userId}',{DateKey}='${dateKey}')`,
-      })
-      .all()
-    const profile = profileRows[0]?.fields || null
+    /* ====================================================
+       Question meta
+    ==================================================== */
 
-    // 2) Question meta
     const questionRows = await base('Questions')
       .select({
         maxRecords: 1,
         filterByFormula: `{DateKey}='${dateKey}'`,
       })
       .all()
-    const question = questionRows[0]?.fields || {}
 
-    // 3) Attempts for this user/day (UserAnswers)
+    const question = questionRows[0]?.fields || {}
+    const answerCount = question.AnswerCount || null
+
+    /* ====================================================
+       User attempts
+    ==================================================== */
+
     const attemptRows = await base('UserAnswers')
       .select({
         maxRecords: 500,
@@ -53,95 +193,91 @@ export default async function handler(req, res) {
       })
       .all()
 
-    const attempts = attemptRows.map((r) => {
-      const f = r.fields || {}
-      return {
-        windowId: f.WindowID || null,
-        result: f.Result || null,
-        createdAt: f.CreatedAt || null,
-        attemptIndex: f.AttemptIndex ?? null,
-        answers: safeJson(f.AnswersJSON),
-        correctAnswers: safeJson(f.CorrectAnswersJSON),
-        incorrectAnswers: safeJson(f.IncorrectAnswersJSON),
-        hintUsed: f.HintUsed === true,
-      }
+    const derived = deriveFromAttempts(attemptRows)
+
+    /* ====================================================
+       Profile row (optional override layer)
+    ==================================================== */
+
+    const profileRows = await base('UserDailyProfile')
+      .select({
+        maxRecords: 1,
+        filterByFormula: `AND({UserID}='${userId}',{DateKey}='${dateKey}')`,
+      })
+      .all()
+
+    const profile = profileRows[0]?.fields || {}
+
+    /* ====================================================
+       Archetype + header copy
+    ==================================================== */
+
+    const archetype =
+      profile.Archetype ||
+      classifyArchetype({
+        completionPct: derived.completionPct,
+        accuracyPct: derived.accuracyPct,
+        paceSeconds: derived.paceSeconds,
+      })
+
+    const headerSentence = buildHeaderSentence({
+      completionPct: derived.completionPct,
+      accuracyPct: derived.accuracyPct,
+      paceSeconds: derived.paceSeconds,
+      paceRelation: profile.PaceRelation || null,
     })
 
-    // 4) Compute robust accuracy + “rare answers list” (from what you actually got correct)
-    const uniqueSubmitted = new Set()
-    const uniqueCorrect = new Set()
+    /* ====================================================
+       Rare answers list (local fallback)
+    ==================================================== */
 
-    for (const a of attempts) {
-      for (const ans of a.answers || []) uniqueSubmitted.add(normalise(ans))
-      for (const c of a.correctAnswers || []) uniqueCorrect.add(normalise(c))
-    }
+    const rareAnswersList = derived.correctList.slice(0, 6)
 
-    const submittedUnique = [...uniqueSubmitted].filter(Boolean)
-    const correctUnique = [...uniqueCorrect].filter(Boolean)
-
-    const computedAccuracy =
-      submittedUnique.length > 0
-        ? Math.round((correctUnique.length / submittedUnique.length) * 100)
-        : 0
-
-    // If you don’t yet store “rare list”, this is still a useful list for the tile.
-    // (Later you can replace this with a true rarity-ranked list from your aggregations.)
-    const rareAnswersList =
-      profile?.RareAnswers && profile.RareAnswers > 0
-        ? correctUnique.slice(0, Math.min(profile.RareAnswers, 6))
-        : []
+    /* ====================================================
+       Response
+    ==================================================== */
 
     return res.status(200).json({
       dateKey,
-      profile: profile
-        ? {
-            AttemptsUsed: profile.AttemptsUsed ?? 0,
-            HintCount: profile.HintCount ?? 0,
 
-            // prefer computed accuracy (fixes the “2%” issue even if Airtable formula is wrong)
-            Accuracy: computedAccuracy,
+      headerSentence,
 
-            Completion: profile.Completion ?? 0,
-            SolveSeconds: profile.SolveSeconds ?? null,
-            DistinctAnswers: profile.DistinctAnswers ?? correctUnique.length,
-            RareAnswers: profile.RareAnswers ?? 0,
+      profile: {
+        AttemptsUsed: profile.AttemptsUsed ?? derived.attempts.length,
+        HintCount: profile.HintCount ?? derived.hintsUsed,
 
-            PercentileSpeed: profile.PercentileSpeed ?? null,
-            PercentileAccuracy: profile.PercentileAccuracy ?? null,
+        Accuracy: derived.accuracyPct,
+        Completion: derived.completionPct,
 
-            Archetype: profile.Archetype || null,
-            StreakContinues: profile.StreakContinues ?? null,
-            FirstSolveToday: profile.FirstSolveToday ?? null,
+        SolveSeconds: profile.SolveSeconds ?? derived.paceSeconds,
 
-            Country: profile.Country || null,
-            Region: profile.Region || null,
-          }
-        : {
-            AttemptsUsed: attempts.length,
-            HintCount: attempts.filter((a) => a.hintUsed).length,
-            Accuracy: computedAccuracy,
-            Completion: 0,
-            SolveSeconds: null,
-            DistinctAnswers: correctUnique.length,
-            RareAnswers: 0,
-            PercentileSpeed: null,
-            PercentileAccuracy: null,
-            Archetype: null,
-            StreakContinues: null,
-            FirstSolveToday: null,
-            Country: null,
-            Region: null,
-          },
+        DistinctAnswers: derived.uniqueCorrect,
+        RareAnswers: profile.RareAnswers ?? rareAnswersList.length,
 
-      question: {
-        answerCount: question.AnswerCount ?? null,
-        correctAnswers: question.CorrectAnswersJSON ? JSON.parse(question.CorrectAnswersJSON) : [],
+        PercentileSpeed: profile.PercentileSpeed ?? null,
+        PercentileAccuracy: profile.PercentileAccuracy ?? null,
+
+        Archetype: archetype,
+
+        StreakContinues: profile.StreakContinues ?? null,
+        FirstSolveToday: profile.FirstSolveToday ?? null,
+
+        Country: profile.Country || null,
+        Region: profile.Region || null,
       },
 
-      attempts,
+      question: {
+        answerCount,
+        correctAnswers: safeJsonArray(question.CorrectAnswersJSON),
+      },
+
+      attempts: derived.attempts,
+
       derived: {
-        submittedUniqueCount: submittedUnique.length,
-        correctUniqueCount: correctUnique.length,
+        submittedUniqueCount: derived.uniqueSubmitted,
+        correctUniqueCount: derived.uniqueCorrect,
+        requiredSlots: derived.requiredSlotsGuess,
+        paceSeconds: derived.paceSeconds,
         rareAnswersList,
       },
     })
