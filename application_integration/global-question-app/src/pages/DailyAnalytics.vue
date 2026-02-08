@@ -72,7 +72,7 @@
               <canvas ref="speedRing"></canvas>
               <span class="ring-center">
                 {{
-                  typeof personal.pacePercentile === 'number'
+                  typeof personal.pacePercentile === 'number' && personal.pacePercentile > 5
                     ? displaySpeed + '%'
                     : personal.paceSeconds
                       ? Math.max(1, Math.round(personal.paceSeconds / 60)) + 'm'
@@ -501,8 +501,10 @@ function buildHeroCopy(rng) {
 
   completionFoot.value =
     required > 0 && foundTowardCompletion >= required
-      ? `All required answers found. (${Math.min(personal.uniqueCorrect, personal.totalSlots)} of ${personal.totalSlots} possible discovered today.)`
-      : `${p.uniqueCorrect} of ${possible} discovered throughout today.`
+      ? `All required answers found. (${Math.min(p.uniqueCorrect, required)}/${required} today.)`
+      : required > 0
+        ? `${Math.min(p.uniqueCorrect, required)}/${required} found today.`
+        : `Completion is still calibrating for this question.`
 
   accuracyFoot.value =
     p.submittedUnique > 0
@@ -510,9 +512,11 @@ function buildHeroCopy(rng) {
       : 'Submission breakdown is still syncing — check back in a moment.'
 
   speedFoot.value =
-    typeof p.pacePercentile === 'number'
+    typeof p.pacePercentile === 'number' && p.pacePercentile > 5
       ? `Faster than ${pct(p.pacePercentile)}% of players today.`
-      : 'Global pace percentile will appear once enough players exist.'
+      : p.paceSeconds
+        ? `Solve time: ${Math.max(1, Math.round(p.paceSeconds / 60))} minute(s). Percentile appears once enough players exist.`
+        : 'Pace is still syncing — check back shortly.'
 
   if (p.archetype) {
     heroDescription.value += ` Archetype: ${p.archetype}.`
@@ -1608,12 +1612,15 @@ function derivePersonalFromUserDailyProfile(payload) {
   const attempts = Array.isArray(payload?.attempts) ? payload.attempts : []
 
   // -------------------------
-  // Percent fields
+  // Percent fields (robust)
   // -------------------------
-  const completion = normaliseAirtablePercent(prof.Completion) ?? 0
-  const accuracy = normaliseAirtablePercent(prof.Accuracy) ?? 0
   const pSpeed = normaliseAirtablePercent(prof.PercentileSpeed)
   const pAcc = normaliseAirtablePercent(prof.PercentileAccuracy)
+
+  // We'll compute completion + accuracy from attempts if we can.
+  // (Airtable % fields are too easy to mis-formula.)
+  let completion = normaliseAirtablePercent(prof.Completion)
+  let accuracy = normaliseAirtablePercent(prof.Accuracy)
 
   // -------------------------
   // Attempts-derived stats
@@ -1639,6 +1646,27 @@ function derivePersonalFromUserDailyProfile(payload) {
   }
 
   const submittedUnique = uniqueSubmitted.size
+
+  // -------------------------
+  // Compute uniqueCorrect + accuracy from attempts
+  // -------------------------
+  const uniqueCorrectSet = new Set()
+
+  for (const a of attempts) {
+    const ca = Array.isArray(a.correctAnswers) ? a.correctAnswers : []
+    for (const c of ca) {
+      const n = normalise(c)
+      if (n) uniqueCorrectSet.add(n)
+    }
+  }
+
+  const computedUniqueCorrect = uniqueCorrectSet.size
+
+  if (submittedUnique > 0) {
+    accuracy = Math.round((computedUniqueCorrect / submittedUnique) * 100)
+  } else {
+    accuracy = 0
+  }
 
   const windowsPlayed = Object.keys(attemptsByWindow).length
 
@@ -1667,7 +1695,7 @@ function derivePersonalFromUserDailyProfile(payload) {
     attemptsTotal: Number(prof.AttemptsUsed) || attempts.length,
     hintsUsed: Number(prof.HintCount) || 0,
 
-    uniqueCorrect: Number(prof.DistinctAnswers) || 0,
+    uniqueCorrect: computedUniqueCorrect || Number(prof.DistinctAnswers) || 0,
     rareAnswers: Number(prof.RareAnswers) || 0,
 
     submittedUnique,
@@ -1675,8 +1703,13 @@ function derivePersonalFromUserDailyProfile(payload) {
     windowsPlayed,
     _attemptsByWindow: attemptsByWindow,
 
-    completion,
-    accuracy,
+    completion:
+      Number(q.answerCount) > 0
+        ? Math.round(
+            (Math.min(computedUniqueCorrect, Number(q.answerCount)) / Number(q.answerCount)) * 100,
+          )
+        : (completion ?? 0),
+    accuracy: accuracy ?? 0,
 
     paceSeconds: prof.SolveSeconds ?? null,
     pacePercentile: pSpeed ?? null,
