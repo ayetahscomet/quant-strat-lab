@@ -1280,29 +1280,6 @@ function buildGlobalBlocks(rng) {
         }
       }
 
-      if (roll < 0.66) {
-        const you = pct(p.completion)
-        const world = pct(g.avgCompletion ?? 62)
-        const gap = clamp(Math.abs(you - world), 0, 100)
-
-        return {
-          topic: 'gap',
-          kicker: 'Gap',
-          title: pick(rng, ['You vs World (spread)', 'Distance from average', 'The differential']),
-          body: '',
-          tier: 'minor',
-          shape: 'square',
-          chart: {
-            type: 'doughnut',
-            size: 'md',
-            colors: [COLORS.green, 'rgba(0,0,0,0.08)'],
-            data: [gap, 100 - gap],
-          },
-          mini: { big: `${gap}%`, sub: 'Spread' },
-          caption: 'A clean “difference” widget.',
-        }
-      }
-
       return {
         topic: 'league',
         kicker: 'League table',
