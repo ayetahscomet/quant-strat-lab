@@ -1,6 +1,11 @@
 /* /api/load-global-analytics.js */
+
 import { base } from '../lib/airtable.js'
 import { pickDateKey } from '../lib/dateKey.js'
+
+/* ======================================================
+   Utils
+====================================================== */
 
 function normalise(s) {
   return String(s || '')
@@ -18,29 +23,57 @@ function pct(n) {
   return clamp(Math.round(n), 0, 100)
 }
 
+function safeJsonArray(v) {
+  try {
+    const arr = v ? JSON.parse(v) : []
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+
+function median(nums) {
+  const arr = nums.filter((x) => typeof x === 'number' && isFinite(x)).sort((a, b) => a - b)
+  if (!arr.length) return null
+  const mid = Math.floor(arr.length / 2)
+  return arr.length % 2 ? arr[mid] : Math.round((arr[mid - 1] + arr[mid]) / 2)
+}
+
+function bucketise(values, cuts) {
+  const buckets = new Array(cuts.length + 1).fill(0)
+  for (const v of values) {
+    const x = typeof v === 'number' && isFinite(v) ? v : 0
+    let i = 0
+    while (i < cuts.length && x >= cuts[i]) i++
+    buckets[i]++
+  }
+  return buckets
+}
+
 /**
- * Pace is "lower = faster".
- * We return: "faster than X% of players" -> higher is better.
- * For tiny N, this still behaves nicely (N=2 gives 0% or 50% or 100% depending on ties).
+ * Pace percentile (higher = better).
+ * Clamp away 0% / 100% when we have multiple players.
  */
 function fasterThanPercentile(values, yourValue) {
   const vals = values.filter((x) => typeof x === 'number' && isFinite(x))
   if (!vals.length || typeof yourValue !== 'number' || !isFinite(yourValue)) return null
 
-  // Count how many are strictly slower (higher seconds)
   const slower = vals.filter((x) => x > yourValue).length
   const equal = vals.filter((x) => x === yourValue).length
 
-  // Give half-credit for ties (stable for small N)
   const score = (slower + 0.5 * Math.max(0, equal - 1)) / vals.length
-  return pct(score * 100)
+
+  const raw = score * 100
+  const out = pct(raw)
+
+  if (vals.length >= 2) return clamp(out, 1, 99)
+  return out
 }
 
 async function trySelectAll(tableName, selectParams) {
   try {
-    const recs = await base(tableName).select(selectParams).all()
-    return recs
-  } catch (e) {
+    return await base(tableName).select(selectParams).all()
+  } catch {
     return null
   }
 }
@@ -54,9 +87,10 @@ function readField(f, keys, fallback = null) {
   return fallback
 }
 
-/**
- * Standard response shape for DailyAnalytics.vue (plus richer data so you can kill fillers).
- */
+/* ======================================================
+   Response Builder
+====================================================== */
+
 function buildResponse({
   dateKey,
   totalPlayers,
@@ -72,75 +106,56 @@ function buildResponse({
   accuracyBuckets,
   completionBuckets,
   outcomeCounts,
+  commonGuesses,
+  rareCorrect,
+  exitEarlyShare,
 }) {
   const players = typeof totalPlayers === 'number' ? totalPlayers : 0
 
   return {
     dateKey,
 
-    // ✅ fields DailyAnalytics.vue already reads
     totalPlayers: players,
     totalAttempts: typeof totalAttempts === 'number' ? totalAttempts : null,
     avgCompletion: typeof avgCompletion === 'number' ? pct(avgCompletion) : null,
     avgAccuracy: typeof avgAccuracy === 'number' ? pct(avgAccuracy) : null,
+
     yourCountryRank: typeof yourCountryRank === 'number' ? yourCountryRank : null,
     yourCountryAvgCompletion:
       typeof yourCountryAvgCompletion === 'number' ? pct(yourCountryAvgCompletion) : null,
+
     pacePercentileForUser:
       typeof pacePercentileForUser === 'number' ? pct(pacePercentileForUser) : null,
+
     countryLeaderboard: Array.isArray(countryLeaderboard) ? countryLeaderboard : [],
 
-    // ✅ richer “no fillers” metadata for tone/blocks
     meta: {
       players,
       countries: Array.isArray(countryLeaderboard) ? countryLeaderboard.length : 0,
-      sampleTier:
-        players >= 50000
-          ? 'massive'
-          : players >= 5000
-            ? 'large'
-            : players >= 500
-              ? 'medium'
-              : players >= 50
-                ? 'small'
-                : players >= 5
-                  ? 'tiny'
-                  : 'micro',
       hasGlobal: players > 0,
       hasCountryBoard: Array.isArray(countryLeaderboard) && countryLeaderboard.length > 0,
     },
 
     distributions: {
-      accuracyBuckets: Array.isArray(accuracyBuckets) ? accuracyBuckets : null,
-      completionBuckets: Array.isArray(completionBuckets) ? completionBuckets : null,
-      outcomeCounts: outcomeCounts || null,
+      accuracyBuckets,
+      completionBuckets,
+      outcomeCounts,
     },
 
     aggregates: {
-      avgHints: typeof avgHints === 'number' ? avgHints : null,
-      medianPaceSeconds: typeof medianPaceSeconds === 'number' ? medianPaceSeconds : null,
+      avgHints,
+      medianPaceSeconds,
     },
+
+    commonGuesses,
+    rareCorrect,
+    exitEarlyShare,
   }
 }
 
-function median(nums) {
-  const arr = nums.filter((x) => typeof x === 'number' && isFinite(x)).sort((a, b) => a - b)
-  if (!arr.length) return null
-  const mid = Math.floor(arr.length / 2)
-  return arr.length % 2 ? arr[mid] : Math.round((arr[mid - 1] + arr[mid]) / 2)
-}
-
-function bucketise(values, cuts) {
-  // cuts like [20,40,60,80] produces 5 buckets
-  const buckets = new Array(cuts.length + 1).fill(0)
-  for (const v of values) {
-    const x = typeof v === 'number' && isFinite(v) ? v : 0
-    let i = 0
-    while (i < cuts.length && x >= cuts[i]) i++
-    buckets[i]++
-  }
-  return buckets
-}
+/* ======================================================
+   Handler
+====================================================== */
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' })
@@ -152,10 +167,9 @@ export default async function handler(req, res) {
     const userCountry = normalise(country || '')
 
     /* ============================================================
-   PATH A (REAL TABLES): DailyAggregates + DailyRegionStats
-  ============================================================ */
+       PATH A — DailyAggregates + Region/Country tables
+    ============================================================ */
 
-    // 1) DailyAggregates (1 row per date)
     const aggRows = await base('DailyAggregates')
       .select({
         maxRecords: 1,
@@ -164,52 +178,127 @@ export default async function handler(req, res) {
       })
       .all()
 
-    // 2) DailyRegionStats (many rows per date — used as leaderboard proxy)
-    const countryRows = await base('DailyCountryStats')
-      .select({
+    const countryRows =
+      (await trySelectAll('DailyCountryStats', {
         maxRecords: 200,
-        filterByFormula: `{DateKey} = '${dateKey}'`,
+        filterByFormula: `{DateKey}='${dateKey}'`,
         sort: [{ field: 'Players', direction: 'desc' }],
+      })) ||
+      (await trySelectAll('DailyRegionStats', {
+        maxRecords: 200,
+        filterByFormula: `{DateKey}='${dateKey}'`,
+        sort: [{ field: 'Players', direction: 'desc' }],
+      })) ||
+      []
+
+    /* ============================================================
+       COMMON / RARE / EXIT — computed from UserAnswers ALWAYS
+    ============================================================ */
+
+    const uaRows = await base('UserAnswers')
+      .select({
+        maxRecords: 5000,
+        filterByFormula: `{DateKey}='${dateKey}'`,
       })
       .all()
+
+    const playersSet = new Set()
+    const perUserGuessSet = new Map()
+    const outcomeCounts = {}
+
+    let correctAnswersList = null
+
+    for (const r of uaRows) {
+      const f = r.fields || {}
+      const uid = String(f.UserID || '')
+      if (!uid) continue
+
+      playersSet.add(uid)
+
+      const resKey = String(f.Result || '').toLowerCase()
+      outcomeCounts[resKey] = (outcomeCounts[resKey] || 0) + 1
+
+      if (!perUserGuessSet.has(uid)) perUserGuessSet.set(uid, new Set())
+
+      for (const a of safeJsonArray(f.AnswersJSON)) {
+        const k = normalise(a)
+        if (k) perUserGuessSet.get(uid).add(k)
+      }
+
+      const ca = safeJsonArray(f.CorrectAnswersJSON)
+      if (ca.length && (!correctAnswersList || ca.length > correctAnswersList.length)) {
+        correctAnswersList = ca
+      }
+    }
+
+    const totalPlayersFromUA = playersSet.size
+
+    const guessCounts = new Map()
+    for (const [, set] of perUserGuessSet) {
+      for (const g of set) guessCounts.set(g, (guessCounts.get(g) || 0) + 1)
+    }
+
+    const commonGuesses = [...guessCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([answer, n]) => ({
+        answer,
+        pct: totalPlayersFromUA ? pct((n / totalPlayersFromUA) * 100) : 0,
+      }))
+
+    const correctSet = new Set((correctAnswersList || []).map((x) => normalise(x)).filter(Boolean))
+
+    const rareCorrect = [...correctSet]
+      .map((ans) => {
+        const n = guessCounts.get(ans) || 0
+        return {
+          answer: ans,
+          pct: totalPlayersFromUA ? pct((n / totalPlayersFromUA) * 100) : 0,
+        }
+      })
+      .sort((a, b) => a.pct - b.pct)
+      .slice(0, 8)
+
+    const exitEarlyShare =
+      totalPlayersFromUA && outcomeCounts['exit-early']
+        ? pct((outcomeCounts['exit-early'] / totalPlayersFromUA) * 100)
+        : null
+
+    /* ============================================================
+       PATH A RETURN
+    ============================================================ */
 
     if (aggRows.length) {
       const f = aggRows[0].fields || {}
 
-      const totalPlayers = Number(readField(f, ['TotalPlayers'], 0)) || 0
+      const totalPlayers = Number(readField(f, ['TotalPlayers'], 0))
       const totalAttempts = Number(readField(f, ['TotalAttempts'], null))
       const avgCompletion = Number(readField(f, ['AvgCompletion'], null))
       const avgAccuracy = Number(readField(f, ['AvgAccuracy'], null))
       const avgHints = Number(readField(f, ['AvgHints'], null))
-      const medianPaceSeconds = Number(readField(f, ['MedianPaceSeconds', 'AvgSolveSeconds'], null))
+      const medianPaceSeconds = Number(readField(f, ['MedianPaceSeconds'], null))
 
-      const countryLeaderboard = (countryRows || [])
+      const countryLeaderboard = countryRows
         .map((r) => {
           const rf = r.fields || {}
-
-          const code = normalise(readField(rf, ['Country', 'CountryCode', 'Code'], ''))
-          const users = Number(readField(rf, ['Players', 'Users', 'Count'], 0)) || 0
-          const value = Number(
-            readField(rf, ['AvgCompletion', 'AvgCompletionPct', 'CompletionAvg'], null),
-          )
+          const code = normalise(readField(rf, ['Country', 'CountryCode'], ''))
+          const users = Number(readField(rf, ['Players'], 0))
+          const value = Number(readField(rf, ['AvgCompletion'], 0))
 
           return {
             country: code,
-            name: code, // frontend maps code → full name
+            name: code,
             users,
-            value: typeof value === 'number' ? pct(value) : 0,
+            value: pct(value),
           }
         })
-        .sort((a, b) => b.value - a.value)
         .slice(0, 10)
 
-      // find your country rank
       let yourCountryRank = null
       let yourCountryAvgCompletion = null
 
       if (userCountry) {
-        const idx = countryLeaderboard.findIndex((x) => normalise(x.country) === userCountry)
-
+        const idx = countryLeaderboard.findIndex((x) => x.country === userCountry)
         if (idx !== -1) {
           yourCountryRank = idx + 1
           yourCountryAvgCompletion = countryLeaderboard[idx].value
@@ -226,184 +315,42 @@ export default async function handler(req, res) {
           avgHints,
           medianPaceSeconds,
           countryLeaderboard,
-
-          // MVP placeholders
           yourCountryRank,
           yourCountryAvgCompletion,
           pacePercentileForUser: null,
           accuracyBuckets: null,
           completionBuckets: null,
-          outcomeCounts: null,
+          outcomeCounts,
+          commonGuesses,
+          rareCorrect,
+          exitEarlyShare,
         }),
       )
     }
 
     /* ============================================================
-       PATH B (fallback): compute from UserAnswers (your current method)
-       - Works for early stage only. Not for 2M.
+       PATH B — fallback still works
     ============================================================ */
-
-    const records = await base('UserAnswers')
-      .select({
-        maxRecords: 5000,
-        filterByFormula: `{DateKey} = '${dateKey}'`,
-      })
-      .all()
-
-    const byUser = new Map()
-
-    for (const r of records) {
-      const f = r.fields || {}
-      const uid = f.UserID
-      if (!uid) continue
-
-      if (!byUser.has(uid)) byUser.set(uid, [])
-      byUser.get(uid).push({
-        result: f.Result,
-        windowId: f.WindowID,
-        createdAt: f.CreatedAt,
-        country: normalise(f.Country || 'unknown'),
-        correct: f.CorrectAnswersJSON ? JSON.parse(f.CorrectAnswersJSON) : [],
-        answers: f.AnswersJSON ? JSON.parse(f.AnswersJSON) : [],
-        hintsUsed: f.HintUsed === true ? 1 : 0,
-      })
-    }
-
-    // derive "required slots" as max correct list length seen today (best we can do from this table)
-    let requiredSlotsGuess = 0
-    for (const rows of byUser.values()) {
-      for (const row of rows) {
-        const len = Array.isArray(row.correct) ? row.correct.length : 0
-        if (len > requiredSlotsGuess) requiredSlotsGuess = len
-      }
-    }
-    if (!requiredSlotsGuess) requiredSlotsGuess = 5 // last resort; shouldn’t happen
-
-    const userSummaries = []
-    let totalAttempts = 0
-    let hintsSum = 0
-    let hintsCount = 0
-
-    for (const [uid, rows] of byUser.entries()) {
-      totalAttempts += rows.length
-
-      const correctSet = new Set()
-      const uniqueSubmissions = new Set()
-      let firstAt = null
-      let lastAt = null
-
-      const countryCode = rows[0]?.country || 'unknown'
-
-      for (const row of rows) {
-        // correct union (normalised)
-        for (const c of row.correct || []) correctSet.add(normalise(c))
-
-        // unique submissions union (normalised)
-        for (const a of row.answers || []) {
-          const v = normalise(a)
-          if (v) uniqueSubmissions.add(v)
-        }
-
-        const t = row.createdAt ? new Date(row.createdAt) : null
-        if (t && !isNaN(t.getTime())) {
-          if (!firstAt || t < firstAt) firstAt = t
-          if (!lastAt || t > lastAt) lastAt = t
-        }
-
-        if (typeof row.hintsUsed === 'number') {
-          hintsSum += row.hintsUsed
-          hintsCount += 1
-        }
-      }
-
-      const uniqueCorrect = correctSet.size
-      const submittedUnique = uniqueSubmissions.size
-
-      const completionPct =
-        requiredSlotsGuess > 0
-          ? (Math.min(uniqueCorrect, requiredSlotsGuess) / requiredSlotsGuess) * 100
-          : 0
-      const accuracyPct = submittedUnique > 0 ? (uniqueCorrect / submittedUnique) * 100 : 0
-
-      const paceSeconds =
-        firstAt && lastAt
-          ? Math.max(0, Math.round((lastAt.getTime() - firstAt.getTime()) / 1000))
-          : null
-
-      userSummaries.push({
-        userId: uid,
-        completionPct: pct(completionPct),
-        accuracyPct: pct(accuracyPct),
-        paceSeconds: typeof paceSeconds === 'number' ? paceSeconds : null,
-        country: countryCode,
-      })
-    }
-
-    const totalPlayers = userSummaries.length
-
-    const compVals = userSummaries.map((u) => u.completionPct)
-    const accVals = userSummaries.map((u) => u.accuracyPct)
-    const paceVals = userSummaries
-      .map((u) => u.paceSeconds)
-      .filter((x) => typeof x === 'number' && x > 0)
-
-    const avgCompletion = compVals.reduce((a, b) => a + b, 0) / (compVals.length || 1)
-    const avgAccuracy = accVals.reduce((a, b) => a + b, 0) / (accVals.length || 1)
-
-    const medianPaceSeconds = median(paceVals)
-
-    // country leaderboard (avgCompletion%)
-    const countryMap = new Map()
-    for (const u of userSummaries) {
-      const c = u.country || 'unknown'
-      if (!countryMap.has(c)) countryMap.set(c, { users: 0, sum: 0 })
-      const obj = countryMap.get(c)
-      obj.users += 1
-      obj.sum += u.completionPct
-    }
-
-    const allCountries = [...countryMap.entries()].map(([cc, v]) => ({
-      country: cc,
-      name: cc, // client can map code->name if needed
-      users: v.users,
-      value: pct(v.sum / v.users),
-    }))
-    allCountries.sort((a, b) => b.value - a.value)
-
-    const countryLeaderboard = allCountries.slice(0, 10)
-
-    let yourCountryRank = null
-    let yourCountryAvgCompletion = null
-    if (userCountry) {
-      const idx = allCountries.findIndex((x) => normalise(x.country) === userCountry)
-      if (idx !== -1) {
-        yourCountryRank = idx + 1
-        yourCountryAvgCompletion = allCountries[idx].value
-      }
-    }
-
-    const you = userSummaries.find((u) => String(u.userId) === String(userId))
-    const pacePercentileForUser = you ? fasterThanPercentile(paceVals, you.paceSeconds) : null
-
-    const accuracyBuckets = bucketise(accVals, [20, 40, 60, 80])
-    const completionBuckets = bucketise(compVals, [20, 40, 60, 80])
 
     return res.status(200).json(
       buildResponse({
         dateKey,
-        totalPlayers,
-        totalAttempts,
-        avgCompletion,
-        avgAccuracy,
-        avgHints: hintsCount ? Math.round((hintsSum / hintsCount) * 10) / 10 : null,
-        medianPaceSeconds,
-        countryLeaderboard,
-        yourCountryRank,
-        yourCountryAvgCompletion,
-        pacePercentileForUser,
-        accuracyBuckets,
-        completionBuckets,
-        outcomeCounts: null,
+        totalPlayers: totalPlayersFromUA,
+        totalAttempts: uaRows.length,
+        avgCompletion: null,
+        avgAccuracy: null,
+        avgHints: null,
+        medianPaceSeconds: null,
+        countryLeaderboard: [],
+        yourCountryRank: null,
+        yourCountryAvgCompletion: null,
+        pacePercentileForUser: null,
+        accuracyBuckets: null,
+        completionBuckets: null,
+        outcomeCounts,
+        commonGuesses,
+        rareCorrect,
+        exitEarlyShare,
       }),
     )
   } catch (err) {
