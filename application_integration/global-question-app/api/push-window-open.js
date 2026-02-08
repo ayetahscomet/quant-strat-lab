@@ -41,6 +41,7 @@ export default async function handler(req, res) {
   console.log('[WINDOW PUSH] cron fired')
 
   const records = await base('PushSubscriptions').select().all()
+  console.log('[WINDOW PUSH] subscriptions found:', records.length)
 
   let pushed = 0
 
@@ -51,6 +52,7 @@ export default async function handler(req, res) {
 
       const sub = JSON.parse(raw)
       const tz = r.get('Timezone') || 'UTC'
+      console.log('[WINDOW PUSH] sub tz:', tz)
 
       const { hour, minute } = getLocalTime(tz)
       const hhmm = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
@@ -65,7 +67,10 @@ export default async function handler(req, res) {
         return hour === h && minute >= m && minute < m + 5 // 5-min firing window
       })
 
-      if (!win) continue
+      if (!win) {
+        console.log('[WINDOW PUSH] no window match for', hhmm)
+        continue
+      }
 
       const todayKey = dateKeyToday(tz)
 
