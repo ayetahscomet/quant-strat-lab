@@ -27,9 +27,14 @@ function getLocalTime(tz) {
 
 export default async function handler(req, res) {
   const isCron = req.headers['x-vercel-cron'] === '1'
-  const isSecret = req.headers['authorization'] === `Bearer ${process.env.CRON_SECRET}`
 
-  if (!isCron && !isSecret) {
+  const headerSecret = req.headers['authorization']
+  const querySecret = req.query?.secret ? `Bearer ${req.query.secret}` : null
+  const expected = `Bearer ${process.env.CRON_SECRET || ''}`
+
+  const isAuthorised = isCron || headerSecret === expected || querySecret === expected
+
+  if (!isAuthorised) {
     return res.status(403).json({ error: 'Forbidden' })
   }
 
