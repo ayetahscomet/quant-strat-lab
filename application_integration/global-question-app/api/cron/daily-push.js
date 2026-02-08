@@ -10,9 +10,15 @@ async function createInBatches(table, rows, size = 10) {
 }
 
 export default async function handler(req, res) {
-  const secret = req.headers.authorization
+  const isVercelCron = req.headers['x-vercel-cron'] === '1'
 
-  if (secret !== `Bearer ${process.env.CRON_SECRET}`) {
+  const headerSecret = req.headers.authorization
+
+  const querySecret = req.query?.secret ? `Bearer ${req.query.secret}` : null
+
+  const expected = `Bearer ${process.env.CRON_SECRET || ''}`
+
+  if (!isVercelCron && headerSecret !== expected && querySecret !== expected) {
     return res.status(401).json({ error: 'unauthorised' })
   }
 
