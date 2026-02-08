@@ -141,19 +141,6 @@ export function getTimeRemainingToEndOfCurrent(tz = getTimezone()) {
 }
 
 // =====================================================
-// DATE KEY FOR STORAGE
-// =====================================================
-
-export function todayKey(tz = getTimezone()) {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: tz,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
-}
-
-// =====================================================
 // DATE KEY FOR STORAGE (CANONICAL)
 // =====================================================
 
