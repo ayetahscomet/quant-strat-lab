@@ -1,5 +1,6 @@
 // /api/log-play.js
 import { base } from '../lib/airtable.js'
+import { pickDateKey } from '../lib/dateKey.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -7,7 +8,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userId, country, dateKey, windowId, answers, correctAnswers, result } = req.body
+    const { dateKey } = pickDateKey(req)
+    const { userId, country, windowId, answers, correctAnswers, result } = req.body
 
     if (!userId || !dateKey || !windowId) {
       return res.status(400).json({ error: 'Missing required fields' })
@@ -20,7 +22,8 @@ export default async function handler(req, res) {
           Country: country || 'xx',
           DateKey: dateKey,
           WindowID: windowId,
-          Result: result || 'lockout', // <-- important change
+          Result: result === 'success' ? 'success' : 'lockout',
+          // <-- important change
           AnswersJSON: JSON.stringify(answers || []),
           CorrectAnswersJSON: JSON.stringify(correctAnswers || []),
           CreatedAt: new Date().toISOString(),
