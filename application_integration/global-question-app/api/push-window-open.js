@@ -64,7 +64,7 @@ export default async function handler(req, res) {
 
       const win = WINDOWS.find((w) => {
         const [h, m] = w.start.split(':').map(Number)
-        return hour === h && minute >= m && minute < m + 5 // 5-min firing window
+        return hour === h && minute >= m && minute < m + 60
       })
 
       if (!win) {
