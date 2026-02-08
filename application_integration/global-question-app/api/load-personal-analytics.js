@@ -1,4 +1,5 @@
 import { base } from '../lib/airtable.js'
+import { pickDateKey } from '../lib/dateKey.js'
 
 function normalisePercent(x) {
   if (x === null || x === undefined) return null
@@ -18,9 +19,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userId, dateKey } = req.body || {}
+    const { dateKey } = pickDateKey(req)
+    const { userId } = req.body || {}
 
-    if (!userId || !dateKey) {
+    if (!userId) {
       return res.status(400).json({ error: 'Missing userId or dateKey' })
     }
 

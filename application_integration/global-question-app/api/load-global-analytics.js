@@ -1,5 +1,6 @@
 /* /api/load-global-analytics.js */
 import { base } from '../lib/airtable.js'
+import { pickDateKey } from '../lib/dateKey.js'
 
 function normalise(s) {
   return String(s || '')
@@ -145,8 +146,8 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' })
 
   try {
-    const { dateKey, userId, country } = req.body || {}
-    if (!dateKey) return res.status(400).json({ error: 'Missing dateKey' })
+    const { dateKey } = pickDateKey(req)
+    const { userId, country } = req.body || {}
 
     const userCountry = normalise(country || '')
 
@@ -262,7 +263,7 @@ export default async function handler(req, res) {
         country: normalise(f.Country || 'unknown'),
         correct: f.CorrectAnswersJSON ? JSON.parse(f.CorrectAnswersJSON) : [],
         answers: f.AnswersJSON ? JSON.parse(f.AnswersJSON) : [],
-        hintsUsed: typeof f.HintsUsed === 'number' ? f.HintsUsed : null,
+        hintsUsed: f.HintUsed === true ? 1 : 0,
       })
     }
 
