@@ -89,6 +89,8 @@ export async function registerPush() {
       body: JSON.stringify({
         sub,
         timezone: getTimezone(),
+        userId: localStorage.getItem('akinto_user_id'),
+        country: localStorage.getItem('akinto_country'),
       }),
     })
 

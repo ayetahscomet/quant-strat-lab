@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
   try {
-    const { sub, timezone } = req.body || {}
+    const { sub, timezone, userId, country } = req.body || {}
 
     console.log('[SAVE PUSH] body:', sub?.endpoint)
 
@@ -38,6 +38,9 @@ export default async function handler(req, res) {
           Endpoint: sub.endpoint,
           SubscriptionJSON: JSON.stringify(sub),
           Timezone: tz,
+          UserID: userId || null,
+          Country: country || null,
+          FirstSeenAt: new Date().toISOString(),
         },
       },
     ])

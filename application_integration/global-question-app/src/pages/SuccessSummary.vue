@@ -153,6 +153,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { registerPush } from '@/push/registerPush'
+
+onMounted(() => {
+  setTimeout(() => {
+    registerPush()
+  }, 1500)
+})
 
 const router = useRouter()
 

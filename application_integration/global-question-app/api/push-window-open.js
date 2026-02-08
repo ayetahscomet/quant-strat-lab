@@ -3,6 +3,7 @@
 import webpush from 'web-push'
 import { base } from '../lib/airtable.js'
 import { WINDOWS } from '../lib/windows.js'
+import { dateKeyToday } from '../lib/dateKey.js'
 
 webpush.setVapidDetails(
   'mailto:hello@akinto.io',
@@ -52,12 +53,7 @@ export default async function handler(req, res) {
       const win = WINDOWS.find((w) => w.start === hhmm)
       if (!win) continue
 
-      const todayKey = new Intl.DateTimeFormat('en-CA', {
-        timeZone: tz,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      }).format(new Date())
+      const todayKey = dateKeyToday(tz)
 
       const pushKey = `${todayKey}_${win.id}`
 
@@ -69,7 +65,10 @@ export default async function handler(req, res) {
           title: `Akinto · ${win.label} window open`,
           body: `Your ${win.label} window just started.`,
           icon: '/push-icon.png',
-          url: 'https://akinto.io/play',
+          data: {
+            url: 'https://akinto.io/play',
+            windowId: win.id,
+          },
         }),
       )
 

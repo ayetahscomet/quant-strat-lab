@@ -19,5 +19,15 @@ self.addEventListener('push', function (event) {
 
 self.addEventListener('notificationclick', function (event) {
   event.notification.close()
-  event.waitUntil(clients.openWindow('/play'))
+
+  const url = event.notification?.data?.url || '/play'
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url === url && 'focus' in client) return client.focus()
+      }
+      return clients.openWindow(url)
+    }),
+  )
 })
