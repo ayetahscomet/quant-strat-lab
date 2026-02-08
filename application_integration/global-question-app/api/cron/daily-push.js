@@ -8,22 +8,28 @@ async function createInBatches(table, rows, size = 10) {
   }
 }
 
-export default async function handler(req, res) {
-  // Vercel Cron requests include this header
+function isAuthorised(req) {
   const isVercelCron = req.headers['x-vercel-cron'] === '1'
 
-  // Allow manual triggering via either:
-  // 1) Authorization: Bearer <CRON_SECRET>
-  // 2) /api/cron/daily-push?secret=<CRON_SECRET>
   const headerSecret = req.headers.authorization
   const querySecret = req.query?.secret ? `Bearer ${req.query.secret}` : null
   const expected = `Bearer ${process.env.CRON_SECRET || ''}`
 
-  if (!isVercelCron && headerSecret !== expected && querySecret !== expected) {
+  // Allow Vercel Cron without secrets; allow manual runs with header OR query secret
+  return isVercelCron || headerSecret === expected || querySecret === expected
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'GET only' })
+  }
+
+  if (!isAuthorised(req)) {
     return res.status(401).json({ error: 'unauthorised' })
   }
 
   const { dateKey } = pickDateKey(req, { defaultOffsetDays: 0 })
+
   console.log('🔔 Push generation:', dateKey)
 
   const users = await base('Users').select({ maxRecords: 5000 }).all()
@@ -31,12 +37,12 @@ export default async function handler(req, res) {
 
   for (const r of users) {
     const u = r.fields
-
     if (!u.LastPlayedDate) continue
 
     const inactiveDays = Math.floor((new Date(dateKey) - new Date(u.LastPlayedDate)) / 86400000)
 
     let type = null
+
     if (u.CurrentStreak >= 10) type = 'high-streak'
     else if (u.CurrentStreak >= 3 && inactiveDays >= 1) type = 'streak-risk'
     else if (u.TotalDaysPlayed === 1) type = 'new-user'
@@ -50,6 +56,7 @@ export default async function handler(req, res) {
         UserID: u.UserID,
         DateKey: dateKey,
         Type: type,
+
         Country: u.CountryCode || 'xx',
         Region: u.Region || 'Unknown',
 
@@ -62,7 +69,7 @@ export default async function handler(req, res) {
     })
   }
 
-  // De-dupe for the day
+  // De-dupe for the day (UserID + Type)
   const existing = await base('PushQueue')
     .select({
       maxRecords: 5000,
@@ -77,5 +84,9 @@ export default async function handler(req, res) {
     await createInBatches('PushQueue', finalPushes)
   }
 
-  return res.status(200).json({ ok: true, queued: finalPushes.length, dateKey })
+  return res.status(200).json({
+    ok: true,
+    dateKey,
+    queued: finalPushes.length,
+  })
 }

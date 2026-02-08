@@ -71,7 +71,13 @@
             <div class="ring-stack">
               <canvas ref="speedRing"></canvas>
               <span class="ring-center">
-                {{ typeof personal.pacePercentile === 'number' ? displaySpeed + '%' : '—' }}
+                {{
+                  typeof personal.pacePercentile === 'number'
+                    ? displaySpeed + '%'
+                    : personal.paceSeconds
+                      ? Math.max(1, Math.round(personal.paceSeconds / 60)) + 'm'
+                      : '—'
+                }}
               </span>
             </div>
 
@@ -1052,9 +1058,16 @@ function buildGlobalBlocks(rng) {
           ? 'Streak maintained.'
           : 'Another data point logged.',
       body: personal.value.rareAnswers
-        ? `You found ${personal.value.rareAnswers} rare answer${
-            personal.value.rareAnswers === 1 ? '' : 's'
-          }. That’s alpha.`
+        ? (() => {
+            const list = Array.isArray(personal.value.rareAnswersList)
+              ? personal.value.rareAnswersList
+              : []
+            return list.length
+              ? `Rare finds: ${list.slice(0, 6).join(', ')}.`
+              : `You found ${personal.value.rareAnswers} rare answer${
+                  personal.value.rareAnswers === 1 ? '' : 's'
+                }. That’s alpha.`
+          })()
         : personal.value.duplicatePenalty === 0
           ? 'Every submission was unique — clean work.'
           : `Duplicates cropped up ${personal.value.duplicatePenalty} times.`,
@@ -1676,6 +1689,7 @@ function derivePersonalFromUserDailyProfile(payload) {
 
     countryCode: resolvedCountryCode,
     countryName: resolvedCountryName,
+    rareAnswersList: payload?.derived?.rareAnswersList || [],
   }
 }
 

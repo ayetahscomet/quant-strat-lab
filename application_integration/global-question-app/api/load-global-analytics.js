@@ -187,9 +187,11 @@ export default async function handler(req, res) {
         .map((r) => {
           const rf = r.fields || {}
 
-          const code = normalise(readField(rf, ['Country'], ''))
-          const users = Number(readField(rf, ['Players'], 0)) || 0
-          const value = Number(readField(rf, ['AvgCompletion'], null))
+          const code = normalise(readField(rf, ['Country', 'CountryCode', 'Code'], ''))
+          const users = Number(readField(rf, ['Players', 'Users', 'Count'], 0)) || 0
+          const value = Number(
+            readField(rf, ['AvgCompletion', 'AvgCompletionPct', 'CompletionAvg'], null),
+          )
 
           return {
             country: code,
@@ -226,8 +228,8 @@ export default async function handler(req, res) {
           countryLeaderboard,
 
           // MVP placeholders
-          yourCountryRank: null,
-          yourCountryAvgCompletion: null,
+          yourCountryRank,
+          yourCountryAvgCompletion,
           pacePercentileForUser: null,
           accuracyBuckets: null,
           completionBuckets: null,
