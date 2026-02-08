@@ -1,5 +1,4 @@
 // /api/cron/daily-push.js
-
 import { base } from '../../lib/airtable.js'
 import { pickDateKey } from '../../lib/dateKey.js'
 
@@ -10,12 +9,14 @@ async function createInBatches(table, rows, size = 10) {
 }
 
 export default async function handler(req, res) {
+  // Vercel Cron requests include this header
   const isVercelCron = req.headers['x-vercel-cron'] === '1'
 
+  // Allow manual triggering via either:
+  // 1) Authorization: Bearer <CRON_SECRET>
+  // 2) /api/cron/daily-push?secret=<CRON_SECRET>
   const headerSecret = req.headers.authorization
-
   const querySecret = req.query?.secret ? `Bearer ${req.query.secret}` : null
-
   const expected = `Bearer ${process.env.CRON_SECRET || ''}`
 
   if (!isVercelCron && headerSecret !== expected && querySecret !== expected) {
@@ -23,11 +24,9 @@ export default async function handler(req, res) {
   }
 
   const { dateKey } = pickDateKey(req, { defaultOffsetDays: 0 })
-
   console.log('🔔 Push generation:', dateKey)
 
   const users = await base('Users').select({ maxRecords: 5000 }).all()
-
   const pushes = []
 
   for (const r of users) {
@@ -38,18 +37,11 @@ export default async function handler(req, res) {
     const inactiveDays = Math.floor((new Date(dateKey) - new Date(u.LastPlayedDate)) / 86400000)
 
     let type = null
-
-    if (u.CurrentStreak >= 10) {
-      type = 'high-streak'
-    } else if (u.CurrentStreak >= 3 && inactiveDays >= 1) {
-      type = 'streak-risk'
-    } else if (u.TotalDaysPlayed === 1) {
-      type = 'new-user'
-    } else if (inactiveDays >= 5) {
-      type = 're-engage'
-    } else if (inactiveDays === 0 && u.CurrentStreak >= 2) {
-      type = 'returning-today'
-    }
+    if (u.CurrentStreak >= 10) type = 'high-streak'
+    else if (u.CurrentStreak >= 3 && inactiveDays >= 1) type = 'streak-risk'
+    else if (u.TotalDaysPlayed === 1) type = 'new-user'
+    else if (inactiveDays >= 5) type = 're-engage'
+    else if (inactiveDays === 0 && u.CurrentStreak >= 2) type = 'returning-today'
 
     if (!type) continue
 
@@ -57,13 +49,10 @@ export default async function handler(req, res) {
       fields: {
         UserID: u.UserID,
         DateKey: dateKey,
-
         Type: type,
-
         Country: u.CountryCode || 'xx',
         Region: u.Region || 'Unknown',
 
-        // ✅ delivery pipeline defaults
         Delivered: false,
         DeliveredAt: null,
         Channel: 'web-push',
@@ -73,10 +62,7 @@ export default async function handler(req, res) {
     })
   }
 
-  /* =====================================================
-     De-dupe for the day 
-  ===================================================== */
-
+  // De-dupe for the day
   const existing = await base('PushQueue')
     .select({
       maxRecords: 5000,
@@ -85,15 +71,11 @@ export default async function handler(req, res) {
     .all()
 
   const keys = new Set(existing.map((r) => `${r.fields.UserID}::${r.fields.Type}`))
-
   const finalPushes = pushes.filter((p) => !keys.has(`${p.fields.UserID}::${p.fields.Type}`))
 
   if (finalPushes.length) {
     await createInBatches('PushQueue', finalPushes)
   }
 
-  return res.status(200).json({
-    ok: true,
-    queued: finalPushes.length,
-  })
+  return res.status(200).json({ ok: true, queued: finalPushes.length, dateKey })
 }
