@@ -15,8 +15,8 @@ self.addEventListener('push', function (event) {
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: payload.icon || '/push-icon.png',
-      badge: payload.badge || '/push-badge.png',
+      icon: payload.icon || '/logo-main.svg',
+      badge: payload.badge || '/logo-main.svg',
 
       // ✅ REQUIRED so notificationclick can route correctly
       data: {
