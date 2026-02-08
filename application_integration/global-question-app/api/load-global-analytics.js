@@ -7,6 +7,25 @@ import { pickDateKey } from '../lib/dateKey.js'
    Utils
 ====================================================== */
 
+const COUNTRY_NAMES = {
+  gb: 'United Kingdom',
+  us: 'United States',
+  fr: 'France',
+  de: 'Germany',
+  it: 'Italy',
+  es: 'Spain',
+  cn: 'China',
+  in: 'India',
+  jp: 'Japan',
+  ca: 'Canada',
+  au: 'Australia',
+}
+
+function countryName(code) {
+  const k = normalise(code)
+  return COUNTRY_NAMES[k] || code?.toUpperCase() || '—'
+}
+
 function normalise(s) {
   return String(s || '')
     .trim()
@@ -39,35 +58,18 @@ function median(nums) {
   return arr.length % 2 ? arr[mid] : Math.round((arr[mid - 1] + arr[mid]) / 2)
 }
 
-function bucketise(values, cuts) {
-  const buckets = new Array(cuts.length + 1).fill(0)
-  for (const v of values) {
-    const x = typeof v === 'number' && isFinite(v) ? v : 0
-    let i = 0
-    while (i < cuts.length && x >= cuts[i]) i++
-    buckets[i]++
-  }
-  return buckets
-}
-
 /**
- * Pace percentile (higher = better).
- * Clamp away 0% / 100% when we have multiple players.
+ * Pace percentile: only meaningful if >=2 values.
  */
 function fasterThanPercentile(values, yourValue) {
   const vals = values.filter((x) => typeof x === 'number' && isFinite(x))
-  if (!vals.length || typeof yourValue !== 'number' || !isFinite(yourValue)) return null
+  if (vals.length < 2 || typeof yourValue !== 'number') return null
 
   const slower = vals.filter((x) => x > yourValue).length
   const equal = vals.filter((x) => x === yourValue).length
 
   const score = (slower + 0.5 * Math.max(0, equal - 1)) / vals.length
-
-  const raw = score * 100
-  const out = pct(raw)
-
-  if (vals.length >= 2) return clamp(out, 1, 99)
-  return out
+  return pct(score * 100)
 }
 
 async function trySelectAll(tableName, selectParams) {
@@ -91,65 +93,18 @@ function readField(f, keys, fallback = null) {
    Response Builder
 ====================================================== */
 
-function buildResponse({
-  dateKey,
-  totalPlayers,
-  totalAttempts,
-  avgCompletion,
-  avgAccuracy,
-  avgHints,
-  medianPaceSeconds,
-  countryLeaderboard,
-  yourCountryRank,
-  yourCountryAvgCompletion,
-  pacePercentileForUser,
-  accuracyBuckets,
-  completionBuckets,
-  outcomeCounts,
-  commonGuesses,
-  rareCorrect,
-  exitEarlyShare,
-}) {
-  const players = typeof totalPlayers === 'number' ? totalPlayers : 0
-
+function buildResponse(payload) {
   return {
-    dateKey,
+    ...payload,
 
-    totalPlayers: players,
-    totalAttempts: typeof totalAttempts === 'number' ? totalAttempts : null,
-    avgCompletion: typeof avgCompletion === 'number' ? pct(avgCompletion) : null,
-    avgAccuracy: typeof avgAccuracy === 'number' ? pct(avgAccuracy) : null,
-
-    yourCountryRank: typeof yourCountryRank === 'number' ? yourCountryRank : null,
-    yourCountryAvgCompletion:
-      typeof yourCountryAvgCompletion === 'number' ? pct(yourCountryAvgCompletion) : null,
-
-    pacePercentileForUser:
-      typeof pacePercentileForUser === 'number' ? pct(pacePercentileForUser) : null,
-
-    countryLeaderboard: Array.isArray(countryLeaderboard) ? countryLeaderboard : [],
+    commonGuesses: payload.commonGuesses || [],
+    rareCorrect: payload.rareCorrect || [],
 
     meta: {
-      players,
-      countries: Array.isArray(countryLeaderboard) ? countryLeaderboard.length : 0,
-      hasGlobal: players > 0,
-      hasCountryBoard: Array.isArray(countryLeaderboard) && countryLeaderboard.length > 0,
+      players: payload.totalPlayers || 0,
+      hasGlobal: (payload.totalPlayers || 0) > 0,
+      hasCountryBoard: (payload.countryLeaderboard || []).length > 0,
     },
-
-    distributions: {
-      accuracyBuckets,
-      completionBuckets,
-      outcomeCounts,
-    },
-
-    aggregates: {
-      avgHints,
-      medianPaceSeconds,
-    },
-
-    commonGuesses,
-    rareCorrect,
-    exitEarlyShare,
   }
 }
 
@@ -167,32 +122,7 @@ export default async function handler(req, res) {
     const userCountry = normalise(country || '')
 
     /* ============================================================
-       PATH A — DailyAggregates + Region/Country tables
-    ============================================================ */
-
-    const aggRows = await base('DailyAggregates')
-      .select({
-        maxRecords: 1,
-        filterByFormula: `{DateKey} = '${dateKey}'`,
-        sort: [{ field: 'GeneratedAt', direction: 'desc' }],
-      })
-      .all()
-
-    const countryRows =
-      (await trySelectAll('DailyCountryStats', {
-        maxRecords: 200,
-        filterByFormula: `{DateKey}='${dateKey}'`,
-        sort: [{ field: 'Players', direction: 'desc' }],
-      })) ||
-      (await trySelectAll('DailyRegionStats', {
-        maxRecords: 200,
-        filterByFormula: `{DateKey}='${dateKey}'`,
-        sort: [{ field: 'Players', direction: 'desc' }],
-      })) ||
-      []
-
-    /* ============================================================
-       COMMON / RARE / EXIT — computed from UserAnswers ALWAYS
+       Load UserAnswers for culture / rare / exit logic
     ============================================================ */
 
     const uaRows = await base('UserAnswers')
@@ -202,40 +132,58 @@ export default async function handler(req, res) {
       })
       .all()
 
-    const playersSet = new Set()
-    const perUserGuessSet = new Map()
-    const outcomeCounts = {}
-
-    let correctAnswersList = null
+    const perUserGuesses = new Map()
+    const perUserCorrect = new Map()
+    const perUserSuccess = new Map()
+    const perUserTimes = new Map()
 
     for (const r of uaRows) {
       const f = r.fields || {}
       const uid = String(f.UserID || '')
       if (!uid) continue
 
-      playersSet.add(uid)
-
-      const resKey = String(f.Result || '').toLowerCase()
-      outcomeCounts[resKey] = (outcomeCounts[resKey] || 0) + 1
-
-      if (!perUserGuessSet.has(uid)) perUserGuessSet.set(uid, new Set())
+      if (!perUserGuesses.has(uid)) {
+        perUserGuesses.set(uid, new Set())
+        perUserCorrect.set(uid, new Set())
+        perUserSuccess.set(uid, false)
+        perUserTimes.set(uid, [])
+      }
 
       for (const a of safeJsonArray(f.AnswersJSON)) {
-        const k = normalise(a)
-        if (k) perUserGuessSet.get(uid).add(k)
+        const n = normalise(a)
+        if (n) perUserGuesses.get(uid).add(n)
       }
 
-      const ca = safeJsonArray(f.CorrectAnswersJSON)
-      if (ca.length && (!correctAnswersList || ca.length > correctAnswersList.length)) {
-        correctAnswersList = ca
+      for (const c of safeJsonArray(f.CorrectAnswersJSON)) {
+        const n = normalise(c)
+        if (n) perUserCorrect.get(uid).add(n)
       }
+
+      if (f.Result === 'success') perUserSuccess.set(uid, true)
+
+      if (f.CreatedAt) perUserTimes.get(uid).push(new Date(f.CreatedAt))
     }
 
-    const totalPlayersFromUA = playersSet.size
+    const totalPlayersFromUA = perUserGuesses.size
+
+    /* -------- Exit Early -------- */
+
+    let exitEarlyCount = 0
+    for (const [uid, success] of perUserSuccess.entries()) {
+      if (!success) exitEarlyCount++
+    }
+
+    const exitEarlyShare =
+      totalPlayersFromUA > 0 ? pct((exitEarlyCount / totalPlayersFromUA) * 100) : null
+
+    /* -------- Common / Rare -------- */
 
     const guessCounts = new Map()
-    for (const [, set] of perUserGuessSet) {
-      for (const g of set) guessCounts.set(g, (guessCounts.get(g) || 0) + 1)
+
+    for (const set of perUserGuesses.values()) {
+      for (const g of set) {
+        guessCounts.set(g, (guessCounts.get(g) || 0) + 1)
+      }
     }
 
     const commonGuesses = [...guessCounts.entries()]
@@ -246,27 +194,36 @@ export default async function handler(req, res) {
         pct: totalPlayersFromUA ? pct((n / totalPlayersFromUA) * 100) : 0,
       }))
 
-    const correctSet = new Set((correctAnswersList || []).map((x) => normalise(x)).filter(Boolean))
+    const correctUnion = new Set()
+    for (const set of perUserCorrect.values()) {
+      for (const v of set) correctUnion.add(v)
+    }
 
-    const rareCorrect = [...correctSet]
-      .map((ans) => {
-        const n = guessCounts.get(ans) || 0
-        return {
-          answer: ans,
-          pct: totalPlayersFromUA ? pct((n / totalPlayersFromUA) * 100) : 0,
-        }
-      })
+    const rareCorrect = [...correctUnion]
+      .map((ans) => ({
+        answer: ans,
+        pct: totalPlayersFromUA ? pct(((guessCounts.get(ans) || 0) / totalPlayersFromUA) * 100) : 0,
+      }))
       .sort((a, b) => a.pct - b.pct)
       .slice(0, 8)
 
-    const exitEarlyShare =
-      totalPlayersFromUA && outcomeCounts['exit-early']
-        ? pct((outcomeCounts['exit-early'] / totalPlayersFromUA) * 100)
-        : null
-
     /* ============================================================
-       PATH A RETURN
+       PATH A — Aggregates tables
     ============================================================ */
+
+    const aggRows = await base('DailyAggregates')
+      .select({
+        maxRecords: 1,
+        filterByFormula: `{DateKey}='${dateKey}'`,
+        sort: [{ field: 'GeneratedAt', direction: 'desc' }],
+      })
+      .all()
+
+    const countryRows =
+      (await trySelectAll('DailyCountryStats', {
+        maxRecords: 200,
+        filterByFormula: `{DateKey}='${dateKey}'`,
+      })) || []
 
     if (aggRows.length) {
       const f = aggRows[0].fields || {}
@@ -287,23 +244,13 @@ export default async function handler(req, res) {
 
           return {
             country: code,
-            name: code,
+            name: countryName(code),
             users,
             value: pct(value),
           }
         })
+        .sort((a, b) => b.value - a.value)
         .slice(0, 10)
-
-      let yourCountryRank = null
-      let yourCountryAvgCompletion = null
-
-      if (userCountry) {
-        const idx = countryLeaderboard.findIndex((x) => x.country === userCountry)
-        if (idx !== -1) {
-          yourCountryRank = idx + 1
-          yourCountryAvgCompletion = countryLeaderboard[idx].value
-        }
-      }
 
       return res.status(200).json(
         buildResponse({
@@ -315,12 +262,11 @@ export default async function handler(req, res) {
           avgHints,
           medianPaceSeconds,
           countryLeaderboard,
-          yourCountryRank,
-          yourCountryAvgCompletion,
+          yourCountryRank: null,
+          yourCountryAvgCompletion: null,
           pacePercentileForUser: null,
           accuracyBuckets: null,
           completionBuckets: null,
-          outcomeCounts,
           commonGuesses,
           rareCorrect,
           exitEarlyShare,
@@ -329,7 +275,7 @@ export default async function handler(req, res) {
     }
 
     /* ============================================================
-       PATH B — fallback still works
+       PATH B — fallback
     ============================================================ */
 
     return res.status(200).json(
@@ -347,7 +293,6 @@ export default async function handler(req, res) {
         pacePercentileForUser: null,
         accuracyBuckets: null,
         completionBuckets: null,
-        outcomeCounts,
         commonGuesses,
         rareCorrect,
         exitEarlyShare,
