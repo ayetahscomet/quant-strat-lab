@@ -229,6 +229,24 @@ import {
 import { onUnmounted } from 'vue'
 import { countryAliases } from '@/data/countryAliases'
 import { registerPush } from '@/push/registerPush'
+import { useHead } from '@vueuse/head'
+
+useHead({
+  title: 'Akinto Play – Today’s Global Knowledge Puzzle',
+  meta: [
+    {
+      name: 'description',
+      content:
+        'Play today’s Akinto puzzle and test your global knowledge. One daily question. Compare your thinking with players worldwide.',
+    },
+  ],
+  link: [
+    {
+      rel: 'canonical',
+      href: 'https://akinto.io/play',
+    },
+  ],
+})
 
 /* ======================================================
    CORE GAME STATE

@@ -120,6 +120,24 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { countries } from '../data/countries.js'
+import { useHead } from '@vueuse/head'
+
+useHead({
+  title: 'Akinto – The Global Daily Knowledge Game',
+  meta: [
+    {
+      name: 'description',
+      content:
+        'Akinto is a daily global knowledge puzzle where players worldwide explore geography, culture and global thinking together.',
+    },
+  ],
+  link: [
+    {
+      rel: 'canonical',
+      href: 'https://akinto.io/',
+    },
+  ],
+})
 
 const router = useRouter()
 const seoHero = ref(null)
