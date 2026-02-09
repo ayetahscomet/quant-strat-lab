@@ -295,8 +295,8 @@ export default async function handler(req, res) {
       AttemptsUsed: attempts.length,
       HintCount: hintCount,
 
-      AvgAccuracy: pct(mean(ps.map((x) => x.Accuracy || 0))),
-      AvgCompletion: pct(mean(ps.map((x) => x.Completion || 0))),
+      Accuracy: accuracy,
+      Completion: completion,
 
       SolveSeconds: solveSeconds,
       DistinctAnswers: submitted.size,
@@ -353,9 +353,9 @@ export default async function handler(req, res) {
       Region: region,
       Players: players,
       AvgHints: avg(ps.map((x) => x.HintCount || 0)),
-      AvgAccuracy: avg(ps.map((x) => x.Accuracy || 0)),
+      AvgAccuracy: accuracy,
       AvgSolveSeconds: avg(ps.map((x) => (Number.isFinite(x.SolveSeconds) ? x.SolveSeconds : 0))),
-      AvgCompletion: avg(ps.map((x) => x.Completion || 0)),
+      AvgCompletion: completion,
       ShareOfPlayers: totalPlayers ? players / totalPlayers : 0,
       GeneratedAt: new Date().toISOString(),
     }
