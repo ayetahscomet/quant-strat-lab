@@ -1,4 +1,5 @@
 <template>
+  <link rel="canonical" href="https://akinto.io/" />
   <div class="legal-page">
     <h1>Privacy Policy</h1>
 

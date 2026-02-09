@@ -1,4 +1,6 @@
 <template>
+  <link rel="canonical" href="https://akinto.io/" />
+
   <transition name="screen-fade" mode="out-in">
     <!-- ===========================
          GAMEPLAY VIEW

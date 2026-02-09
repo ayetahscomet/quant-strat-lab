@@ -1,4 +1,5 @@
 <template>
+  <link rel="canonical" href="https://akinto.io/" />
   <div class="analytics-wrapper" :class="{ loading: isLoading }">
     <!-- ==========================
          🖤 LEFT — PERSONAL (42%)

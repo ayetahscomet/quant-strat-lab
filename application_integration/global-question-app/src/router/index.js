@@ -9,10 +9,43 @@ import Cookies from '@/pages/Cookies.vue'
 export default createRouter({
   history: createWebHistory('/'),
   routes: [
-    { path: '/', name: 'Home', component: LandingView },
-    { path: '/play', name: 'Play', component: Play },
-    { path: '/analytics', name: 'Analytics', component: DailyAnalytics },
-    { path: '/privacy', component: Privacy },
-    { path: '/cookies', component: Cookies },
+    {
+      path: '/',
+      name: 'Home',
+      component: LandingView,
+      meta: {
+        title: 'Akinto – The Global Daily Knowledge Game',
+      },
+    },
+    {
+      path: '/play',
+      name: 'Play',
+      component: Play,
+      meta: {
+        title: 'Akinto Play – Today’s Global Knowledge Puzzle',
+      },
+    },
+    {
+      path: '/analytics',
+      name: 'Analytics',
+      component: DailyAnalytics,
+      meta: {
+        title: 'Akinto Analytics – Global Thinking Patterns',
+      },
+    },
+    {
+      path: '/privacy',
+      component: Privacy,
+      meta: {
+        title: 'Privacy Policy – Akinto',
+      },
+    },
+    {
+      path: '/cookies',
+      component: Cookies,
+      meta: {
+        title: 'Cookies Policy – Akinto',
+      },
+    },
   ],
 })
