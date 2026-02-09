@@ -353,9 +353,9 @@ export default async function handler(req, res) {
       Region: region,
       Players: players,
       AvgHints: avg(ps.map((x) => x.HintCount || 0)),
-      AvgAccuracy: accuracy,
+      AvgAccuracy: avg(ps.map((x) => x.Accuracy || 0)),
       AvgSolveSeconds: avg(ps.map((x) => (Number.isFinite(x.SolveSeconds) ? x.SolveSeconds : 0))),
-      AvgCompletion: completion,
+      AvgCompletion: avg(ps.map((x) => x.Completion || 0)),
       ShareOfPlayers: totalPlayers ? players / totalPlayers : 0,
       GeneratedAt: new Date().toISOString(),
     }
