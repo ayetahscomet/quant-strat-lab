@@ -1,4 +1,5 @@
 // /api/cron/daily-push.js
+
 import { base } from '../../lib/airtable.js'
 import { pickDateKey } from '../../lib/dateKey.js'
 
@@ -13,10 +14,16 @@ function isAuthorised(req) {
 
   const headerSecret = req.headers.authorization
   const querySecret = req.query?.secret ? `Bearer ${req.query.secret}` : null
-  const expected = `Bearer ${process.env.CRON_SECRET || ''}`
+  const expected = `Bearer ${process.env.CRON_SECRET || 'akinto-to-the-moon'}`
 
-  // Allow Vercel Cron without secrets; allow manual runs with header OR query secret
   return isVercelCron || headerSecret === expected || querySecret === expected
+}
+
+// simple YYYY-MM-DD diff
+function diffDays(a, b) {
+  const d1 = new Date(a + 'T00:00:00Z')
+  const d2 = new Date(b + 'T00:00:00Z')
+  return Math.floor((d1 - d2) / 86400000)
 }
 
 export default async function handler(req, res) {
@@ -33,21 +40,28 @@ export default async function handler(req, res) {
   console.log('🔔 Push generation:', dateKey)
 
   const users = await base('Users').select({ maxRecords: 5000 }).all()
+
   const pushes = []
 
   for (const r of users) {
     const u = r.fields
-    if (!u.LastPlayedDate) continue
 
-    const inactiveDays = Math.floor((new Date(dateKey) - new Date(u.LastPlayedDate)) / 86400000)
+    const lastKey = u.LastPlayedDateKey || u.LastPlayedDate
+
+    if (!lastKey) {
+      console.log('[PUSH] skip user', u.UserID, 'no LastPlayedDateKey')
+      continue
+    }
+
+    const inactiveDays = diffDays(dateKey, lastKey)
 
     let type = null
 
-    if (u.CurrentStreak >= 10) type = 'high-streak'
-    else if (u.CurrentStreak >= 3 && inactiveDays >= 1) type = 'streak-risk'
-    else if (u.TotalDaysPlayed === 1) type = 'new-user'
+    if ((u.CurrentStreak || 0) >= 10) type = 'high-streak'
+    else if ((u.CurrentStreak || 0) >= 3 && inactiveDays >= 1) type = 'streak-risk'
+    else if ((u.TotalDaysPlayed || 0) === 1) type = 'new-user'
     else if (inactiveDays >= 5) type = 're-engage'
-    else if (inactiveDays === 0 && u.CurrentStreak >= 2) type = 'returning-today'
+    else if (inactiveDays === 0 && (u.CurrentStreak || 0) >= 2) type = 'returning-today'
 
     if (!type) continue
 
@@ -69,7 +83,10 @@ export default async function handler(req, res) {
     })
   }
 
-  // De-dupe for the day (UserID + Type)
+  // =============================
+  // DE-DUPE
+  // =============================
+
   const existing = await base('PushQueue')
     .select({
       maxRecords: 5000,
@@ -78,11 +95,14 @@ export default async function handler(req, res) {
     .all()
 
   const keys = new Set(existing.map((r) => `${r.fields.UserID}::${r.fields.Type}`))
+
   const finalPushes = pushes.filter((p) => !keys.has(`${p.fields.UserID}::${p.fields.Type}`))
 
   if (finalPushes.length) {
     await createInBatches('PushQueue', finalPushes)
   }
+
+  console.log('[PUSH]', pushes.length, 'candidates', finalPushes.length, 'queued')
 
   return res.status(200).json({
     ok: true,

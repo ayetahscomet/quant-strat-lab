@@ -11,6 +11,10 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY,
 )
 
+/* =====================================================
+   Time helpers
+===================================================== */
+
 function getLocalTime(tz) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: tz,
@@ -24,6 +28,18 @@ function getLocalTime(tz) {
 
   return { hour, minute }
 }
+
+function hhmmToMinutes(hhmm) {
+  const [h, m] = String(hhmm || '00:00')
+    .split(':')
+    .map(Number)
+
+  return (Number(h) || 0) * 60 + (Number(m) || 0)
+}
+
+/* =====================================================
+   Handler
+===================================================== */
 
 export default async function handler(req, res) {
   const isCron = req.headers['x-vercel-cron'] === '1'
@@ -45,37 +61,42 @@ export default async function handler(req, res) {
 
   let pushed = 0
 
+  // Cron runs every 5 mins so allow a little buffer
+  const GRACE_MINS = 6
+
   for (const r of records) {
     try {
       const raw = r.get('SubscriptionJSON')
       if (!raw) continue
 
       const sub = JSON.parse(raw)
+
       const tz = r.get('Timezone') || 'UTC'
       console.log('[WINDOW PUSH] sub tz:', tz)
 
       const { hour, minute } = getLocalTime(tz)
+
+      const nowMins = hour * 60 + minute
       const hhmm = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
 
-      console.log('[WINDOW PUSH] check', {
-        tz,
-        hhmm,
-      })
+      console.log('[WINDOW PUSH] check', { tz, hhmm })
 
+      // 🔥 Find window inside grace period
       const win = WINDOWS.find((w) => {
-        const [h, m] = w.start.split(':').map(Number)
-        return hour === h && minute >= m && minute < m + 5 // 5-min firing window
+        const startMins = hhmmToMinutes(w.start)
+        const diff = nowMins - startMins
+        return diff >= 0 && diff < GRACE_MINS
       })
 
       if (!win) {
-        console.log('[WINDOW PUSH] no window match for', hhmm)
+        console.log('[WINDOW PUSH] no window match for', hhmm, 'tz:', tz)
         continue
       }
 
       const todayKey = dateKeyToday(tz)
-
       const pushKey = `${todayKey}_${win.id}`
 
+      // prevent duplicates
       if (r.get('LastPushedKey') === pushKey) continue
 
       await webpush.sendNotification(
@@ -85,7 +106,7 @@ export default async function handler(req, res) {
           body: `Your ${win.label} window just started.`,
           icon: '/push-icon.png',
 
-          // ✅ flattened for service worker
+          // flattened for service worker
           url: 'https://akinto.io/play',
           windowId: win.id,
         }),
@@ -101,6 +122,7 @@ export default async function handler(req, res) {
     } catch (err) {
       console.warn('[WINDOW PUSH] failed:', err.statusCode || err.message)
 
+      // expired subscription → delete
       if (err.statusCode === 404 || err.statusCode === 410) {
         await base('PushSubscriptions').destroy(r.id)
       }
