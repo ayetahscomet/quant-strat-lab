@@ -114,4 +114,24 @@ import ConsentBanner from '@/components/ConsentBanner.vue'
   max-width: 90vw;
   white-space: nowrap;
 }
+
+/* ============================
+   TRUST FOOTER COLOR MODES
+============================ */
+
+/* default = light background */
+.trust-footer {
+  color: #111;
+  opacity: 0.85;
+}
+
+/* when page is dark */
+body.dark-bg .trust-footer {
+  color: #f2f2f2;
+  opacity: 0.9;
+}
+
+body.dark-bg .trust-footer a {
+  color: #ffffff;
+}
 </style>

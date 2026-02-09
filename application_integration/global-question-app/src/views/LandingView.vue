@@ -60,6 +60,60 @@
       <p class="micro" v-if="country">You can change this any time.</p>
     </div>
   </div>
+
+  <!-- SEO / HERO SCROLL SECTION -->
+  <section class="seo-hero" ref="seoHero">
+    <div class="seo-inner">
+      <header class="seo-head">
+        <h2>Akinto — The Global Daily Knowledge Game</h2>
+        <p class="seo-sub">A high-value habit for global literacy.</p>
+      </header>
+
+      <p class="seo-lead">
+        Akinto aims to become a benchmark app for global literacy and a place where curiosity forms
+        daily while a worldwide community grows around thoughtful exploration.
+      </p>
+
+      <p class="seo-lead">
+        What some call facts, we call globally common knowledge. Each day presents one carefully
+        designed question that rewards reflection over immediate correctness and shows how people
+        across countries approached the same challenge.
+      </p>
+
+      <div class="seo-cols">
+        <div class="seo-col">
+          <h3>How it works</h3>
+          <ul>
+            <li>🌍 One daily question that becomes a high-value habit</li>
+            <li>🧠 Reflective thought over immediate correctness</li>
+            <li>📊 Compare how the world thinks</li>
+            <li>🔔 Get notified when new windows open</li>
+            <li>🌱 Knowledge is not restricted. The mission is global accessibility.</li>
+          </ul>
+        </div>
+
+        <div class="seo-col">
+          <h3>Our learning philosophy</h3>
+          <p>Akinto is guided by simple principles:</p>
+          <ul>
+            <li>Discovery over memorisation</li>
+            <li>Curiosity over competition</li>
+            <li>Global perspective over narrow local knowledge</li>
+            <li>Simple, reflective and rooted in genuine exploration</li>
+          </ul>
+        </div>
+
+        <div class="seo-col seo-cta">
+          <h3>Join today</h3>
+          <p>
+            Become part of a global community built on curiosity and return each day to sharpen your
+            view of the world.
+          </p>
+          <button class="seo-play" @click="goToGame">Play today’s puzzle</button>
+        </div>
+      </div>
+    </div>
+  </section>
 </template>
 
 <script setup>
@@ -68,6 +122,8 @@ import { useRouter } from 'vue-router'
 import { countries } from '../data/countries.js'
 
 const router = useRouter()
+const seoHero = ref(null)
+let seoObserver = null
 
 /**
  * Single source of truth:
@@ -165,10 +221,32 @@ onMounted(() => {
   if (existing) country.value = normaliseCode(existing)
 
   window.addEventListener('keydown', handleLandingKey)
+  // Toggle footer colour when SEO section enters view
+  seoObserver = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting) {
+        document.body.classList.add('dark-bg')
+      } else {
+        document.body.classList.remove('dark-bg')
+      }
+    },
+    {
+      threshold: 0.2,
+    },
+  )
+
+  if (seoHero.value) {
+    seoObserver.observe(seoHero.value)
+  }
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleLandingKey)
+  if (seoObserver && seoHero.value) {
+    seoObserver.unobserve(seoHero.value)
+  }
+
+  document.body.classList.remove('dark-bg')
 })
 </script>
 
@@ -389,6 +467,103 @@ onBeforeUnmount(() => {
   margin-top: 12px;
   font-size: 12px;
   opacity: 0.55;
+}
+
+/* ================================
+   SEO HERO SCROLL SECTION
+================================ */
+
+.seo-hero {
+  width: 100%;
+  background: #000;
+  color: #fff;
+  padding: 120px 24px 140px;
+}
+
+.seo-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.seo-head h2 {
+  font-size: 44px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.seo-sub {
+  margin-top: 12px;
+  font-size: 18px;
+  opacity: 0.7;
+}
+
+.seo-lead {
+  max-width: 760px;
+  margin-top: 36px;
+  font-size: 19px;
+  line-height: 1.6;
+  opacity: 0.85;
+}
+
+.seo-cols {
+  margin-top: 70px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 42px;
+}
+
+.seo-col h3 {
+  font-size: 20px;
+  margin-bottom: 16px;
+}
+
+.seo-col p {
+  font-size: 15px;
+  line-height: 1.6;
+  opacity: 0.8;
+}
+
+.seo-col ul {
+  padding-left: 18px;
+}
+
+.seo-col li {
+  margin-bottom: 10px;
+  font-size: 15px;
+}
+
+.seo-cta {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 28px;
+  border-radius: 18px;
+}
+
+.seo-play {
+  margin-top: 20px;
+  padding: 12px 30px;
+  background: white;
+  color: black;
+  border-radius: 10px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+.seo-play:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .seo-cols {
+    grid-template-columns: 1fr;
+  }
+
+  .seo-head h2 {
+    font-size: 34px;
+  }
 }
 
 /* Animation */
