@@ -296,7 +296,7 @@ const topCountries = computed(() => {
 .logo {
   width: 74px;
   height: 74px;
-  border-radius: 14px; /* square-ish */
+  border-radius: 8px; /* square-ish */
   outline: 2px solid rgba(255, 255, 255, 0.9); /* white outline */
   outline-offset: 0px;
 }
@@ -380,7 +380,7 @@ const topCountries = computed(() => {
 }
 
 .value {
-  font-size: 56px; /* reduced (was too huge) */
+  font-size: 40px;
   font-weight: 950;
   margin-top: 10px;
   letter-spacing: -0.8px;

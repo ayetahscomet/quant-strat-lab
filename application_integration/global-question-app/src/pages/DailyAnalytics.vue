@@ -216,37 +216,40 @@
   </div>
 
   <!-- SHARE OVERLAY -->
-  <div v-if="shareOpen" class="share-overlay" @click.self="closeShareOverlay">
-    <div class="share-modal">
-      <button class="share-close" @click="closeShareOverlay">✕</button>
+  <Transition name="share-sheet" appear>
+    <div v-if="shareOpen" class="share-overlay" @click.self="closeShareOverlay">
+      <div class="share-modal" role="dialog" aria-modal="true" aria-label="Share results">
+        <button class="share-close" @click="closeShareOverlay" aria-label="Close">✕</button>
 
-      <!-- LIVE ShareCard -->
-      <ShareCard
-        ref="liveShareCardRef"
-        :date="personal.dateKey"
-        :completion="displayCompletion"
-        :accuracy="displayAccuracy"
-        :pace="
-          typeof personal.pacePercentile === 'number'
-            ? displaySpeed + '%'
-            : personal.paceSeconds
-              ? Math.max(1, Math.round(personal.paceSeconds / 60)) + 'm'
-              : '—'
-        "
-        :country="personal.countryName"
-        :leaderboard="global.countryLeaderboard?.slice(0, 3)"
-      />
+        <!-- LIVE ShareCard -->
+        <ShareCard
+          ref="liveShareCardRef"
+          :date="personal.dateKey"
+          :completion="displayCompletion"
+          :accuracy="displayAccuracy"
+          :pace="
+            typeof personal.pacePercentile === 'number'
+              ? displaySpeed + '%'
+              : personal.paceSeconds
+                ? Math.max(1, Math.round(personal.paceSeconds / 60)) + 'm'
+                : '—'
+          "
+          :completionReason="personal.completionReason"
+          :countryName="personal.countryName"
+          :global="global"
+        />
 
-      <!-- SOCIAL BUTTON ROW -->
-      <div class="share-actions">
-        <button @click="shareToTwitter">X</button>
-        <button @click="shareToFacebook">Facebook</button>
-        <button @click="shareToWhatsApp">WhatsApp</button>
-        <button @click="shareToLinkedIn">LinkedIn</button>
-        <button @click="downloadImage">Download</button>
+        <!-- SOCIAL BUTTON ROW -->
+        <div class="share-actions">
+          <button class="share-pill" @click="shareToTwitter">X</button>
+          <button class="share-pill" @click="shareToFacebook">Facebook</button>
+          <button class="share-pill" @click="shareToWhatsApp">WhatsApp</button>
+          <button class="share-pill" @click="shareToLinkedIn">LinkedIn</button>
+          <button class="share-pill share-primary" @click="downloadImage">Download</button>
+        </div>
       </div>
     </div>
-  </div>
+  </Transition>
 </template>
 
 <script setup>
@@ -1634,13 +1637,19 @@ function derivePersonalFromUserDailyProfile(payload) {
   // COMPLETION LOGIC
   // -----------------------------
 
+  if (!totalSlots || totalSlots <= 0) {
+    computedCompletion = 0
+    completionReason = 'minimal'
+  }
+
   let computedCompletion = 0
   let completionReason = 'minimal'
 
   const solved = totalSlots > 0 && computedUniqueCorrect >= totalSlots
 
   const reachedFinalWindow =
-    attemptsByWindow['last'] > 0 || attemptsByWindow['7'] > 0 || windowsPlayed === WINDOWS_PER_DAY
+    windowsPlayed === WINDOWS_PER_DAY ||
+    Object.keys(attemptsByWindow).includes(String(WINDOWS_PER_DAY))
 
   const meaningfulPlay = windowsPlayed >= 3
 
@@ -1662,12 +1671,10 @@ function derivePersonalFromUserDailyProfile(payload) {
   // ACCURACY LOGIC (STRUCTURAL)
   // -----------------------------
 
-  const totalAvailableAttempts = windowsPlayed * ATTEMPTS_PER_WINDOW
+  const totalAttemptCount = attempts.length
 
   const computedAccuracy =
-    totalAvailableAttempts > 0
-      ? Math.round((computedUniqueCorrect / totalAvailableAttempts) * 100)
-      : 0
+    totalAttemptCount > 0 ? Math.round((computedUniqueCorrect / totalAttemptCount) * 100) : 0
 
   // -----------------------------
   // Pace logic (only meaningful if solved)
@@ -1826,6 +1833,7 @@ async function fetchPersonalAnalytics() {
 }
 
 async function fetchGlobalAnalytics() {
+  console.log('Global payload:', g)
   const res = await fetch('/api/load-global-analytics', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1897,25 +1905,77 @@ async function generateShareImage() {
   })
 }
 
+async function tryNativeShare(blob) {
+  try {
+    const file = new File([blob], 'akinto-results.png', {
+      type: 'image/png',
+    })
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: 'Akinto Results',
+        text: `I scored ${displayCompletion.value}% on Akinto.`,
+        url: 'https://akinto.io',
+      })
+      return true
+    }
+  } catch (e) {
+    console.warn('Native share failed:', e)
+  }
+
+  return false
+}
+
 async function shareToTwitter() {
-  const text = `My Akinto results — ${displayCompletion.value}% completion.`
+  const blob = await generateShareImage()
+
+  const usedNative = await tryNativeShare(blob)
+  if (usedNative) return
+
+  const text = `I scored ${displayCompletion.value}% on Akinto today.`
+  const url = 'https://akinto.io'
+
   window.open(
-    `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=https://akinto.io`,
+    `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
     '_blank',
   )
 }
 
-function shareToFacebook() {
-  window.open(`https://www.facebook.com/sharer/sharer.php?u=https://akinto.io`, '_blank')
+async function shareToFacebook() {
+  const blob = await generateShareImage()
+
+  const usedNative = await tryNativeShare(blob)
+  if (usedNative) return
+
+  const url = 'https://akinto.io'
+
+  window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank')
 }
 
-function shareToWhatsApp() {
-  const text = `My Akinto results: ${displayCompletion.value}% completion https://akinto.io`
-  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`)
+async function shareToWhatsApp() {
+  const blob = await generateShareImage()
+
+  const usedNative = await tryNativeShare(blob)
+  if (usedNative) return
+
+  const text = `I scored ${displayCompletion.value}% on Akinto today. https://akinto.io`
+
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
 }
 
-function shareToLinkedIn() {
-  window.open(`https://www.linkedin.com/sharing/share-offsite/?url=https://akinto.io`, '_blank')
+async function shareToLinkedIn() {
+  const blob = await generateShareImage()
+
+  const usedNative = await tryNativeShare(blob)
+  if (usedNative) return
+
+  const url = 'https://akinto.io'
+
+  window.open(
+    `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+    '_blank',
+  )
 }
 
 async function downloadImage() {
@@ -2651,25 +2711,38 @@ const completionSubline = computed(() => {
 .share-overlay {
   position: fixed;
   inset: 0;
-  backdrop-filter: blur(14px);
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 9999;
+
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  display: grid;
+  place-items: center;
+
+  overscroll-behavior: contain;
 }
 
 .share-modal {
-  background: #111;
-  padding: 30px;
-  border-radius: 26px;
-  width: 900px;
-  max-width: 100%;
+  width: min(920px, calc(100vw - 28px));
+  max-height: min(92vh, 920px);
+  border-radius: 28px;
+  padding: 22px 22px 18px;
   position: relative;
-  animation: popUp 0.25s ease;
+  background: rgba(17, 17, 17, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 40px 90px rgba(0, 0, 0, 0.55),
+    0 10px 30px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 16px;
+  transform-origin: center;
+  will-change: transform, opacity, filter;
 }
 
 .share-modal > * {
@@ -2684,22 +2757,38 @@ const completionSubline = computed(() => {
 .share-close {
   position: absolute;
   top: 14px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
+  right: 14px;
+
+  width: 36px;
+  height: 36px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.06);
-  color: white;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+
   cursor: pointer;
+  display: grid;
+  place-items: center;
+
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.share-close:hover {
+  transform: scale(1.06);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .share-actions {
-  margin-top: 24px;
+  width: 100%;
   display: flex;
-  gap: 14px;
+  gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
+  padding: 4px 2px 2px;
 }
 
 .share-actions button {
@@ -2716,6 +2805,103 @@ const completionSubline = computed(() => {
 .share-actions button:hover {
   background: white;
   color: black;
+}
+
+.share-pill {
+  appearance: none;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 750;
+  cursor: pointer;
+
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.share-pill:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.share-pill:active {
+  transform: translateY(0px) scale(0.99);
+  opacity: 0.96;
+}
+
+.share-primary {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+/* Transformations and Transitions */
+
+.g-block,
+.personal-card,
+.stat-card,
+.hero-box {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.g-block:hover,
+.personal-card:hover,
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.share-sheet-enter-from,
+.share-sheet-leave-to {
+  opacity: 0;
+}
+
+.share-sheet-enter-active,
+.share-sheet-leave-active {
+  transition: opacity 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.share-sheet-enter-active .share-modal {
+  animation: shareModalIn 520ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
+}
+
+.share-sheet-leave-active .share-modal {
+  animation: shareModalOut 220ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes shareModalIn {
+  0% {
+    opacity: 0;
+    transform: translateY(28px) scale(0.94);
+    filter: blur(2px);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0px) scale(1);
+    filter: blur(0px);
+  }
+}
+
+@keyframes shareModalOut {
+  0% {
+    opacity: 1;
+    transform: translateY(0px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
 }
 
 @keyframes popUp {
@@ -2759,18 +2945,19 @@ const completionSubline = computed(() => {
   }
 }
 
-.g-block,
-.personal-card,
-.stat-card,
-.hero-box {
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
-}
-.g-block:hover,
-.personal-card:hover,
-.stat-card:hover {
-  transform: translateY(-2px);
+@media (prefers-reduced-motion: reduce) {
+  .share-sheet-enter-active,
+  .share-sheet-leave-active {
+    transition: none;
+  }
+  .share-sheet-enter-active .share-modal,
+  .share-sheet-leave-active .share-modal {
+    animation: none;
+  }
+  .share-pill,
+  .share-close {
+    transition: none;
+  }
 }
 
 @media (max-width: 720px) {
