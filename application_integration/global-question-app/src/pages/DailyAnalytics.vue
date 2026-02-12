@@ -202,27 +202,16 @@
       :date="personal.dateKey"
       :completion="displayCompletion"
       :accuracy="displayAccuracy"
-      :pace-text="
-        typeof personal.pacePercentile === 'number' && personal.pacePercentile > 5
-          ? `Top ${displaySpeed}% pace`
+      :pace="
+        typeof personal.pacePercentile === 'number'
+          ? displaySpeed + '%'
           : personal.paceSeconds
-            ? `${Math.max(1, Math.round(personal.paceSeconds / 60))}m`
+            ? Math.max(1, Math.round(personal.paceSeconds / 60)) + 'm'
             : '—'
       "
-      :pace-percentile="typeof personal.pacePercentile === 'number' ? displaySpeed : null"
-      :country-name="personal.countryName || null"
-      :total-players="typeof global.totalPlayers === 'number' ? global.totalPlayers : null"
-      :avg-completion="typeof global.avgCompletion === 'number' ? global.avgCompletion : null"
-      :avg-accuracy="typeof global.avgAccuracy === 'number' ? global.avgAccuracy : null"
-      :your-country-rank="
-        typeof global.yourCountryRank === 'number' ? global.yourCountryRank : null
-      "
-      :your-country-avg-completion="
-        typeof global.yourCountryAvgCompletion === 'number' ? global.yourCountryAvgCompletion : null
-      "
-      :country-leaderboard="
-        Array.isArray(global.countryLeaderboard) ? global.countryLeaderboard : []
-      "
+      :completionReason="personal.completionReason"
+      :countryName="personal.countryName"
+      :global="global"
     />
   </div>
 
@@ -1592,15 +1581,18 @@ function derivePersonalFromUserDailyProfile(payload) {
   const q = payload?.question || {}
   const attempts = Array.isArray(payload?.attempts) ? payload.attempts : []
 
-  // Percent fields (robust)
-  const pSpeed = normaliseAirtablePercent(prof.PercentileSpeed)
-  const pAcc = normaliseAirtablePercent(prof.PercentileAccuracy)
+  // -----------------------------
+  // STRUCTURAL CONSTANTS
+  // -----------------------------
+  const WINDOWS_PER_DAY = 7
+  const ATTEMPTS_PER_WINDOW = 3
+  const MAX_ATTEMPTS = WINDOWS_PER_DAY * ATTEMPTS_PER_WINDOW
 
-  let completion = normaliseAirtablePercent(prof.Completion)
-  let accuracy = normaliseAirtablePercent(prof.Accuracy)
-
+  // -----------------------------
   // Attempts-derived stats
+  // -----------------------------
   const uniqueSubmitted = new Set()
+  const uniqueCorrectSet = new Set()
   const attemptsByWindow = {}
   let duplicatePenalty = 0
 
@@ -1610,8 +1602,16 @@ function derivePersonalFromUserDailyProfile(payload) {
     for (const ans of rawAnswers) {
       if (!ans) continue
       const n = normalise(ans)
+
       if (uniqueSubmitted.has(n)) duplicatePenalty++
       uniqueSubmitted.add(n)
+    }
+
+    const correctAnswers = Array.isArray(a.correctAnswers) ? a.correctAnswers : []
+
+    for (const c of correctAnswers) {
+      const n = normalise(c)
+      if (n) uniqueCorrectSet.add(n)
     }
 
     if (a.windowId) {
@@ -1621,29 +1621,65 @@ function derivePersonalFromUserDailyProfile(payload) {
   }
 
   const submittedUnique = uniqueSubmitted.size
-
-  // Compute uniqueCorrect + accuracy from attempts
-  const uniqueCorrectSet = new Set()
-
-  for (const a of attempts) {
-    const ca = Array.isArray(a.correctAnswers) ? a.correctAnswers : []
-    for (const c of ca) {
-      const n = normalise(c)
-      if (n) uniqueCorrectSet.add(n)
-    }
-  }
-
   const computedUniqueCorrect = uniqueCorrectSet.size
-
-  if (submittedUnique > 0) {
-    accuracy = Math.round((computedUniqueCorrect / submittedUnique) * 100)
-  } else {
-    accuracy = 0
-  }
-
   const windowsPlayed = Object.keys(attemptsByWindow).length
 
-  // Country resolution
+  // -----------------------------
+  // Question Meta
+  // -----------------------------
+  const totalSlots = Number(q.answerCount) || 0
+  const totalPossible = Array.isArray(q.correctAnswers) ? q.correctAnswers.length : totalSlots
+
+  // -----------------------------
+  // COMPLETION LOGIC
+  // -----------------------------
+
+  let computedCompletion = 0
+  let completionReason = 'minimal'
+
+  const solved = totalSlots > 0 && computedUniqueCorrect >= totalSlots
+
+  const reachedFinalWindow =
+    attemptsByWindow['last'] > 0 || attemptsByWindow['7'] > 0 || windowsPlayed === WINDOWS_PER_DAY
+
+  const meaningfulPlay = windowsPlayed >= 3
+
+  if (solved) {
+    computedCompletion = 100
+    completionReason = 'solved'
+  } else if (!solved && meaningfulPlay && reachedFinalWindow) {
+    computedCompletion = 100
+    completionReason = 'persistence'
+  } else if (meaningfulPlay) {
+    computedCompletion = Math.round((computedUniqueCorrect / totalSlots) * 100)
+    completionReason = 'engaged'
+  } else {
+    computedCompletion = Math.round((computedUniqueCorrect / totalSlots) * 100)
+    completionReason = 'minimal'
+  }
+
+  // -----------------------------
+  // ACCURACY LOGIC (STRUCTURAL)
+  // -----------------------------
+
+  const totalAvailableAttempts = windowsPlayed * ATTEMPTS_PER_WINDOW
+
+  const computedAccuracy =
+    totalAvailableAttempts > 0
+      ? Math.round((computedUniqueCorrect / totalAvailableAttempts) * 100)
+      : 0
+
+  // -----------------------------
+  // Pace logic (only meaningful if solved)
+  // -----------------------------
+  const paceSeconds = solved ? (prof.SolveSeconds ?? null) : null
+
+  const pSpeed = normaliseAirtablePercent(prof.PercentileSpeed)
+  const pAcc = normaliseAirtablePercent(prof.PercentileAccuracy)
+
+  // -----------------------------
+  // Country Resolution
+  // -----------------------------
   const profileCountryCode =
     typeof prof.Country === 'string' && prof.Country.length ? prof.Country.toLowerCase() : null
 
@@ -1651,20 +1687,19 @@ function derivePersonalFromUserDailyProfile(payload) {
 
   const resolvedCountryName = countryNameFromCode(resolvedCountryCode)
 
-  // Question meta
-  const totalSlots = Number(q.answerCount) || 0
-  const totalPossible = Array.isArray(q.correctAnswers) ? q.correctAnswers.length : totalSlots
-
+  // -----------------------------
+  // FINAL PERSONAL OBJECT
+  // -----------------------------
   personal.value = {
     ...personal.value,
 
     totalSlots,
     _totalPossible: totalPossible,
 
-    attemptsTotal: Number(prof.AttemptsUsed) || attempts.length,
+    attemptsTotal: attempts.length,
     hintsUsed: Number(prof.HintCount) || 0,
 
-    uniqueCorrect: computedUniqueCorrect || Number(prof.DistinctAnswers) || 0,
+    uniqueCorrect: computedUniqueCorrect,
     rareAnswers: Number(prof.RareAnswers) || 0,
 
     submittedUnique,
@@ -1672,25 +1707,21 @@ function derivePersonalFromUserDailyProfile(payload) {
     windowsPlayed,
     _attemptsByWindow: attemptsByWindow,
 
-    completion:
-      Number(q.answerCount) > 0
-        ? Math.round(
-            (Math.min(computedUniqueCorrect, Number(q.answerCount)) / Number(q.answerCount)) * 100,
-          )
-        : (completion ?? 0),
-    accuracy: accuracy ?? 0,
+    completion: computedCompletion,
+    completionReason,
+    accuracy: computedAccuracy,
 
-    paceSeconds: prof.SolveSeconds ?? null,
-    pacePercentile: pSpeed ?? null,
+    paceSeconds,
+    pacePercentile: solved ? (pSpeed ?? null) : null,
     accuracyPercentile: pAcc ?? null,
 
     archetype: prof.Archetype ?? null,
-
     streakContinues: prof.StreakContinues ?? null,
     firstSolveToday: prof.FirstSolveToday ?? null,
 
     countryCode: resolvedCountryCode,
     countryName: resolvedCountryName,
+
     rareAnswersList: payload?.derived?.rareAnswersList || [],
   }
 }
@@ -1894,6 +1925,54 @@ async function downloadImage() {
   link.download = 'akinto-results.png'
   link.click()
 }
+
+defineProps({
+  date: String,
+  completion: Number,
+  accuracy: Number,
+  pace: String,
+  completionReason: String,
+  countryName: String,
+  global: Object,
+})
+
+const completionHeadline = computed(() => {
+  switch (props.completionReason) {
+    case 'solved':
+      return 'Perfect execution.'
+
+    case 'persistence':
+      return 'Full persistence.'
+
+    case 'engaged':
+      return 'Deep engagement.'
+
+    case 'minimal':
+      return 'Light exploration.'
+
+    default:
+      return ''
+  }
+})
+
+const completionSubline = computed(() => {
+  switch (props.completionReason) {
+    case 'solved':
+      return 'All required answers found.'
+
+    case 'persistence':
+      return 'Reached the final window. Most players don’t.'
+
+    case 'engaged':
+      return 'Strong participation across multiple windows.'
+
+    case 'minimal':
+      return 'Early interaction — tomorrow is wide open.'
+
+    default:
+      return ''
+  }
+})
 </script>
 
 <style scoped>
@@ -2585,7 +2664,7 @@ async function downloadImage() {
   padding: 30px;
   border-radius: 26px;
   width: 900px;
-  max-width: 94%;
+  max-width: 100%;
   position: relative;
   animation: popUp 0.25s ease;
   display: flex;

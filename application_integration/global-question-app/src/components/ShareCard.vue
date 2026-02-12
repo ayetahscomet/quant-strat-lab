@@ -37,6 +37,11 @@
       </div>
     </div>
 
+    <div class="completion-copy">
+      <div class="headline">{{ completionHeadline }}</div>
+      <div class="sub">{{ completionSubline }}</div>
+    </div>
+
     <!-- Brag strip -->
     <div class="brag">
       <div class="brag-left">
