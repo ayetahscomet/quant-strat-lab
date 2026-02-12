@@ -133,7 +133,7 @@
           <h1 class="g-title">The Global Mind.</h1>
           <p class="g-sub">{{ globalSubline }}</p>
         </div>
-        <button class="share-btn" @click="copyShareText" :disabled="!personalReady">
+        <button class="share-btn" @click="openShareOverlay" :disabled="!personalReady">
           {{ shareBtnLabel }}
         </button>
       </header>
@@ -194,6 +194,70 @@
       </div>
     </section>
   </div>
+  <!-- Hidden Share Card Render Target -->
+  <div class="share-render-target">
+    <ShareCard
+      v-if="personalReady"
+      ref="shareCardRef"
+      :date="personal.dateKey"
+      :completion="displayCompletion"
+      :accuracy="displayAccuracy"
+      :pace-text="
+        typeof personal.pacePercentile === 'number' && personal.pacePercentile > 5
+          ? `Top ${displaySpeed}% pace`
+          : personal.paceSeconds
+            ? `${Math.max(1, Math.round(personal.paceSeconds / 60))}m`
+            : '—'
+      "
+      :pace-percentile="typeof personal.pacePercentile === 'number' ? displaySpeed : null"
+      :country-name="personal.countryName || null"
+      :total-players="typeof global.totalPlayers === 'number' ? global.totalPlayers : null"
+      :avg-completion="typeof global.avgCompletion === 'number' ? global.avgCompletion : null"
+      :avg-accuracy="typeof global.avgAccuracy === 'number' ? global.avgAccuracy : null"
+      :your-country-rank="
+        typeof global.yourCountryRank === 'number' ? global.yourCountryRank : null
+      "
+      :your-country-avg-completion="
+        typeof global.yourCountryAvgCompletion === 'number' ? global.yourCountryAvgCompletion : null
+      "
+      :country-leaderboard="
+        Array.isArray(global.countryLeaderboard) ? global.countryLeaderboard : []
+      "
+    />
+  </div>
+
+  <!-- SHARE OVERLAY -->
+  <div v-if="shareOpen" class="share-overlay" @click.self="closeShareOverlay">
+    <div class="share-modal">
+      <button class="share-close" @click="closeShareOverlay">✕</button>
+
+      <!-- LIVE ShareCard -->
+      <ShareCard
+        ref="liveShareCardRef"
+        :date="personal.dateKey"
+        :completion="displayCompletion"
+        :accuracy="displayAccuracy"
+        :pace="
+          typeof personal.pacePercentile === 'number'
+            ? displaySpeed + '%'
+            : personal.paceSeconds
+              ? Math.max(1, Math.round(personal.paceSeconds / 60)) + 'm'
+              : '—'
+        "
+        :country="personal.countryName"
+        :leaderboard="global.countryLeaderboard?.slice(0, 3)"
+      />
+
+      <!-- SOCIAL BUTTON ROW -->
+      <div class="share-actions">
+        <button @click="shareToTwitter">X</button>
+        <button @click="shareToFacebook">Facebook</button>
+        <button @click="shareToWhatsApp">WhatsApp</button>
+        <button @click="shareToLinkedIn">LinkedIn</button>
+        <button @click="downloadImage">Download</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -204,6 +268,8 @@ import { useRouter } from 'vue-router'
 import { Chart } from 'chart.js/auto'
 import { countries } from '@/data/countries'
 import { getTimezone, todayKey } from '../utils/windows.js'
+import html2canvas from 'html2canvas'
+import ShareCard from '@/components/ShareCard.vue'
 
 /* String/Number Helper Functions  */
 
@@ -383,6 +449,9 @@ const personalChartCanvas = ref(null)
 const globalChartRefs = ref(new Map())
 const personalChartBlock = ref({ tag: '', title: '', caption: '', type: 'line' })
 const globalBlocks = ref([])
+const shareCardRef = ref(null)
+const shareOpen = ref(false)
+const liveShareCardRef = ref(null)
 
 /* Initial Statements of Required Constants (BLOCKS SET TO "NULL") */
 
@@ -1744,9 +1813,19 @@ const displaySpeed = computed(() =>
   typeof personal.value.pacePercentile === 'number' ? pct(personal.value.pacePercentile) : 55,
 )
 
-/* Share Features */
+/* ShareCard Features */
 
-const shareBtnLabel = ref('Copy Share Text')
+function openShareOverlay() {
+  shareOpen.value = true
+  document.body.classList.add('blur-active')
+}
+
+function closeShareOverlay() {
+  shareOpen.value = false
+  document.body.classList.remove('blur-active')
+}
+
+const shareBtnLabel = ref('Share Results')
 async function copyShareText() {
   if (!personalReady.value) return
 
@@ -1770,6 +1849,50 @@ async function copyShareText() {
     shareBtnLabel.value = 'Copy failed'
     setTimeout(() => (shareBtnLabel.value = 'Copy Share Text'), 1400)
   }
+}
+
+async function generateShareImage() {
+  await nextTick()
+
+  const el = liveShareCardRef.value.$el
+
+  const canvas = await html2canvas(el, {
+    scale: 3,
+    backgroundColor: null,
+  })
+
+  return new Promise((resolve) => {
+    canvas.toBlob(resolve, 'image/png')
+  })
+}
+
+async function shareToTwitter() {
+  const text = `My Akinto results — ${displayCompletion.value}% completion.`
+  window.open(
+    `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=https://akinto.io`,
+    '_blank',
+  )
+}
+
+function shareToFacebook() {
+  window.open(`https://www.facebook.com/sharer/sharer.php?u=https://akinto.io`, '_blank')
+}
+
+function shareToWhatsApp() {
+  const text = `My Akinto results: ${displayCompletion.value}% completion https://akinto.io`
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`)
+}
+
+function shareToLinkedIn() {
+  window.open(`https://www.linkedin.com/sharing/share-offsite/?url=https://akinto.io`, '_blank')
+}
+
+async function downloadImage() {
+  const blob = await generateShareImage()
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = 'akinto-results.png'
+  link.click()
 }
 </script>
 
@@ -2437,7 +2560,98 @@ async function copyShareText() {
   background: rgba(0, 0, 0, 0.06);
 }
 
+/* ShareCard Overlay Amendments */
+
+.share-render-target {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  pointer-events: none;
+}
+
+.share-overlay {
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(14px);
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.share-modal {
+  background: #111;
+  padding: 30px;
+  border-radius: 26px;
+  width: 900px;
+  max-width: 94%;
+  position: relative;
+  animation: popUp 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.share-modal > * {
+  max-width: 100%;
+}
+
+.share-modal .share-card-root {
+  width: 100%;
+  max-width: 820px;
+}
+
+.share-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  cursor: pointer;
+}
+
+.share-actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.share-actions button {
+  background: transparent;
+  color: white;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.share-actions button:hover {
+  background: white;
+  color: black;
+}
+
+@keyframes popUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 /* Multi-Media Adjustments*/
+
 @media (max-width: 980px) {
   .analytics-wrapper {
     flex-direction: column;
