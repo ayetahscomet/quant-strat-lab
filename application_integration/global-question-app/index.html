@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- ===============================
-       Core Meta
-  ================================ -->
+    <!-- =====================================
+         CORE META
+    ====================================== -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- ===============================
-       Title + Description (SEO)
-  ================================ -->
+    <!-- =====================================
+         TITLE + DESCRIPTION (PRIMARY BRAND)
+    ====================================== -->
     <title>Akinto – The Global Daily Knowledge Game</title>
 
     <meta
@@ -17,46 +17,80 @@
       content="Akinto is a daily global knowledge puzzle where players across the world test geography, culture and common knowledge together."
     />
 
-    <!-- ===============================
-       Favicon
-  ================================ -->
-    <link rel="icon" type="image/png+xml" href="logo-main-2048.svg" />
+    <!-- Canonical (VERY IMPORTANT for sitelinks) -->
+    <link rel="canonical" href="https://akinto.io/" />
+
+    <!-- =====================================
+         FAVICON / BRAND ICONS
+    ====================================== -->
+
+    <!-- Primary circular logo (what Google will use) -->
     <link rel="icon" type="image/png" sizes="512x512" href="/circular-logo.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/circular-logo.png" />
-    <meta property="og:image" content="https://akinto.io/circular-logo.png" />
-    <meta name="twitter:image" content="https://akinto.io/circular-logo.png" />
 
-    <!-- ===============================
-       Open Graph (Facebook / Slack / LinkedIn)
-  ================================ -->
+    <!-- Optional SVG favicon -->
+    <link rel="icon" type="image/svg+xml" href="/logo-main-2048.svg" />
+
+    <!-- =====================================
+         OPEN GRAPH
+    ====================================== -->
+    <meta property="og:type" content="website" />
     <meta property="og:title" content="Akinto – The Global Daily Knowledge Game" />
     <meta
       property="og:description"
       content="A daily puzzle connecting players around the world through geography, culture and curiosity."
     />
-    <meta property="og:type" content="website" />
     <meta property="og:url" content="https://akinto.io/" />
-    <meta property="og:image" content="https://akinto.io/logo-main-2048.svg" />
+    <meta property="og:image" content="https://akinto.io/circular-logo.png" />
 
-    <!-- ===============================
-       Twitter Card
-  ================================ -->
+    <!-- =====================================
+         TWITTER CARD
+    ====================================== -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Akinto – The Global Daily Knowledge Game" />
     <meta
       name="twitter:description"
       content="Play the daily global knowledge puzzle enjoyed by players worldwide."
     />
-    <meta name="twitter:image" content="https://akinto.io/logo-main-2048.svg" />
+    <meta name="twitter:image" content="https://akinto.io/circular-logo.png" />
 
-    <!-- ===============================
-       Search Engine Signals
-  ================================ -->
+    <!-- =====================================
+         SEARCH ENGINE SIGNALS
+    ====================================== -->
     <meta name="robots" content="index, follow" />
 
-    <!-- ===============================
-       Structured Data – Game Schema
-  ================================ -->
+    <!-- =====================================
+         STRUCTURED DATA
+    ====================================== -->
+
+    <!-- Website (helps sitelinks eligibility) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Akinto",
+        "url": "https://akinto.io/",
+        "inLanguage": "en",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://akinto.io/play",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
+
+    <!-- Organization (brand authority + logo control) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Akinto",
+        "url": "https://akinto.io",
+        "logo": "https://akinto.io/circular-logo.png"
+      }
+    </script>
+
+    <!-- Game Schema -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -69,22 +103,12 @@
         "applicationCategory": "Game"
       }
     </script>
-
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "Akinto",
-        "url": "https://akinto.io",
-        "logo": "https://akinto.io/circular-logo.png"
-      }
-    </script>
   </head>
 
   <body>
     <div id="app"></div>
 
-    <!-- Vite boot script stays last -->
+    <!-- Vite boot script -->
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
