@@ -1,9 +1,6 @@
 <template>
-  <link rel="canonical" href="https://akinto.io/" />
   <div class="analytics-wrapper" :class="{ loading: isLoading }">
-    <!-- ==========================
-         🖤 LEFT — PERSONAL (42%)
-    =========================== -->
+    <!-- LEFT: PERSONAL ANALYTICS -->
     <section class="left-pane">
       <header class="left-header">
         <img src="/logo-800-full.svg" class="brand-logo" @click="goHome" />
@@ -113,7 +110,7 @@
 
       <div class="left-footer" v-if="personalReady">
         <button class="cta" @click="goHome">Back to Akinto</button>
-        <p class="micro-note">This page locks for the day. Tomorrow tells a new story.</p>
+        <p class="micro-note">Tomorrow tells a new story.</p>
       </div>
 
       <div class="left-skeleton" v-else>
@@ -129,13 +126,11 @@
       </div>
     </section>
 
-    <!-- ==========================
-         🤍 RIGHT — GLOBAL (58%)
-    =========================== -->
+    <!-- RIGHT: GLOBAL ANALYTICS -->
     <section class="right-pane">
       <header class="right-header">
         <div class="global-title-wrap">
-          <h2 class="g-title">The Global Mind.</h2>
+          <h1 class="g-title">The Global Mind.</h1>
           <p class="g-sub">{{ globalSubline }}</p>
         </div>
         <button class="share-btn" @click="copyShareText" :disabled="!personalReady">
@@ -202,44 +197,152 @@
 </template>
 
 <script setup>
-/* ======================================================
-   DailyAnalytics.vue — Akinto “Front Page” Analytics
-   - Uses server endpoints (no Airtable tokens in client)
-   - Deterministic daily randomness (seeded) for layout + copy
-   - Personal: 2 cards + 3 rings + 1 rotating chart
-   - Global: ~10 mixed blocks (text, mini stats, leaderboards, mini charts)
-====================================================== */
+/* Required Import Functions */
 
 import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import Chart from 'chart.js/auto'
-import { countries } from '@/data/countries.js'
+import { Chart } from 'chart.js/auto'
+import { countries } from '@/data/countries'
 import { getTimezone, todayKey } from '../utils/windows.js'
 
-const COUNTRY_MAP = Object.fromEntries(countries.map((c) => [c.code.toLowerCase(), c.name]))
+/* String/Number Helper Functions  */
+
+function hashStringToInt(str) {
+  // simple, fast, deterministic
+  let h = 2166136261
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+function mulberry32(seed) {
+  return function () {
+    let t = (seed += 0x6d2b79f5)
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function pick(rng, arr) {
+  return arr[Math.floor(rng() * arr.length)]
+}
+
+function shuffleInPlace(rng, arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n))
+}
+
+function pct(n) {
+  if (!isFinite(n)) return 0
+  return clamp(Math.round(n), 0, 100)
+}
+
+function normalise(s) {
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
+function normaliseAirtablePercent(x) {
+  if (x === null || x === undefined) return null
+  let n = Number(x)
+  if (!isFinite(n)) return null
+  if (n > 0 && n <= 1) n = n * 100
+  while (n > 100) n = n / 10
+  return n
+}
+
+/* Domain Specific Helper Functions  */
 
 function countryNameFromCode(code) {
   if (!code) return null
   return COUNTRY_MAP[String(code).toLowerCase()] || code
 }
 
-const countryMap = Object.fromEntries(countries.map((c) => [c.code.toLowerCase(), c.name]))
-
 function countryName(code) {
   return countryMap[code?.toLowerCase()] || code
 }
 
-/* =========================
-   ROUTING
-========================= */
-const router = useRouter()
+function countryDisplay(codeOrName) {
+  const raw = String(codeOrName || '').trim()
+  if (!raw) return '—'
+
+  const lower = raw.toLowerCase()
+
+  if (/^[a-z]{2}$/.test(lower)) {
+    return countries.find((c) => String(c.code || '').toLowerCase() === lower)?.name || raw
+  }
+
+  return raw
+}
+
+/* Context Aware Utilities & Helper Functions */
+
+function getOrCreateUUID() {
+  let id = localStorage.getItem('akinto_user_id')
+
+  if (!id) {
+    const legacy = localStorage.getItem('akinto_uuid')
+    if (legacy) {
+      id = legacy
+      localStorage.setItem('akinto_user_id', legacy)
+    }
+  }
+  if (!id) {
+    id = crypto.randomUUID()
+    localStorage.setItem('akinto_user_id', id)
+  }
+  return id
+}
+
+function blockGridSpan(block) {
+  const spans = {
+    hero: { wide: [2, 2], tall: [1, 3], square: [1, 2], slim: [1, 1] },
+    major: { wide: [2, 2], tall: [1, 3], square: [1, 2], slim: [1, 1] },
+    minor: { wide: [2, 1], tall: [1, 2], square: [1, 2], slim: [1, 1] },
+    ticker: { wide: [2, 1], tall: [1, 1], square: [1, 1], slim: [1, 1] },
+    badge: { wide: [1, 1], tall: [1, 1], square: [1, 1], slim: [1, 1] },
+  }
+  const t = spans[block.tier] || spans.minor
+  const s = t[block.shape] || t.square
+  return s
+}
+
+function blockStyleComputed(block) {
+  const [c, r] = blockGridSpan(block)
+  return { gridColumnEnd: `span ${c}`, gridRowEnd: `span ${r}` }
+}
+
+function blockStyleMerged(block) {
+  return {
+    ...blockStyleComputed(block),
+    transform: `rotate(${block.rot || 0}deg)`,
+  }
+}
+
+function blockStyle(block) {
+  return blockStyleMerged(block)
+}
+
+/* Router Functions */
+
 function goHome() {
   router.push('/')
 }
 
-/* =========================
-   BRAND / COLOURS
-========================= */
+/* Assignment of Brand Colour Constants */
+
 const COLORS = {
   blue: '#4B7BFF',
   gold: '#FFCC4D',
@@ -254,178 +357,78 @@ const COLORS = {
   slate: '#14181D',
 }
 
-/* =========================
-   HELPERS: stable RNG per day
-========================= */
-function hashStringToInt(str) {
-  // simple, fast, deterministic
-  let h = 2166136261
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  return h >>> 0
-}
-function mulberry32(seed) {
-  return function () {
-    let t = (seed += 0x6d2b79f5)
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-function pick(rng, arr) {
-  return arr[Math.floor(rng() * arr.length)]
-}
-function shuffleInPlace(rng, arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
-}
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n))
-}
-function pct(n) {
-  if (!isFinite(n)) return 0
-  return clamp(Math.round(n), 0, 100)
-}
-function normalise(s) {
-  return String(s || '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-}
+/* Statements of Required Constants (SET TO NULL)*/
 
-function normaliseAirtablePercent(x) {
-  // Airtable "Percent" fields are often stored as:
-  // - 0.33 (shown as 33%)
-  // - OR accidentally stored as 3.33 (shown as 333%)
-  // - OR 9 (shown as 900%)
-  // We normalise to 0–100 scale for the UI.
-  if (x === null || x === undefined) return null
-  let n = Number(x)
-  if (!isFinite(n)) return null
-
-  // if it's a fraction (0–1), convert to 0–100
-  if (n > 0 && n <= 1) n = n * 100
-
-  // if it's "too big", scale down by 10 until it fits
-  while (n > 100) n = n / 10
-
-  return n
-}
-
-function countryDisplay(codeOrName) {
-  const raw = String(codeOrName || '').trim()
-  if (!raw) return '—'
-
-  const lower = raw.toLowerCase()
-
-  // If it's a 2-letter code (gb, af, etc), map to full name
-  if (/^[a-z]{2}$/.test(lower)) {
-    return countries.find((c) => String(c.code || '').toLowerCase() === lower)?.name || raw
-  }
-
-  // Already a name
-  return raw
-}
-
-/* =========================
-   USER + DATE CONTEXT
-========================= */
-function getOrCreateUUID() {
-  // ✅ single source of truth across the whole app
-  let id = localStorage.getItem('akinto_user_id')
-
-  // Backwards-compat: if an old key exists, migrate it once
-  if (!id) {
-    const legacy = localStorage.getItem('akinto_uuid')
-    if (legacy) {
-      id = legacy
-      localStorage.setItem('akinto_user_id', legacy)
-    }
-  }
-
-  if (!id) {
-    id = crypto.randomUUID()
-    localStorage.setItem('akinto_user_id', id)
-  }
-
-  return id
-}
-
+const COUNTRY_MAP = Object.fromEntries(countries.map((c) => [c.code.toLowerCase(), c.name]))
+const countryMap = Object.fromEntries(countries.map((c) => [c.code.toLowerCase(), c.name]))
+const router = useRouter()
 const tz = ref(getTimezone())
 const dateKeyRef = ref(todayKey('Europe/London'))
-
 const userId = getOrCreateUUID()
 const userCountryCode = (localStorage.getItem('akinto_country') || 'XX').toLowerCase()
-
-/* =========================
-   STATE
-========================= */
 const isLoading = ref(true)
 const personalReady = ref(false)
+const personalSubline = ref('')
+const globalSubline = ref('')
+const heroHeadline = ref('')
+const heroDescription = ref('')
+const completionFoot = ref('')
+const accuracyFoot = ref('')
+const speedFoot = ref('')
+const personalCards = ref([])
+const completionRing = ref(null)
+const accuracyRing = ref(null)
+const speedRing = ref(null)
+const personalChartCanvas = ref(null)
+const globalChartRefs = ref(new Map())
+const personalChartBlock = ref({ tag: '', title: '', caption: '', type: 'line' })
+const globalBlocks = ref([])
+
+/* Initial Statements of Required Constants (BLOCKS SET TO "NULL") */
 
 const personal = ref({
-  // from UserDailyProfile (+ Questions for answerCount / correct answers if you want)
   dateKey: dateKeyRef.value,
   userId,
   countryCode: userCountryCode,
-  countryName,
-
-  // question meta (optional but used by your UI pills)
-  totalSlots: 0, // answer count needed for the day
-  correctAnswers: [], // canonical answer list (optional)
-
-  // personal metrics (UserDailyProfile)
-  attemptsTotal: 0, // AttemptsUsed
-  hintsUsed: 0, // HintCount
-  uniqueCorrect: 0, // DistinctAnswers (or correct count if you store it)
-  rareAnswers: 0, // RareAnswers
-  completion: 0, // Completion (0–100)
-  accuracy: 0, // Accuracy (0–100)
-  paceSeconds: null, // SolveSeconds
-  pacePercentile: null, // PercentileSpeed
-  accuracyPercentile: null, // PercentileAccuracy
-
-  // optional classifications
+  countryName: null,
+  totalSlots: 0,
+  correctAnswers: [],
+  attemptsTotal: 0,
+  hintsUsed: 0,
+  uniqueCorrect: 0,
+  rareAnswers: 0,
+  completion: 0,
+  accuracy: 0,
+  paceSeconds: null,
+  pacePercentile: null,
+  accuracyPercentile: null,
   archetype: null,
   streakContinues: null,
   firstSolveToday: null,
-
-  // outcome (you can map if you store it; else keep "unknown")
   dayResult: 'unknown',
 })
 
 const global = ref({
-  // from /api/load-global-analytics (if you implement)
   totalPlayers: null,
   totalAttempts: null,
   avgCompletion: null,
   avgAccuracy: null,
-  countryLeaderboard: [], // [ { name, value } ]
+  countryLeaderboard: [],
   speedPercentiles: null,
   yourCountryRank: null,
   yourCountryAvgCompletion: null,
-  globalStreak: null, // optional
+  globalStreak: null,
 })
 
-/* =========================
-   COPY: sublines + dynamic text
-   (seeded so refresh doesn't change)
-========================= */
-const personalSubline = ref('')
-const globalSubline = ref('')
+/* Text Sublines */
 
 const PERSONAL_SUBLINES = [
   'How today felt, backed by data.',
-  'Your performance — but visualised.',
+  'Your performance - but visualised.',
   'A data-shaped memory of today.',
   'How you moved through the puzzle.',
   'Today, translated into patterns.',
-  'Where you accelerated — where you paused.',
+  'Where you accelerated - where you paused.',
   'Your thinking style, made measurable.',
   'A trace of today’s decisions.',
   'Your daily brainprint.',
@@ -438,21 +441,14 @@ const GLOBAL_SUBLINES = [
   'How today’s question unfolded across borders.',
   'A global snapshot of common knowledge.',
   'The world answered. You answered. Here’s the contrast.',
-  'Today in context — not isolation.',
+  'Today in context - not isolation.',
   'A world map of decision-making.',
   'The global pulse of the puzzle.',
   'Across time zones, one question.',
   'Today’s collective brain.',
 ]
 
-/* =========================
-   HERO COPY (personal)
-========================= */
-const heroHeadline = ref('')
-const heroDescription = ref('')
-const completionFoot = ref('')
-const accuracyFoot = ref('')
-const speedFoot = ref('')
+/* LEFT (Personal Analytics)*/
 
 function buildHeroCopy(rng) {
   const p = personal.value
@@ -488,7 +484,7 @@ function buildHeroCopy(rng) {
     result === 'success'
       ? 'You finished the day.'
       : result === 'exit-early'
-        ? 'You tapped out early — self-care is strategy.'
+        ? 'You tapped out early. Self-care is strategy.'
         : result === 'lockout'
           ? 'You ran out of attempts in at least one window.'
           : 'Today’s session is logged.'
@@ -504,7 +500,7 @@ function buildHeroCopy(rng) {
     required > 0 && foundTowardCompletion >= required
       ? `All required answers found. (${Math.min(p.uniqueCorrect, required)}/${required} today.)`
       : required > 0
-        ? `${Math.min(p.uniqueCorrect, required)}/${required} found today.`
+        ? `${p.uniqueCorrect}/${required} found today.`
         : `Completion is still calibrating for this question.`
 
   accuracyFoot.value =
@@ -528,10 +524,6 @@ function buildHeroCopy(rng) {
   }
 }
 
-/* =========================
-   PERSONAL “cards” generator (2 cards / day)
-   - 50 template variations (with logic)
-========================= */
 function buildPersonalCards(rng) {
   const p = personal.value
 
@@ -541,7 +533,6 @@ function buildPersonalCards(rng) {
       : null
 
   const templates = [
-    // 1–10: completion/accuracy mood
     () => ({
       kicker: 'Your style today',
       title:
@@ -575,7 +566,6 @@ function buildPersonalCards(rng) {
       mini: { big: `${pct(p.accuracy)}%`, sub: 'Accuracy' },
     }),
 
-    // 11–20: hints + attempts
     () => ({
       kicker: 'Hint economy',
       title:
@@ -604,7 +594,6 @@ function buildPersonalCards(rng) {
       mini: { big: `${p.attemptsTotal}`, sub: 'Attempts' },
     }),
 
-    // 21–30: country + vibe
     () => ({
       kicker: 'Passport check',
       title: p.countryName ? `Hello, ${p.countryName}.` : 'Hello, traveller.',
@@ -630,7 +619,6 @@ function buildPersonalCards(rng) {
       mini: { big: `${p.duplicatePenalty}`, sub: 'Duplicates' },
     }),
 
-    // 31–40: pace / percentile
     () => ({
       kicker: 'Pace',
       title:
@@ -685,10 +673,9 @@ function buildPersonalCards(rng) {
       mini: null,
     }),
 
-    // 41–50: playful “thinking like X” without hard stereotypes
     () => ({
       kicker: 'Vibe check',
-      title: 'Ah — thinking like a strategist.',
+      title: 'Ah - thinking like a strategist.',
       body:
         p.accuracy >= 80 && p.completion < 80
           ? 'High precision, selective coverage. You prioritise hits over volume.'
@@ -726,14 +713,12 @@ function buildPersonalCards(rng) {
     }),
   ]
 
-  // pick 2 unique templates
   const pool = templates.map((fn, idx) => ({ idx, fn }))
   shuffleInPlace(rng, pool)
 
   const out = []
   for (const t of pool) {
     const card = t.fn()
-    // drop null minis cleanly
     out.push({
       id: `pc_${t.idx}`,
       kicker: card.kicker,
@@ -747,17 +732,8 @@ function buildPersonalCards(rng) {
   return out
 }
 
-const personalCards = ref([])
+/* Personal Chart Generation & Instances */
 
-/* =========================
-   CHARTS: refs + instances
-========================= */
-const completionRing = ref(null)
-const accuracyRing = ref(null)
-const speedRing = ref(null)
-const personalChartCanvas = ref(null)
-
-const globalChartRefs = ref(new Map()) // blockId -> canvas element
 function registerGlobalChartRef(el, blockId) {
   if (!el) return
   globalChartRefs.value.set(blockId, el)
@@ -788,7 +764,7 @@ function makeDoughnut(ctx, valuePct, fg, bg) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '62%', // <-- THICKER ring
+      cutout: '62%',
       plugins: {
         legend: { display: false },
         tooltip: { enabled: false },
@@ -870,11 +846,6 @@ function makeMiniDoughnut(ctx, data, colors) {
     },
   })
 }
-
-/* =========================
-   PERSONAL DYNAMIC CHART (10 types)
-========================= */
-const personalChartBlock = ref({ tag: '', title: '', caption: '', type: 'line' })
 
 function buildPersonalChart(rng) {
   const p = personal.value
@@ -1003,16 +974,33 @@ function buildPersonalChart(rng) {
   return chosen
 }
 
-/* =========================
-   GLOBAL BLOCKS (front page)
-========================= */
-const globalBlocks = ref([])
+function renderPersonalCharts(rng) {
+  destroyCharts()
 
-/**
- * Block tier & shape control (CSS grid):
- * - tier: hero | major | minor | ticker | badge
- * - shape: wide | tall | square | slim
- */
+  const p = personal.value
+  if (!completionRing.value || !accuracyRing.value || !speedRing.value) return
+
+  const completionCtx = completionRing.value.getContext('2d')
+  const accuracyCtx = accuracyRing.value.getContext('2d')
+  const speedCtx = speedRing.value.getContext('2d')
+
+  chartInstances.push(makeDoughnut(completionCtx, pct(p.completion), '#18E2A4', 'rgba(0,0,0,0.22)'))
+  chartInstances.push(makeDoughnut(accuracyCtx, pct(p.accuracy), '#5C82FF', 'rgba(0,0,0,0.22)'))
+
+  const speedVal = typeof p.pacePercentile === 'number' ? pct(p.pacePercentile) : 0
+  chartInstances.push(makeDoughnut(speedCtx, speedVal, '#FFB938', 'rgba(0,0,0,0.22)'))
+
+  // Personal dynamic chart
+  if (personalChartCanvas.value) {
+    const ctx = personalChartCanvas.value.getContext('2d')
+    const chosen = buildPersonalChart(rng)
+    const inst = chosen.render(ctx)
+    chartInstances.push(inst)
+  }
+}
+
+/* Global Chart Generation & Instances */
+
 function buildGlobalBlocks(rng) {
   const p = personal.value
   const g = global.value
@@ -1020,14 +1008,12 @@ function buildGlobalBlocks(rng) {
   const usedTopics = new Set()
   const usedTitles = new Set()
 
-  // Helpers for friendly fallback strings
   const totalPlayers = typeof g.totalPlayers === 'number' ? g.totalPlayers : null
   const countryRank =
     typeof g.yourCountryRank === 'number' ? `#${g.yourCountryRank}` : totalPlayers ? '—' : '—'
 
   const countryLabel = p.countryName || 'your country'
 
-  // “50-ish” templated headlines — we generate more via patterns
   const baseTemplates = [
     () => ({
       kicker: 'Global',
@@ -1224,15 +1210,12 @@ function buildGlobalBlocks(rng) {
     }),
   ]
 
-  // Extend to “50” feeling via pattern expansion (headline factories)
   const extraFactories = []
 
-  // 5) mini chart strips (12) — always visual
   for (let i = 0; i < 12; i++) {
     extraFactories.push(() => {
       const roll = rng()
 
-      // synthetic-but-consistent series so the UI always looks alive
       const base = clamp((pct(g.avgCompletion ?? 62) + pct(p.completion)) / 2, 10, 95)
       const series = [
         clamp(base - 10 + rng() * 8, 5, 98),
@@ -1242,7 +1225,6 @@ function buildGlobalBlocks(rng) {
         clamp(base + 2 + rng() * 6, 5, 98),
       ].map((x) => Math.round(x))
 
-      // quick league-ish rows from leaderboard if present, else placeholders
       const leagueRows =
         Array.isArray(g.countryLeaderboard) && g.countryLeaderboard.length
           ? g.countryLeaderboard
@@ -1257,7 +1239,6 @@ function buildGlobalBlocks(rng) {
               ['6. —', '—'],
             ]
 
-      // pick a visual motif
       if (roll < 0.33) {
         return {
           topic: 'sparkline',
@@ -1304,7 +1285,6 @@ function buildGlobalBlocks(rng) {
     })
   }
 
-  // 1) completion comparisons (10)
   for (let i = 0; i < 10; i++) {
     extraFactories.push(() => ({
       topic: 'completion',
@@ -1332,7 +1312,6 @@ function buildGlobalBlocks(rng) {
     }))
   }
 
-  // 2) pace commentary (10)
   for (let i = 0; i < 10; i++) {
     extraFactories.push(() => ({
       topic: 'pace',
@@ -1370,7 +1349,6 @@ function buildGlobalBlocks(rng) {
     }))
   }
 
-  // 3) country spice (10)
   for (let i = 0; i < 10; i++) {
     extraFactories.push(() => ({
       topic: 'country',
@@ -1402,7 +1380,6 @@ function buildGlobalBlocks(rng) {
     }))
   }
 
-  // 4) playful micro-headlines (12)
   for (let i = 0; i < 12; i++) {
     extraFactories.push(() => ({
       topic: 'editorial',
@@ -1429,11 +1406,9 @@ function buildGlobalBlocks(rng) {
     }))
   }
 
-  // Build pool, shuffle, then select ~10 blocks with tier structure
   const pool = [...baseTemplates, ...extraFactories]
   shuffleInPlace(rng, pool)
 
-  // editorial structure: 1 hero, 2 majors, 4 minors, 2 tickers, 1 badge
   const want = { hero: 1, major: 3, minor: 7, ticker: 2, badge: 1 }
   const blocks = []
   const counts = { hero: 0, major: 0, minor: 0, ticker: 0, badge: 0 }
@@ -1511,9 +1486,6 @@ function buildGlobalBlocks(rng) {
   return blocks
 }
 
-/* =========================
-   GLOBAL charts per block
-========================= */
 function renderGlobalBlockCharts(rng) {
   for (const b of globalBlocks.value) {
     if (!b.chart) continue
@@ -1544,65 +1516,21 @@ function renderGlobalBlockCharts(rng) {
     chartInstances.push(instance)
   }
 }
+/* Global x Personal Analytics Overlapping Functions */
 
-/* =========================
-   MAIN CHART RENDER
-========================= */
-function renderPersonalCharts(rng) {
-  destroyCharts()
-
-  const p = personal.value
-  if (!completionRing.value || !accuracyRing.value || !speedRing.value) return
-
-  const completionCtx = completionRing.value.getContext('2d')
-  const accuracyCtx = accuracyRing.value.getContext('2d')
-  const speedCtx = speedRing.value.getContext('2d')
-
-  chartInstances.push(makeDoughnut(completionCtx, pct(p.completion), '#18E2A4', 'rgba(0,0,0,0.22)'))
-  chartInstances.push(makeDoughnut(accuracyCtx, pct(p.accuracy), '#5C82FF', 'rgba(0,0,0,0.22)'))
-
-  const speedVal = typeof p.pacePercentile === 'number' ? pct(p.pacePercentile) : 0
-  chartInstances.push(makeDoughnut(speedCtx, speedVal, '#FFB938', 'rgba(0,0,0,0.22)'))
-
-  // Personal dynamic chart
-  if (personalChartCanvas.value) {
-    const ctx = personalChartCanvas.value.getContext('2d')
-    const chosen = buildPersonalChart(rng)
-    const inst = chosen.render(ctx)
-    chartInstances.push(inst)
-  }
-}
-
-/* =========================
-   METRICS COMPUTATION from attempts
-   Expected shape from /api/load-day-progress:
-   {
-     attempts: [{ answers, correctAnswers, incorrectAnswers, windowId, result, createdAt, attemptIndex }],
-     correctAnswers: [...], // canonical for the day
-     dayEnded: boolean,
-     dayEndResult: 'success'|'failure'|...
-     hintsUsed: number (optional)
-   }
-========================= */
 function derivePersonalFromUserDailyProfile(payload) {
   const prof = payload?.profile || {}
   const q = payload?.question || {}
   const attempts = Array.isArray(payload?.attempts) ? payload.attempts : []
 
-  // -------------------------
   // Percent fields (robust)
-  // -------------------------
   const pSpeed = normaliseAirtablePercent(prof.PercentileSpeed)
   const pAcc = normaliseAirtablePercent(prof.PercentileAccuracy)
 
-  // We'll compute completion + accuracy from attempts if we can.
-  // (Airtable % fields are too easy to mis-formula.)
   let completion = normaliseAirtablePercent(prof.Completion)
   let accuracy = normaliseAirtablePercent(prof.Accuracy)
 
-  // -------------------------
   // Attempts-derived stats
-  // -------------------------
   const uniqueSubmitted = new Set()
   const attemptsByWindow = {}
   let duplicatePenalty = 0
@@ -1625,9 +1553,7 @@ function derivePersonalFromUserDailyProfile(payload) {
 
   const submittedUnique = uniqueSubmitted.size
 
-  // -------------------------
   // Compute uniqueCorrect + accuracy from attempts
-  // -------------------------
   const uniqueCorrectSet = new Set()
 
   for (const a of attempts) {
@@ -1648,9 +1574,7 @@ function derivePersonalFromUserDailyProfile(payload) {
 
   const windowsPlayed = Object.keys(attemptsByWindow).length
 
-  // -------------------------
   // Country resolution
-  // -------------------------
   const profileCountryCode =
     typeof prof.Country === 'string' && prof.Country.length ? prof.Country.toLowerCase() : null
 
@@ -1658,9 +1582,7 @@ function derivePersonalFromUserDailyProfile(payload) {
 
   const resolvedCountryName = countryNameFromCode(resolvedCountryCode)
 
-  // -------------------------
   // Question meta
-  // -------------------------
   const totalSlots = Number(q.answerCount) || 0
   const totalPossible = Array.isArray(q.correctAnswers) ? q.correctAnswers.length : totalSlots
 
@@ -1704,90 +1626,6 @@ function derivePersonalFromUserDailyProfile(payload) {
   }
 }
 
-/* =========================
-   FETCHERS
-   IMPORTANT: keep Airtable keys on server.
-========================= */
-async function fetchPersonalAnalytics() {
-  const res = await fetch('/api/load-personal-analytics', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      userId,
-      dateKey: dateKeyRef.value,
-    }),
-  })
-
-  if (!res.ok) throw new Error('load-personal-analytics failed')
-  return res.json()
-}
-
-/**
- * OPTIONAL: implement this endpoint server-side for real global stats.
- * Should return shape like:
- * {
- *   totalPlayers, totalAttempts, avgCompletion, avgAccuracy,
- *   countryLeaderboard: [{ name, value }],
- *   yourCountryRank, yourCountryAvgCompletion,
- *   pacePercentileForUser
- * }
- */
-async function fetchGlobalAnalytics() {
-  // Server should read:
-  // - DailyAggregates for dateKey (TotalPlayers, TotalAttempts, AvgCompletion, AvgAccuracy, etc.)
-  // - (optional) Country leaderboard you compute server-side
-  // - (optional) yourCountryRank / yourCountryAvgCompletion server-side
-  const res = await fetch('/api/load-global-analytics', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dateKey: dateKeyRef.value, country: userCountryCode, userId }),
-  })
-
-  if (!res.ok) throw new Error('load-global-analytics failed')
-  return res.json()
-}
-
-/* =========================
-   DISPLAY COMPUTED
-========================= */
-const displayCompletion = computed(() => pct(personal.value.completion))
-const displayAccuracy = computed(() => pct(personal.value.accuracy))
-const displaySpeed = computed(() =>
-  typeof personal.value.pacePercentile === 'number' ? pct(personal.value.pacePercentile) : 55,
-)
-
-/* =========================
-   SHARE
-========================= */
-const shareBtnLabel = ref('Copy Share Text')
-async function copyShareText() {
-  if (!personalReady.value) return
-
-  const p = personal.value
-  const line1 = `Akinto - Daily Analytics (${p.dateKey})`
-  const line2 = `Completion: ${pct(p.completion)}% | Accuracy: ${pct(p.accuracy)}%`
-  const line3 =
-    typeof p.pacePercentile === 'number'
-      ? `Pace: faster than ${pct(p.pacePercentile)}% today`
-      : p.paceSeconds
-        ? `Pace: ~${Math.max(1, Math.round(p.paceSeconds / 60))}m from first to last move`
-        : `Pace: calibrating`
-  const line4 = `akinto.io`
-
-  const text = [line1, line2, line3, line4].join('\n')
-  try {
-    await navigator.clipboard.writeText(text)
-    shareBtnLabel.value = 'Copied ✓'
-    setTimeout(() => (shareBtnLabel.value = 'Copy Share Text'), 1400)
-  } catch {
-    shareBtnLabel.value = 'Copy failed'
-    setTimeout(() => (shareBtnLabel.value = 'Copy Share Text'), 1400)
-  }
-}
-
-/* =========================
-   LIFECYCLE
-========================= */
 onMounted(async () => {
   isLoading.value = true
 
@@ -1798,30 +1636,23 @@ onMounted(async () => {
   globalSubline.value = pick(rng, GLOBAL_SUBLINES)
 
   try {
-    /* ===========================================
-     1) Personal analytics (UserDailyProfile)
-  =========================================== */
+    // Personal analytics (UserDailyProfile)
     const personalPayload = await fetchPersonalAnalytics()
     derivePersonalFromUserDailyProfile(personalPayload)
 
-    /* ===========================================
-     2) Global analytics (DailyAggregates)
-  =========================================== */
+    // Global analytics (DailyAggregates)
     const g = await fetchGlobalAnalytics()
 
     if (g) {
-      // g is already UI-shaped by /api/load-global-analytics
       global.value = {
         totalPlayers: typeof g.totalPlayers === 'number' ? g.totalPlayers : 0,
         totalAttempts: typeof g.totalAttempts === 'number' ? g.totalAttempts : null,
 
-        // These come back as 0–100 already (integers), but normalise defensively anyway
         avgCompletion:
           typeof g.avgCompletion === 'number' ? normaliseAirtablePercent(g.avgCompletion) : null,
         avgAccuracy:
           typeof g.avgAccuracy === 'number' ? normaliseAirtablePercent(g.avgAccuracy) : null,
 
-        // Expecting [{ country, name, users, value }]
         countryLeaderboard: Array.isArray(g.countryLeaderboard) ? g.countryLeaderboard : [],
 
         yourCountryRank: typeof g.yourCountryRank === 'number' ? g.yourCountryRank : null,
@@ -1830,20 +1661,16 @@ onMounted(async () => {
             ? normaliseAirtablePercent(g.yourCountryAvgCompletion)
             : null,
 
-        // optional fields your endpoint may include
         speedPercentiles: g.distributions?.paceBuckets || null,
         globalStreak: null,
       }
 
-      // If the endpoint computed pace percentile for THIS user, wire it into personal
       if (typeof g.pacePercentileForUser === 'number') {
         personal.value.pacePercentile = normaliseAirtablePercent(g.pacePercentileForUser)
       }
     }
 
-    /* ===========================================
-     3) Build editorial copy + layout
-  =========================================== */
+    // Build editorial copy + layout
     buildHeroCopy(rng)
     personalCards.value = buildPersonalCards(rng)
 
@@ -1852,9 +1679,7 @@ onMounted(async () => {
 
     personalReady.value = true
 
-    /* ===========================================
-     4) Render charts
-  =========================================== */
+    // Render charts
     await nextTick()
     renderPersonalCharts(rng)
 
@@ -1884,52 +1709,80 @@ onUnmounted(() => {
   destroyCharts()
 })
 
-/* =========================
-   GLOBAL BLOCK layout helpers
-========================= */
-function blockGridSpan(block) {
-  // translate tier/shape to grid spans
-  const spans = {
-    hero: { wide: [2, 2], tall: [1, 3], square: [1, 2], slim: [1, 1] },
-    major: { wide: [2, 2], tall: [1, 3], square: [1, 2], slim: [1, 1] },
-    minor: { wide: [2, 1], tall: [1, 2], square: [1, 2], slim: [1, 1] },
-    ticker: { wide: [2, 1], tall: [1, 1], square: [1, 1], slim: [1, 1] },
-    badge: { wide: [1, 1], tall: [1, 1], square: [1, 1], slim: [1, 1] },
-  }
-  const t = spans[block.tier] || spans.minor
-  const s = t[block.shape] || t.square
-  return s // [colSpan, rowSpan]
-}
-function blockStyleComputed(block) {
-  const [c, r] = blockGridSpan(block)
-  return { gridColumnEnd: `span ${c}`, gridRowEnd: `span ${r}` }
-}
-function blockStyleMerged(block) {
-  return {
-    ...blockStyleComputed(block),
-    transform: `rotate(${block.rot || 0}deg)`,
-  }
+/* Fetcher Functions */
+
+async function fetchPersonalAnalytics() {
+  const res = await fetch('/api/load-personal-analytics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      dateKey: dateKeyRef.value,
+    }),
+  })
+
+  if (!res.ok) throw new Error('load-personal-analytics failed')
+  return res.json()
 }
 
-function blockStyle(block) {
-  return blockStyleMerged(block)
+async function fetchGlobalAnalytics() {
+  const res = await fetch('/api/load-global-analytics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dateKey: dateKeyRef.value, country: userCountryCode, userId }),
+  })
+
+  if (!res.ok) throw new Error('load-global-analytics failed')
+  return res.json()
+}
+
+/* Computed Constants */
+
+const displayCompletion = computed(() => pct(personal.value.completion))
+const displayAccuracy = computed(() => pct(personal.value.accuracy))
+const displaySpeed = computed(() =>
+  typeof personal.value.pacePercentile === 'number' ? pct(personal.value.pacePercentile) : 55,
+)
+
+/* Share Features */
+
+const shareBtnLabel = ref('Copy Share Text')
+async function copyShareText() {
+  if (!personalReady.value) return
+
+  const p = personal.value
+  const line1 = `Akinto - Daily Analytics (${p.dateKey})`
+  const line2 = `Completion: ${pct(p.completion)}% | Accuracy: ${pct(p.accuracy)}%`
+  const line3 =
+    typeof p.pacePercentile === 'number'
+      ? `Pace: faster than ${pct(p.pacePercentile)}% today`
+      : p.paceSeconds
+        ? `Pace: ~${Math.max(1, Math.round(p.paceSeconds / 60))}m from first to last move`
+        : `Pace: calibrating`
+  const line4 = `akinto.io`
+
+  const text = [line1, line2, line3, line4].join('\n')
+  try {
+    await navigator.clipboard.writeText(text)
+    shareBtnLabel.value = 'Copied ✓'
+    setTimeout(() => (shareBtnLabel.value = 'Copy Share Text'), 1400)
+  } catch {
+    shareBtnLabel.value = 'Copy failed'
+    setTimeout(() => (shareBtnLabel.value = 'Copy Share Text'), 1400)
+  }
 }
 </script>
 
 <style scoped>
-/* =========================
-   SHELL
-========================= */
+/* Shell Adjustments */
+
 .analytics-wrapper {
   display: flex;
   width: 100vw;
   min-height: 100vh;
-
   overflow-x: hidden;
-
   margin: 0;
   padding: 0;
-
   font-family:
     Inter,
     system-ui,
@@ -1940,21 +1793,17 @@ function blockStyle(block) {
     sans-serif;
 }
 
-/* =========================
-   LEFT PANEL (PERSONAL)
-========================= */
+/* LEFT: PERSONAL ANALYTICS */
+
 .left-pane {
   flex: 0 0 38%;
   max-width: 38%;
   min-width: 360px;
-
   background: #0d0f11;
   color: white;
-
   padding: 34px 30px 28px;
-
+  padding-top: 50px;
   overflow-y: auto;
-
   border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -2010,7 +1859,6 @@ function blockStyle(block) {
   opacity: 0.78;
   font-size: 14px;
   line-height: 1.55;
-
   display: -webkit-box;
   -webkit-line-clamp: 3;
   line-clamp: 3;
@@ -2024,6 +1872,7 @@ function blockStyle(block) {
   flex-wrap: wrap;
   gap: 8px;
 }
+
 .pill {
   font-size: 12px;
   padding: 8px 10px;
@@ -2033,19 +1882,13 @@ function blockStyle(block) {
   opacity: 0.95;
 }
 
-/* =========================
-   HERO STAT BLOCKS (LEFT)
-========================= */
-
 .primary-stats-grid {
   margin-top: 18px;
-
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
+  text-align: center;
 }
-
-/* Big vertical plaque */
 
 .stat-card {
   border-radius: 16px;
@@ -2055,12 +1898,11 @@ function blockStyle(block) {
   align-items: flex-start;
   text-align: left;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
-
   min-height: 90px;
   max-height: 100px;
+  max-width: 550px;
 }
 
-/* Individual colour moods */
 .completion-card {
   background: linear-gradient(180deg, #34e3a0, #1fbf85);
 }
@@ -2081,7 +1923,6 @@ function blockStyle(block) {
   padding-left: 12px;
 }
 
-/* RING HOLDER */
 .ring-stack {
   position: relative;
   width: 65px;
@@ -2089,28 +1930,24 @@ function blockStyle(block) {
   flex-shrink: 0;
 }
 
-/* % TEXT */
 .ring-center {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-
   font-size: 15px;
   font-weight: 900;
   letter-spacing: 0.2px;
   color: rgba(255, 255, 255, 0.95);
 }
 
-/* TEXT COLUMN */
 .stat-copy {
   flex: 1;
   display: flex;
   align-items: center;
 }
 
-/* COMMENTARY */
 .stat-foot {
   margin: 0;
   font-size: 13px;
@@ -2118,7 +1955,6 @@ function blockStyle(block) {
   opacity: 0.9;
 }
 
-/* Label at top */
 .stat-label {
   padding-left: 10px;
   margin: 0 0 0px;
@@ -2162,12 +1998,14 @@ function blockStyle(block) {
   letter-spacing: 0.7px;
   text-transform: uppercase;
 }
+
 .card-title {
   margin: 0 0 6px;
   font-size: 16px;
   font-weight: 750;
   letter-spacing: 0.15px;
 }
+
 .card-body {
   margin: 0;
   font-size: 13px;
@@ -2181,16 +2019,12 @@ function blockStyle(block) {
   bottom: 12px;
   text-align: right;
 }
+
 .mini-big {
   display: block;
   font-weight: 900;
   font-size: 18px;
   letter-spacing: 0.2px;
-}
-.mini-sub {
-  display: block;
-  font-size: 11px;
-  opacity: 0.7;
 }
 
 .chart-dynamic {
@@ -2199,9 +2033,7 @@ function blockStyle(block) {
   border-radius: 18px;
   padding: 14px 14px 12px;
   border: 1px solid rgba(255, 255, 255, 0.06);
-
   min-height: 300px;
-
   display: flex;
   flex-direction: column;
 }
@@ -2212,22 +2044,26 @@ function blockStyle(block) {
   justify-content: space-between;
   margin-bottom: 8px;
 }
+
 .chart-tag {
   font-size: 11px;
   letter-spacing: 0.7px;
   text-transform: uppercase;
   opacity: 0.65;
 }
+
 .chart-title {
   font-size: 13px;
   opacity: 0.85;
   font-weight: 650;
 }
+
 .personal-chart canvas {
   width: 100%;
   min-height: 180px;
   height: auto;
 }
+
 .chart-caption {
   margin: 8px 4px 0;
   font-size: 12px;
@@ -2238,12 +2074,10 @@ function blockStyle(block) {
 .left-footer {
   margin-top: 26px;
   padding-top: 16px;
-
   display: flex;
   flex-direction: column;
   gap: 12px;
   align-items: flex-start;
-
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -2256,30 +2090,23 @@ function blockStyle(block) {
   cursor: pointer;
   font-weight: 700;
 }
+
 .cta:hover {
   transform: translateY(-2px);
   opacity: 0.96;
 }
-.micro-note {
-  margin: 0;
-  opacity: 0.6;
-  font-size: 12px;
-}
 
-/* =========================
-   RIGHT PANEL (GLOBAL)
-========================= */
+/* RIGHT: GLOBAL ANALYTICS */
+
 .right-pane {
   flex: 1;
-
   background: #fff;
   color: #111;
-
   padding: 32px 36px 30px;
-
   overflow-y: auto;
-
   position: relative;
+  padding-bottom: 200px;
+  padding-top: 50px;
 }
 
 .right-header {
@@ -2339,6 +2166,7 @@ function blockStyle(block) {
   font-weight: 750;
   cursor: pointer;
 }
+
 .share-btn:disabled {
   opacity: 0.5;
   cursor: default;
@@ -2395,10 +2223,12 @@ function blockStyle(block) {
   margin-top: auto;
   padding-top: 10px;
 }
+
 .g-mini-big {
   font-size: 22px;
   font-weight: 900;
 }
+
 .g-mini-sub {
   font-size: 11px;
   opacity: 0.62;
@@ -2412,6 +2242,7 @@ function blockStyle(block) {
   border: 1px solid rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
+
 .g-table-row {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -2420,9 +2251,11 @@ function blockStyle(block) {
   font-size: 12px;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
+
 .g-table-row:first-child {
   border-top: none;
 }
+
 .g-table-head {
   background: rgba(0, 0, 0, 0.04);
   font-weight: 800;
@@ -2430,11 +2263,13 @@ function blockStyle(block) {
   text-transform: uppercase;
   letter-spacing: 0.6px;
 }
+
 .g-table-left {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .g-table-right {
   font-weight: 800;
 }
@@ -2464,52 +2299,57 @@ function blockStyle(block) {
   line-height: 1.4;
 }
 
-/* Tier vibes */
 .tier-hero {
   background: #ffffff;
   border: 2px solid rgba(0, 0, 0, 0.08);
 }
+
 .tier-hero .g-head {
   font-size: 22px;
 }
+
 .tier-major {
   background: #f5f7ff;
 }
+
 .tier-minor {
   background: #f7f7fa;
 }
+
 .tier-ticker {
   background: #fff;
 }
+
 .tier-badge {
   background: #fff;
   border-style: dashed;
 }
 
-/* Shapes via grid spans (computed inline as style too) */
 .shape-wide {
   display: block;
 }
+
 .shape-tall {
   display: block;
 }
+
 .shape-square {
   display: block;
 }
+
 .shape-slim {
   display: block;
 }
 
-/* Footer */
+/* Footer Amendments */
+
 .right-footer {
   margin-top: 22px;
   padding-top: 14px;
-
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-
   border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
@@ -2518,6 +2358,7 @@ function blockStyle(block) {
   font-size: 12px;
   opacity: 0.62;
 }
+
 .brand-tag {
   border: 2px solid #111;
   border-radius: 999px;
@@ -2527,36 +2368,41 @@ function blockStyle(block) {
   color: #fff;
 }
 
-/* =========================
-   SKELETONS
-========================= */
+/* Skeleton Formations */
+
 .left-skeleton .sk-line {
   height: 14px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   margin-bottom: 10px;
 }
+
 .left-skeleton .w60 {
   width: 60%;
 }
+
 .left-skeleton .w40 {
   width: 40%;
 }
+
 .left-skeleton .sk-box {
   height: 110px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.06);
   margin-top: 16px;
 }
+
 .left-skeleton .sk-box.tall {
   height: 260px;
 }
+
 .left-skeleton .sk-grid {
   margin-top: 16px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
+
 .left-skeleton .sk-card {
   height: 170px;
   border-radius: 18px;
@@ -2569,6 +2415,7 @@ function blockStyle(block) {
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.06);
 }
+
 .right-skeleton .sk-right-sub {
   height: 14px;
   width: 70%;
@@ -2576,6 +2423,7 @@ function blockStyle(block) {
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.06);
 }
+
 .right-skeleton .sk-right-grid {
   margin-top: 16px;
   display: grid;
@@ -2583,14 +2431,13 @@ function blockStyle(block) {
   grid-auto-rows: 110px;
   gap: 12px;
 }
+
 .right-skeleton .sk-right-block {
   border-radius: 16px;
   background: rgba(0, 0, 0, 0.06);
 }
 
-/* =========================
-   RESPONSIVE
-========================= */
+/* Multi-Media Adjustments*/
 @media (max-width: 980px) {
   .analytics-wrapper {
     flex-direction: column;
@@ -2619,9 +2466,6 @@ function blockStyle(block) {
   }
 }
 
-/* =========================
-   SMALL polish
-========================= */
 .g-block,
 .personal-card,
 .stat-card,
@@ -2636,11 +2480,6 @@ function blockStyle(block) {
   transform: translateY(-2px);
 }
 
-/* ======================================================
-   DAILY ANALYTICS — MOBILE REFLOW
-   Personal first, Global second
-====================================================== */
-
 @media (max-width: 720px) {
   /* ---- SHELL ---- */
   .analytics-wrapper {
@@ -2648,7 +2487,6 @@ function blockStyle(block) {
     height: auto;
   }
 
-  /* ---- PANES STACK ---- */
   .left-pane,
   .right-pane {
     flex: none;
@@ -2658,7 +2496,6 @@ function blockStyle(block) {
     height: auto;
   }
 
-  /* reduce padding for phone */
   .left-pane {
     padding: 22px 16px 26px;
   }
@@ -2666,10 +2503,6 @@ function blockStyle(block) {
   .right-pane {
     padding: 24px 16px 28px;
   }
-
-  /* ====================================================
-     PERSONAL HEADER (INSPIRED BY SUCCESS SUMMARY)
-  ==================================================== */
 
   .left-header {
     align-items: flex-start;
@@ -2688,10 +2521,6 @@ function blockStyle(block) {
     font-size: 13px;
   }
 
-  /* ====================================================
-     HERO COPY TIGHTEN
-  ==================================================== */
-
   .hero-box {
     padding: 14px;
   }
@@ -2703,10 +2532,6 @@ function blockStyle(block) {
   .hero-sub {
     font-size: 13px;
   }
-
-  /* ====================================================
-     PRIMARY RINGS — FULL WIDTH STACK
-  ==================================================== */
 
   .primary-stats-grid {
     grid-template-columns: 1fr;
@@ -2740,10 +2565,6 @@ function blockStyle(block) {
     font-size: 12.5px;
   }
 
-  /* ====================================================
-     PERSONAL DYNAMICS → SINGLE COLUMN
-  ==================================================== */
-
   .personal-dynamics {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
@@ -2753,18 +2574,10 @@ function blockStyle(block) {
     grid-column: auto;
   }
 
-  /* ====================================================
-     FOOTER TIGHTEN
-  ==================================================== */
-
   .left-footer {
     margin-top: 18px;
     padding-top: 12px;
   }
-
-  /* ====================================================
-     GLOBAL HEADER TREATMENT
-  ==================================================== */
 
   .right-pane {
     padding-top: 18px;
@@ -2775,7 +2588,7 @@ function blockStyle(block) {
     align-items: flex-start;
     gap: 8px;
     margin-bottom: 16px;
-    max-height: 300px; /* IMPORTANT */
+    max-height: 300px;
   }
 
   .g-title {
@@ -2792,10 +2605,6 @@ function blockStyle(block) {
     font-size: 13px;
     align-self: flex-end;
   }
-
-  /* ====================================================
-     GLOBAL GRID → SINGLE COLUMN
-  ==================================================== */
 
   .global-grid {
     display: flex !important;
