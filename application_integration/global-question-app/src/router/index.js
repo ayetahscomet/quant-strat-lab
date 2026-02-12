@@ -58,18 +58,16 @@ const router = createRouter({
 ----------------------------------------- */
 
 router.beforeEach((to, from, next) => {
-  // 1️⃣ Dynamic page title
   if (to.meta?.title) {
     document.title = to.meta.title
   }
 
-  // 2️⃣ Setup protection
   if (to.meta?.requiresSetup) {
-    const cookiesAccepted = localStorage.getItem('akinto_cookie_consent') === 'true'
+    const cookiesAccepted = localStorage.getItem('akinto_consent') === 'true'
     const countrySelected = !!localStorage.getItem('akinto_country')
 
     if (!cookiesAccepted || !countrySelected) {
-      return next('/') // force back to landing
+      return next({ path: '/', query: { setup: '1' } })
     }
   }
 
