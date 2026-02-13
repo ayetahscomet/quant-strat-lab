@@ -156,7 +156,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { registerPush } from '@/push/registerPush'
-import { computeDailyMetrics } from '@/lib/metricsEngine.js'
+import { computeDailyMetrics } from '../../lib/metricsEngine.js'
 
 onMounted(() => {
   setTimeout(() => {

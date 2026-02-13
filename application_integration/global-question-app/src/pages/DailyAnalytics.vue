@@ -262,7 +262,7 @@ import { countries } from '@/data/countries'
 import { getTimezone, todayKey } from '../utils/windows.js'
 import html2canvas from 'html2canvas'
 import ShareCard from '@/components/ShareCard.vue'
-import { computeDailyMetrics } from '@/lib/metricsEngine.js'
+import { computeDailyMetrics } from '../../lib/metricsEngine.js'
 
 /* String/Number Helper Functions  */
 
