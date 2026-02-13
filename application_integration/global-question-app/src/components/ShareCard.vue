@@ -124,6 +124,7 @@ const props = defineProps({
   dailyScore: Number,
   countryName: String,
   global: Object,
+  pacePercentile: Number,
 })
 
 function clamp(n, a, b) {

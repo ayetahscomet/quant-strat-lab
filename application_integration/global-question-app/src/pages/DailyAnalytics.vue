@@ -200,16 +200,7 @@
       v-if="personalReady"
       ref="shareCardRef"
       :date="personal.dateKey"
-      :completion="displayCompletion"
-      :accuracy="displayAccuracy"
-      :pace="
-        typeof personal.pacePercentile === 'number'
-          ? displaySpeed + '%'
-          : personal.paceSeconds
-            ? Math.max(1, Math.round(personal.paceSeconds / 60)) + 'm'
-            : '—'
-      "
-      :completionReason="personal.completionReason"
+      v-bind="canonicalShareMetrics"
       :countryName="personal.countryName"
       :global="global"
     />
@@ -225,16 +216,7 @@
         <ShareCard
           ref="liveShareCardRef"
           :date="personal.dateKey"
-          :completion="displayCompletion"
-          :accuracy="displayAccuracy"
-          :pace="
-            typeof personal.pacePercentile === 'number'
-              ? displaySpeed + '%'
-              : personal.paceSeconds
-                ? Math.max(1, Math.round(personal.paceSeconds / 60)) + 'm'
-                : '—'
-          "
-          :completionReason="personal.completionReason"
+          v-bind="canonicalShareMetrics"
           :countryName="personal.countryName"
           :global="global"
         />
@@ -1624,7 +1606,8 @@ function derivePersonalFromUserDailyProfile(payload) {
     totalSlots: metrics.totalSlots,
     _totalPossible: metrics.totalSlots,
 
-    attemptsTotal: attempts.length,
+    attemptsTotal: metrics.attemptsTotal,
+
     hintsUsed: Number(prof.HintCount) || 0,
 
     uniqueCorrect: metrics.correctCount,
@@ -1646,9 +1629,9 @@ function derivePersonalFromUserDailyProfile(payload) {
     countryCode: resolvedCountryCode,
     countryName: resolvedCountryName,
 
-    submittedUnique: uniqueSubmitted.size,
-    duplicatePenalty,
-    _attemptsByWindow: attemptsByWindow,
+    submittedUnique: metrics.submittedUnique,
+    duplicatePenalty: metrics.duplicatePenalty,
+    _attemptsByWindow: metrics.attemptsByWindow,
   }
 }
 
@@ -1772,6 +1755,21 @@ const displayAccuracy = computed(() => pct(personal.value.accuracy))
 const displaySpeed = computed(() =>
   typeof personal.value.pacePercentile === 'number' ? pct(personal.value.pacePercentile) : 55,
 )
+
+const canonicalShareMetrics = computed(() => ({
+  completion: personal.value.completion,
+  accuracy: personal.value.accuracy,
+  pace:
+    typeof personal.value.pacePercentile === 'number'
+      ? `${pct(personal.value.pacePercentile)}%`
+      : personal.value.paceSeconds
+        ? `${Math.max(1, Math.round(personal.value.paceSeconds / 60))}m`
+        : '—',
+
+  pacePercentile: personal.value.pacePercentile,
+  completionReason: personal.value.completionReason,
+  dailyScore: personal.value.dailyScore,
+}))
 
 /* ShareCard Features */
 

@@ -260,11 +260,13 @@ async function loadSuccessSummaryFromAirtable() {
     windowIndex = Math.floor(h / 2)
   }
 
+  const cleanAttempts = attempts.filter(
+    (a) => Number(a.attemptIndex) !== 999 && a.result !== 'snapshot',
+  )
+
   metrics.value = computeDailyMetrics({
     attempts,
-    question: {
-      answerCount: correctAnswers.length,
-    },
+    question: { answerCount: correctAnswers.length },
     profile: {},
   })
 

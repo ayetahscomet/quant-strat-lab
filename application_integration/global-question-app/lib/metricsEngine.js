@@ -19,6 +19,12 @@ function normalisePercent(x) {
   return n
 }
 
+function cleanAttempts(attempts = []) {
+  return attempts.filter(
+    (a) => Number(a?.attemptIndex) !== 999 && a?.result !== 'snapshot' && !a?.isSummary,
+  )
+}
+
 export function computeDailyMetrics({ attempts = [], question = {}, profile = {} }) {
   const WINDOWS_PER_DAY = 7
   const ATTEMPTS_PER_WINDOW = 3
@@ -27,7 +33,9 @@ export function computeDailyMetrics({ attempts = [], question = {}, profile = {}
   const uniqueCorrect = new Set()
   const attemptsByWindow = {}
 
-  for (const a of attempts) {
+  const clean = cleanAttempts(attempts)
+
+  for (const a of clean) {
     const rawAnswers = Array.isArray(a.answers) ? a.answers : a.answer ? [a.answer] : []
 
     for (const ans of rawAnswers) {
@@ -78,7 +86,7 @@ export function computeDailyMetrics({ attempts = [], question = {}, profile = {}
   completion = clamp(completion, 0, 100)
 
   // ---------------- Accuracy ----------------
-  const totalAvailableAttempts = windowsPlayed * ATTEMPTS_PER_WINDOW
+  const totalAvailableAttempts = clean.length
 
   const accuracy =
     totalAvailableAttempts > 0 ? Math.round((correctCount / totalAvailableAttempts) * 100) : 0
@@ -104,5 +112,9 @@ export function computeDailyMetrics({ attempts = [], question = {}, profile = {}
     windowsPlayed,
     correctCount,
     totalSlots,
+    attemptsTotal: clean.length,
+    submittedUnique: uniqueSubmitted.size,
+    duplicatePenalty: uniqueSubmitted.size - uniqueCorrect.size,
+    attemptsByWindow,
   }
 }
