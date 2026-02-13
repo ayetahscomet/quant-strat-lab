@@ -80,7 +80,9 @@
 
             <div class="metric metric-big">
               <p class="metric-label">Completion</p>
-              <p class="metric-value-lg">100<span class="metric-unit">%</span></p>
+              <p class="metric-value-lg">
+                {{ metrics?.completion ?? 0 }} <span class="metric-unit">%</span>
+              </p>
               <p class="metric-footnote">You filled the full board.</p>
             </div>
           </div>
@@ -154,6 +156,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { registerPush } from '@/push/registerPush'
+import { computeDailyMetrics } from '@/lib/metricsEngine.js'
 
 onMounted(() => {
   setTimeout(() => {
@@ -180,6 +183,8 @@ const summary = ref({
   windowIndex: 0,
   userId: '',
 })
+
+const metrics = ref(null)
 
 /**
  * Helper: lightweight normaliser for answer comparison.
@@ -255,6 +260,14 @@ async function loadSuccessSummaryFromAirtable() {
     windowIndex = Math.floor(h / 2)
   }
 
+  metrics.value = computeDailyMetrics({
+    attempts,
+    question: {
+      answerCount: correctAnswers.length,
+    },
+    profile: {},
+  })
+
   summary.value = {
     ...summary.value,
     userId,
@@ -290,8 +303,7 @@ const totalAnswers = computed(
 )
 
 const accuracy = computed(() => {
-  if (!totalAnswers.value) return 0
-  return (summary.value.correctCount / totalAnswers.value) * 100
+  return Math.round(metrics.value?.accuracy ?? 0)
 })
 
 /* ---------- Other accepted answers ---------- */

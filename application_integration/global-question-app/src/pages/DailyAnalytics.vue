@@ -262,6 +262,7 @@ import { countries } from '@/data/countries'
 import { getTimezone, todayKey } from '../utils/windows.js'
 import html2canvas from 'html2canvas'
 import ShareCard from '@/components/ShareCard.vue'
+import { computeDailyMetrics } from '@/lib/metricsEngine.js'
 
 /* String/Number Helper Functions  */
 
@@ -1584,37 +1585,18 @@ function derivePersonalFromUserDailyProfile(payload) {
   const q = payload?.question || {}
   const attempts = Array.isArray(payload?.attempts) ? payload.attempts : []
 
-  // -----------------------------
-  // STRUCTURAL CONSTANTS
-  // -----------------------------
-  const WINDOWS_PER_DAY = 7
-  const ATTEMPTS_PER_WINDOW = 3
-  const MAX_ATTEMPTS = WINDOWS_PER_DAY * ATTEMPTS_PER_WINDOW
-
-  // -----------------------------
-  // Attempts-derived stats
-  // -----------------------------
   const uniqueSubmitted = new Set()
-  const uniqueCorrectSet = new Set()
   const attemptsByWindow = {}
   let duplicatePenalty = 0
 
   for (const a of attempts) {
-    const rawAnswers = Array.isArray(a.answers) ? a.answers : a.answer ? [a.answer] : []
+    const raw = Array.isArray(a.answers) ? a.answers : a.answer ? [a.answer] : []
 
-    for (const ans of rawAnswers) {
+    for (const ans of raw) {
       if (!ans) continue
       const n = normalise(ans)
-
       if (uniqueSubmitted.has(n)) duplicatePenalty++
       uniqueSubmitted.add(n)
-    }
-
-    const correctAnswers = Array.isArray(a.correctAnswers) ? a.correctAnswers : []
-
-    for (const c of correctAnswers) {
-      const n = normalise(c)
-      if (n) uniqueCorrectSet.add(n)
     }
 
     if (a.windowId) {
@@ -1623,70 +1605,12 @@ function derivePersonalFromUserDailyProfile(payload) {
     }
   }
 
-  const submittedUnique = uniqueSubmitted.size
-  const computedUniqueCorrect = uniqueCorrectSet.size
-  const windowsPlayed = Object.keys(attemptsByWindow).length
+  const metrics = computeDailyMetrics({
+    attempts,
+    question: q,
+    profile: prof,
+  })
 
-  // -----------------------------
-  // Question Meta
-  // -----------------------------
-  const totalSlots = Number(q.answerCount) || 0
-  const totalPossible = Array.isArray(q.correctAnswers) ? q.correctAnswers.length : totalSlots
-
-  // -----------------------------
-  // COMPLETION LOGIC
-  // -----------------------------
-
-  if (!totalSlots || totalSlots <= 0) {
-    computedCompletion = 0
-    completionReason = 'minimal'
-  }
-
-  let computedCompletion = 0
-  let completionReason = 'minimal'
-
-  const solved = totalSlots > 0 && computedUniqueCorrect >= totalSlots
-
-  const reachedFinalWindow =
-    windowsPlayed === WINDOWS_PER_DAY ||
-    Object.keys(attemptsByWindow).includes(String(WINDOWS_PER_DAY))
-
-  const meaningfulPlay = windowsPlayed >= 3
-
-  if (solved) {
-    computedCompletion = 100
-    completionReason = 'solved'
-  } else if (!solved && meaningfulPlay && reachedFinalWindow) {
-    computedCompletion = 100
-    completionReason = 'persistence'
-  } else if (meaningfulPlay) {
-    computedCompletion = Math.round((computedUniqueCorrect / totalSlots) * 100)
-    completionReason = 'engaged'
-  } else {
-    computedCompletion = Math.round((computedUniqueCorrect / totalSlots) * 100)
-    completionReason = 'minimal'
-  }
-
-  // -----------------------------
-  // ACCURACY LOGIC (STRUCTURAL)
-  // -----------------------------
-
-  const totalAttemptCount = attempts.length
-
-  const computedAccuracy =
-    totalAttemptCount > 0 ? Math.round((computedUniqueCorrect / totalAttemptCount) * 100) : 0
-
-  // -----------------------------
-  // Pace logic (only meaningful if solved)
-  // -----------------------------
-  const paceSeconds = solved ? (prof.SolveSeconds ?? null) : null
-
-  const pSpeed = normaliseAirtablePercent(prof.PercentileSpeed)
-  const pAcc = normaliseAirtablePercent(prof.PercentileAccuracy)
-
-  // -----------------------------
-  // Country Resolution
-  // -----------------------------
   const profileCountryCode =
     typeof prof.Country === 'string' && prof.Country.length ? prof.Country.toLowerCase() : null
 
@@ -1694,33 +1618,26 @@ function derivePersonalFromUserDailyProfile(payload) {
 
   const resolvedCountryName = countryNameFromCode(resolvedCountryCode)
 
-  // -----------------------------
-  // FINAL PERSONAL OBJECT
-  // -----------------------------
   personal.value = {
     ...personal.value,
 
-    totalSlots,
-    _totalPossible: totalPossible,
+    totalSlots: metrics.totalSlots,
+    _totalPossible: metrics.totalSlots,
 
     attemptsTotal: attempts.length,
     hintsUsed: Number(prof.HintCount) || 0,
 
-    uniqueCorrect: computedUniqueCorrect,
-    rareAnswers: Number(prof.RareAnswers) || 0,
+    uniqueCorrect: metrics.correctCount,
+    windowsPlayed: metrics.windowsPlayed,
 
-    submittedUnique,
-    duplicatePenalty,
-    windowsPlayed,
-    _attemptsByWindow: attemptsByWindow,
+    completion: metrics.completion,
+    completionReason: metrics.completionReason,
+    accuracy: metrics.accuracy,
 
-    completion: computedCompletion,
-    completionReason,
-    accuracy: computedAccuracy,
+    paceSeconds: metrics.paceSeconds,
+    pacePercentile: metrics.pacePercentile,
 
-    paceSeconds,
-    pacePercentile: solved ? (pSpeed ?? null) : null,
-    accuracyPercentile: pAcc ?? null,
+    dailyScore: metrics.dailyScore,
 
     archetype: prof.Archetype ?? null,
     streakContinues: prof.StreakContinues ?? null,
@@ -1729,7 +1646,9 @@ function derivePersonalFromUserDailyProfile(payload) {
     countryCode: resolvedCountryCode,
     countryName: resolvedCountryName,
 
-    rareAnswersList: payload?.derived?.rareAnswersList || [],
+    submittedUnique: uniqueSubmitted.size,
+    duplicatePenalty,
+    _attemptsByWindow: attemptsByWindow,
   }
 }
 
@@ -1773,7 +1692,10 @@ onMounted(async () => {
       }
 
       if (typeof g.pacePercentileForUser === 'number') {
-        personal.value.pacePercentile = normaliseAirtablePercent(g.pacePercentileForUser)
+        personal.value = {
+          ...personal.value,
+          pacePercentile: normaliseAirtablePercent(g.pacePercentileForUser),
+        }
       }
     }
 
@@ -1833,7 +1755,6 @@ async function fetchPersonalAnalytics() {
 }
 
 async function fetchGlobalAnalytics() {
-  console.log('Global payload:', g)
   const res = await fetch('/api/load-global-analytics', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1985,54 +1906,6 @@ async function downloadImage() {
   link.download = 'akinto-results.png'
   link.click()
 }
-
-defineProps({
-  date: String,
-  completion: Number,
-  accuracy: Number,
-  pace: String,
-  completionReason: String,
-  countryName: String,
-  global: Object,
-})
-
-const completionHeadline = computed(() => {
-  switch (props.completionReason) {
-    case 'solved':
-      return 'Perfect execution.'
-
-    case 'persistence':
-      return 'Full persistence.'
-
-    case 'engaged':
-      return 'Deep engagement.'
-
-    case 'minimal':
-      return 'Light exploration.'
-
-    default:
-      return ''
-  }
-})
-
-const completionSubline = computed(() => {
-  switch (props.completionReason) {
-    case 'solved':
-      return 'All required answers found.'
-
-    case 'persistence':
-      return 'Reached the final window. Most players don’t.'
-
-    case 'engaged':
-      return 'Strong participation across multiple windows.'
-
-    case 'minimal':
-      return 'Early interaction — tomorrow is wide open.'
-
-    default:
-      return ''
-  }
-})
 </script>
 
 <style scoped>

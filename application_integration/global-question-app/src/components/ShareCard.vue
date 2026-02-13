@@ -116,25 +116,14 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  date: { type: String, default: '' },
-
-  completion: { type: Number, default: 0 },
-  accuracy: { type: Number, default: 0 },
-
-  paceText: { type: String, default: '—' },
-  pacePercentile: { type: Number, default: null }, // 0–100, or null
-
-  countryName: { type: String, default: null },
-
-  totalPlayers: { type: Number, default: null },
-  avgCompletion: { type: Number, default: null },
-  avgAccuracy: { type: Number, default: null },
-
-  yourCountryRank: { type: Number, default: null }, // only show if != null
-  yourCountryAvgCompletion: { type: Number, default: null },
-
-  // [{country, name, value, users}]
-  countryLeaderboard: { type: Array, default: () => [] },
+  date: String,
+  completion: Number,
+  accuracy: Number,
+  pace: String,
+  completionReason: String,
+  dailyScore: Number,
+  countryName: String,
+  global: Object,
 })
 
 function clamp(n, a, b) {
@@ -152,11 +141,7 @@ function pct(n) {
  * 0.50 * completion + 0.30 * accuracy + 0.20 * pacePercentile (or 50 if null)
  */
 const dailyScore = computed(() => {
-  const c = pct(props.completion) ?? 0
-  const a = pct(props.accuracy) ?? 0
-  const p =
-    typeof props.pacePercentile === 'number' ? clamp(Math.round(props.pacePercentile), 0, 100) : 50
-  return clamp(Math.round(c * 0.5 + a * 0.3 + p * 0.2), 0, 100)
+  return typeof props.dailyScore === 'number' ? props.dailyScore : 0
 })
 
 const scoreLine = computed(() => {
@@ -175,7 +160,7 @@ const scoreLine = computed(() => {
 
 /** Sample-size / credibility badge */
 const sampleTier = computed(() => {
-  const n = props.totalPlayers
+  const n = props.global?.totalPlayers
   if (typeof n !== 'number') return 'none'
   if (n >= 50) return 'strong'
   if (n >= 15) return 'ok'
@@ -184,7 +169,7 @@ const sampleTier = computed(() => {
 })
 
 const sampleLabel = computed(() => {
-  const n = props.totalPlayers
+  const n = props.global?.totalPlayers
   if (typeof n !== 'number') return `Sample: —`
   if (n < 5) return `Sample: early (${n})`
   if (n < 15) return `Sample: building (${n})`
@@ -192,28 +177,30 @@ const sampleLabel = computed(() => {
 })
 
 const isCompact = computed(() => {
-  const n = props.totalPlayers
+  const n = props.global?.totalPlayers
   // compact when we have very little global data (keeps it tidy)
   return typeof n === 'number' && n < 5
 })
 
 /** Global labels */
 const totalPlayersLabel = computed(() => {
-  const n = props.totalPlayers
+  const n = props.global?.totalPlayers
   return typeof n === 'number' ? `${n}` : '—'
 })
 
 const hasWorldAverages = computed(() => {
-  return typeof props.avgCompletion === 'number' || typeof props.avgAccuracy === 'number'
+  return (
+    typeof props.global?.avgCompletion === 'number' || typeof props.global?.avgAccuracy === 'number'
+  )
 })
 
 const avgCompletionLabel = computed(() => {
-  const v = pct(props.avgCompletion)
+  const v = pct(props.global?.avgCompletion)
   return v === null ? '—' : `${v}%`
 })
 
 const avgAccuracyLabel = computed(() => {
-  const v = pct(props.avgAccuracy)
+  const v = pct(props.global?.avgAccuracy)
   return v === null ? '—' : `${v}%`
 })
 
@@ -224,7 +211,7 @@ const countryComparisonTitle = computed(() => {
 
 const countryComparisonLine = computed(() => {
   const you = pct(props.yourCountryAvgCompletion)
-  const world = pct(props.avgCompletion)
+  const world = pct(props.global?.avgCompletion)
 
   if (you === null && world === null) return 'Calibrating…'
   if (you !== null && world === null) return `${you}% completion (world loading)`
@@ -233,14 +220,16 @@ const countryComparisonLine = computed(() => {
 })
 
 const rankLine = computed(() => {
-  const r = props.yourCountryRank
+  const r = props.global?.yourCountryRank
   if (typeof r !== 'number') return ''
   return `#${r} today`
 })
 
 /** Top 3 countries */
 const topCountries = computed(() => {
-  const arr = Array.isArray(props.countryLeaderboard) ? props.countryLeaderboard : []
+  const arr = Array.isArray(props.global?.countryLeaderboard)
+    ? props.global?.countryLeaderboard
+    : []
   return arr
     .filter((x) => x && (x.name || x.country))
     .slice(0, 3)
