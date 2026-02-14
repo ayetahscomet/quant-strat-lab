@@ -376,6 +376,19 @@ function blockStyle(block) {
   return blockStyleMerged(block)
 }
 
+function normaliseCountryToCode(raw) {
+  const v = String(raw || '').trim()
+  if (!v) return 'xx'
+
+  // already ISO2?
+  if (/^[a-z]{2}$/i.test(v)) return v.toLowerCase()
+
+  // try match by name
+  const lower = v.toLowerCase()
+  const hit = countries.find((c) => String(c.name || '').toLowerCase() === lower)
+  return hit?.code?.toLowerCase() || 'xx'
+}
+
 /* Router Functions */
 
 function goHome() {
@@ -406,7 +419,7 @@ const router = useRouter()
 const tz = ref(getTimezone())
 const dateKeyRef = ref(todayKey('Europe/London'))
 const userId = getOrCreateUUID()
-const userCountryCode = (localStorage.getItem('akinto_country') || 'XX').toLowerCase()
+const userCountryCode = normaliseCountryToCode(localStorage.getItem('akinto_country') || 'xx')
 const isLoading = ref(true)
 const personalReady = ref(false)
 const personalSubline = ref('')
@@ -1247,7 +1260,7 @@ function buildGlobalBlocks(rng) {
       tier: 'badge',
       shape: 'square',
       mini: {
-        big: `${pct(p.completion * 0.5 + p.accuracy * 0.3 + (p.pacePercentile || 50) * 0.2)}%`,
+        big: `${pct(p.dailyScore)}%`,
         sub: 'Daily Score',
       },
       caption: 'Not scientific. Extremely shareable.',
@@ -1567,26 +1580,6 @@ function derivePersonalFromUserDailyProfile(payload) {
   const q = payload?.question || {}
   const attempts = Array.isArray(payload?.attempts) ? payload.attempts : []
 
-  const uniqueSubmitted = new Set()
-  const attemptsByWindow = {}
-  let duplicatePenalty = 0
-
-  for (const a of attempts) {
-    const raw = Array.isArray(a.answers) ? a.answers : a.answer ? [a.answer] : []
-
-    for (const ans of raw) {
-      if (!ans) continue
-      const n = normalise(ans)
-      if (uniqueSubmitted.has(n)) duplicatePenalty++
-      uniqueSubmitted.add(n)
-    }
-
-    if (a.windowId) {
-      attemptsByWindow[a.windowId] ??= 0
-      attemptsByWindow[a.windowId]++
-    }
-  }
-
   const metrics = computeDailyMetrics({
     attempts,
     question: q,
@@ -1596,7 +1589,10 @@ function derivePersonalFromUserDailyProfile(payload) {
   const profileCountryCode =
     typeof prof.Country === 'string' && prof.Country.length ? prof.Country.toLowerCase() : null
 
-  const resolvedCountryCode = profileCountryCode || personal.value.countryCode || userCountryCode
+  const latestLocalCountry = normaliseCountryToCode(localStorage.getItem('akinto_country'))
+
+  const resolvedCountryCode =
+    profileCountryCode || latestLocalCountry || personal.value.countryCode || 'xx'
 
   const resolvedCountryName = countryNameFromCode(resolvedCountryCode)
 
@@ -1606,7 +1602,7 @@ function derivePersonalFromUserDailyProfile(payload) {
     totalSlots: metrics.totalSlots,
     _totalPossible: metrics.totalSlots,
 
-    attemptsTotal: metrics.attemptsTotal,
+    attemptsTotal: metrics.totalAttemptsUsed,
 
     hintsUsed: Number(prof.HintCount) || 0,
 
@@ -1632,6 +1628,7 @@ function derivePersonalFromUserDailyProfile(payload) {
     submittedUnique: metrics.submittedUnique,
     duplicatePenalty: metrics.duplicatePenalty,
     _attemptsByWindow: metrics.attemptsByWindow,
+    totalAttemptsUsed,
   }
 }
 
@@ -1756,20 +1753,24 @@ const displaySpeed = computed(() =>
   typeof personal.value.pacePercentile === 'number' ? pct(personal.value.pacePercentile) : 55,
 )
 
-const canonicalShareMetrics = computed(() => ({
-  completion: personal.value.completion,
-  accuracy: personal.value.accuracy,
-  pace:
-    typeof personal.value.pacePercentile === 'number'
-      ? `${pct(personal.value.pacePercentile)}%`
-      : personal.value.paceSeconds
-        ? `${Math.max(1, Math.round(personal.value.paceSeconds / 60))}m`
-        : '—',
+const canonicalShareMetrics = computed(() => {
+  const p = personal.value
 
-  pacePercentile: personal.value.pacePercentile,
-  completionReason: personal.value.completionReason,
-  dailyScore: personal.value.dailyScore,
-}))
+  return {
+    completion: pct(p.completion),
+    accuracy: pct(p.accuracy),
+    pace:
+      typeof p.pacePercentile === 'number'
+        ? `${pct(p.pacePercentile)}%`
+        : p.paceSeconds
+          ? `${Math.max(1, Math.round(p.paceSeconds / 60))}m`
+          : '—',
+
+    pacePercentile: p.pacePercentile,
+    completionReason: p.completionReason,
+    dailyScore: pct(p.dailyScore),
+  }
+})
 
 /* ShareCard Features */
 

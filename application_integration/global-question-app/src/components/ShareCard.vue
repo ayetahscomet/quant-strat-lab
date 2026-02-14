@@ -23,12 +23,12 @@
     <div class="stats">
       <div class="stat completion">
         <div class="label">Completion</div>
-        <div class="value">{{ completion }}%</div>
+        <div class="value">{{ safeCompletion }}%</div>
       </div>
 
       <div class="stat accuracy">
         <div class="label">Accuracy</div>
-        <div class="value">{{ accuracy }}%</div>
+        <div class="value">{{ safeAccuracy }}%</div>
       </div>
 
       <div class="stat pace">
@@ -117,14 +117,23 @@ import { computed } from 'vue'
 
 const props = defineProps({
   date: String,
+
+  // canonical metrics from engine
   completion: Number,
   accuracy: Number,
-  pace: String,
-  completionReason: String,
   dailyScore: Number,
-  countryName: String,
-  global: Object,
+  pace: String,
   pacePercentile: Number,
+  completionReason: String,
+
+  // country
+  countryName: String,
+
+  // full global object
+  global: {
+    type: Object,
+    default: () => ({}),
+  },
 })
 
 function clamp(n, a, b) {
@@ -137,12 +146,35 @@ function pct(n) {
   return clamp(Math.round(x), 0, 100)
 }
 
+const safeCompletion = computed(() => clamp(Math.round(Number(props.completion) || 0), 0, 100))
+
+const safeAccuracy = computed(() => clamp(Math.round(Number(props.accuracy) || 0), 0, 100))
+
+const paceText = computed(() => {
+  if (props.pace) return props.pace
+  return '—'
+})
+
+const completionHeadline = computed(() => {
+  if (props.completionReason === 'solved') return 'Fully solved.'
+  if (props.completionReason === 'engaged') return 'Strong coverage.'
+  return 'Session logged.'
+})
+
+const completionSubline = computed(() => {
+  if (props.completionReason === 'solved') return 'All required answers found.'
+  if (props.completionReason === 'engaged') return 'You meaningfully worked the board.'
+  return 'More windows, more signal.'
+})
+
 /**
  * Daily Score (same spirit as your global tile):
  * 0.50 * completion + 0.30 * accuracy + 0.20 * pacePercentile (or 50 if null)
  */
 const dailyScore = computed(() => {
-  return typeof props.dailyScore === 'number' ? props.dailyScore : 0
+  const score = Number(props.dailyScore)
+  if (isFinite(score)) return clamp(Math.round(score), 0, 100)
+  return 0
 })
 
 const scoreLine = computed(() => {
@@ -211,19 +243,28 @@ const countryComparisonTitle = computed(() => {
 })
 
 const countryComparisonLine = computed(() => {
-  const you = pct(props.yourCountryAvgCompletion)
+  const you = pct(props.global?.yourCountryAvgCompletion)
   const world = pct(props.global?.avgCompletion)
 
+  // no country selected
+  if (!props.countryName) {
+    return world !== null ? `World ${world}% (set country for comparison)` : 'Calibrating…'
+  }
+
+  // country selected but no data yet
   if (you === null && world === null) return 'Calibrating…'
-  if (you !== null && world === null) return `${you}% completion (world loading)`
-  if (you === null && world !== null) return `World ${world}% (set country for comparison)`
+  if (you !== null && world === null) return `${you}% (world loading)`
+  if (you === null && world !== null) return `World ${world}%`
+
   return `${you}% vs ${world}% completion`
 })
 
+const yourCountryRank = computed(() => {
+  return typeof props.global?.yourCountryRank === 'number' ? props.global.yourCountryRank : null
+})
+
 const rankLine = computed(() => {
-  const r = props.global?.yourCountryRank
-  if (typeof r !== 'number') return ''
-  return `#${r} today`
+  return yourCountryRank.value !== null ? `#${yourCountryRank.value} today` : ''
 })
 
 /** Top 3 countries */

@@ -12,10 +12,20 @@
         <h1 class="hero-title">
           {{ heroTitle }}
         </h1>
-        <p class="hero-sub">You solved all {{ totalAnswers }} answers correctly today.</p>
+        <p class="hero-sub">
+          <template v-if="metrics?.completionReason === 'solved'">
+            You solved all {{ totalAnswers }} answers correctly today.
+          </template>
+          <template v-else>
+            You found {{ summary.correctCount }} of {{ totalAnswers }} answers today.
+          </template>
+        </p>
 
         <div class="hero-chips">
-          <span class="chip chip-strong" v-if="summary.completed"> Perfect solve </span>
+          <span class="chip chip-strong" v-if="metrics?.completionReason === 'solved'">
+            Perfect solve
+          </span>
+
           <span class="chip" v-if="summary.attemptsUsed">
             {{ summary.attemptsUsed }} attempt{{ summary.attemptsUsed === 1 ? '' : 's' }}
           </span>
@@ -81,9 +91,19 @@
             <div class="metric metric-big">
               <p class="metric-label">Completion</p>
               <p class="metric-value-lg">
-                {{ metrics?.completion ?? 0 }} <span class="metric-unit">%</span>
+                {{ Math.max(0, Math.min(100, Math.round(metrics?.completion ?? 0))) }}
+                <span class="metric-unit">%</span>
               </p>
-              <p class="metric-footnote">You filled the full board.</p>
+
+              <p class="metric-footnote">
+                <template v-if="metrics?.completionReason === 'solved'">
+                  You solved the full board.
+                </template>
+                <template v-else-if="metrics?.completionReason === 'engaged'">
+                  You meaningfully worked the board.
+                </template>
+                <template v-else> Session logged across today’s windows. </template>
+              </p>
             </div>
           </div>
         </div>
@@ -94,7 +114,7 @@
             <div class="metric">
               <p class="metric-label">Attempts used</p>
               <p class="metric-value">
-                {{ summary.attemptsUsed || 1 }}
+                {{ metrics?.totalAttemptsUsed ?? (summary.attemptsUsed || 1) }}
               </p>
               <p class="metric-footnote">These are summed throughout your daily windows.</p>
             </div>
@@ -265,7 +285,7 @@ async function loadSuccessSummaryFromAirtable() {
   )
 
   metrics.value = computeDailyMetrics({
-    attempts,
+    attempts: cleanAttempts,
     question: { answerCount: correctAnswers.length },
     profile: {},
   })
@@ -305,7 +325,8 @@ const totalAnswers = computed(
 )
 
 const accuracy = computed(() => {
-  return Math.round(metrics.value?.accuracy ?? 0)
+  const val = Number(metrics.value?.accuracy ?? 0)
+  return Math.max(0, Math.min(100, Math.round(val)))
 })
 
 /* ---------- Other accepted answers ---------- */

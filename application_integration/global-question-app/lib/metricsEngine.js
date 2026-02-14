@@ -26,78 +26,105 @@ function cleanAttempts(attempts = []) {
 }
 
 export function computeDailyMetrics({ attempts = [], question = {}, profile = {} }) {
-  const WINDOWS_PER_DAY = 7
-  const ATTEMPTS_PER_WINDOW = 3
+  const n = Number(question.answerCount) || 0
 
-  const uniqueSubmitted = new Set()
-  const uniqueCorrect = new Set()
+  // --------------------------------------------------
+  // 1️⃣ Remove snapshot / summary rows once
+  // --------------------------------------------------
+  const realAttempts = Array.isArray(attempts)
+    ? attempts.filter(
+        (a) => Number(a?.attemptIndex) !== 999 && a?.result !== 'snapshot' && !a?.isSummary,
+      )
+    : []
+
+  // --------------------------------------------------
+  // 2️⃣ Track windows actually played
+  // --------------------------------------------------
   const attemptsByWindow = {}
-
-  const clean = cleanAttempts(attempts)
-
-  for (const a of clean) {
-    const rawAnswers = Array.isArray(a.answers) ? a.answers : a.answer ? [a.answer] : []
-
-    for (const ans of rawAnswers) {
-      if (!ans) continue
-      uniqueSubmitted.add(normalise(ans))
-    }
-
-    const correctAnswers = Array.isArray(a.correctAnswers) ? a.correctAnswers : []
-
-    for (const c of correctAnswers) {
-      if (!c) continue
-      uniqueCorrect.add(normalise(c))
-    }
-
-    if (a.windowId) {
-      attemptsByWindow[a.windowId] ??= 0
-      attemptsByWindow[a.windowId]++
-    }
+  for (const a of realAttempts) {
+    if (!a.windowId) continue
+    attemptsByWindow[a.windowId] ??= 0
+    attemptsByWindow[a.windowId]++
   }
 
   const windowsPlayed = Object.keys(attemptsByWindow).length
-  const totalSlots = Number(question.answerCount) || 0
+  const totalAttemptsUsed = realAttempts.length
 
-  const correctCount = uniqueCorrect.size
+  // --------------------------------------------------
+  // 3️⃣ Count correct entries across ALL attempts
+  // numerator for accuracy
+  // --------------------------------------------------
+  let correctEntries = 0
+  const uniqueCorrect = new Set()
 
-  // ---------------- Completion ----------------
-  const solved = totalSlots > 0 && correctCount >= totalSlots
+  for (const a of realAttempts) {
+    const correctAnswers = Array.isArray(a.correctAnswers) ? a.correctAnswers.map(normalise) : []
 
-  const reachedFinalWindow =
-    attemptsByWindow['7'] > 0 || attemptsByWindow['last'] > 0 || windowsPlayed === WINDOWS_PER_DAY
+    const answers = Array.isArray(a.answers) ? a.answers : a.answer ? [a.answer] : []
 
-  const meaningfulPlay = windowsPlayed >= 3
+    for (const ans of answers) {
+      const norm = normalise(ans)
+      if (!norm) continue
 
+      if (correctAnswers.includes(norm)) {
+        correctEntries++
+        uniqueCorrect.add(norm)
+      }
+    }
+  }
+
+  const uniqueCorrectCount = uniqueCorrect.size
+
+  // --------------------------------------------------
+  // 4️⃣ COMPLETION (coverage of unique answers)
+  // --------------------------------------------------
   let completion = 0
   let completionReason = 'minimal'
+
+  if (n > 0) {
+    completion = clamp(Math.round((uniqueCorrectCount / n) * 100), 0, 100)
+  }
+
+  const solved = n > 0 && uniqueCorrectCount >= n
 
   if (solved) {
     completion = 100
     completionReason = 'solved'
-  } else if (meaningfulPlay && reachedFinalWindow) {
-    completion = 100
-    completionReason = 'persistence'
-  } else {
-    completion = totalSlots > 0 ? Math.round((correctCount / totalSlots) * 100) : 0
-    completionReason = meaningfulPlay ? 'engaged' : 'minimal'
+  } else if (windowsPlayed >= 3 && totalAttemptsUsed > 0) {
+    completionReason = 'engaged'
   }
 
-  completion = clamp(completion, 0, 100)
-
-  // ---------------- Accuracy ----------------
-  const totalAvailableAttempts = clean.length
+  // --------------------------------------------------
+  // 5️⃣ ACCURACY (precision)
+  //
+  // denominator = attempts used × n inputs
+  //
+  // IMPORTANT:
+  // If player only played 4 windows,
+  // totalAttemptsUsed already reflects that.
+  // --------------------------------------------------
+  const totalSlotsUsed = n > 0 ? totalAttemptsUsed * n : 0
 
   const accuracy =
-    totalAvailableAttempts > 0 ? Math.round((correctCount / totalAvailableAttempts) * 100) : 0
+    totalSlotsUsed > 0 ? clamp(Math.round((correctEntries / totalSlotsUsed) * 100), 0, 100) : 0
 
-  // ---------------- Pace ----------------
-  const paceSeconds = solved ? (profile?.SolveSeconds ?? null) : null
-  const pacePercentile = solved ? normalisePercent(profile?.PercentileSpeed) : null
+  // --------------------------------------------------
+  // 6️⃣ PACE (only meaningful if solved)
+  // --------------------------------------------------
+  const paceSeconds = solved && profile?.SolveSeconds ? Number(profile.SolveSeconds) : null
 
-  // ---------------- Daily Score ----------------
+  const rawPercentile =
+    solved && profile?.PercentileSpeed != null ? normalisePercent(profile.PercentileSpeed) : null
+
+  const pacePercentile = rawPercentile != null ? clamp(Math.round(rawPercentile), 0, 100) : null
+
+  // --------------------------------------------------
+  // 7️⃣ DAILY SCORE
+  // --------------------------------------------------
   const dailyScore = clamp(
-    Math.round(completion * 0.5 + accuracy * 0.3 + (pacePercentile ? pacePercentile * 0.2 : 0)),
+    Math.round(
+      completion * 0.5 + accuracy * 0.3 + (pacePercentile != null ? pacePercentile * 0.2 : 0),
+    ),
     0,
     100,
   )
@@ -106,15 +133,14 @@ export function computeDailyMetrics({ attempts = [], question = {}, profile = {}
     completion,
     completionReason,
     accuracy,
+    dailyScore,
     paceSeconds,
     pacePercentile,
-    dailyScore,
     windowsPlayed,
-    correctCount,
-    totalSlots,
-    attemptsTotal: clean.length,
-    submittedUnique: uniqueSubmitted.size,
-    duplicatePenalty: uniqueSubmitted.size - uniqueCorrect.size,
+    totalAttemptsUsed,
+    correctEntries,
+    uniqueCorrectCount,
+    totalSlots: n,
     attemptsByWindow,
   }
 }
