@@ -26,7 +26,9 @@ function cleanAttempts(attempts = []) {
 }
 
 export function computeDailyMetrics({ attempts = [], question = {}, profile = {} }) {
-  const n = Number(question.answerCount) || 0
+  const n =
+    Number(question.answerCount) ||
+    (Array.isArray(question.correctAnswers) ? question.correctAnswers.length : 0)
 
   // --------------------------------------------------
   // 1️⃣ Remove snapshot / summary rows once
@@ -141,6 +143,5 @@ export function computeDailyMetrics({ attempts = [], question = {}, profile = {}
     correctEntries,
     uniqueCorrectCount,
     totalSlots: n,
-    attemptsByWindow,
   }
 }
