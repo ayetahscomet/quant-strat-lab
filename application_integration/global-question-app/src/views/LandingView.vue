@@ -234,12 +234,24 @@ function handleLandingKey(e) {
 }
 
 onMounted(() => {
-  // Load existing selection
+  // 🔹 1. Capture marketing source (QR tracking)
+  const params = new URLSearchParams(window.location.search)
+  const src = params.get('src')
+
+  if (src) {
+    // store for this session only
+    sessionStorage.setItem('akinto_source', src)
+
+    // remove ?src= from URL so users see clean akinto.io
+    window.history.replaceState({}, document.title, '/')
+  }
+
+  // 🔹 2. Load existing country selection
   const existing = localStorage.getItem('akinto_country')
   if (existing) country.value = normaliseCode(existing)
 
   window.addEventListener('keydown', handleLandingKey)
-  // Toggle footer colour when SEO section enters view
+
   seoObserver = new IntersectionObserver(
     ([entry]) => {
       if (entry.isIntersecting) {

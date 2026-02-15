@@ -363,15 +363,14 @@ function blockStyle(block) {
 
 function normaliseCountryToCode(raw) {
   const v = String(raw || '').trim()
-  if (!v) return 'xx'
+  if (!v) return null
 
-  // already ISO2?
   if (/^[a-z]{2}$/i.test(v)) return v.toLowerCase()
 
-  // try match by name
   const lower = v.toLowerCase()
   const hit = countries.find((c) => String(c.name || '').toLowerCase() === lower)
-  return hit?.code?.toLowerCase() || 'xx'
+
+  return hit?.code?.toLowerCase() || null
 }
 
 function bucketScore(n, bands = [30, 55, 70, 85]) {
@@ -1359,8 +1358,8 @@ function buildGlobalBlocks(rng) {
       topic: 'overguess',
       kicker: 'Overconfidence',
       title: 'Most over-guessed wrong answer',
-      body: `${og.answer} was guessed ${og.guessCount} times but only correct ${og.correctCount} times.`,
-      tier: 'major',
+      body: `${formatted} was consistently incorrectly guessed. You're not the only one.`,
+      tier: 'minor',
       shape: 'square',
       mini: {
         big: `${clamp(Math.round(og.overGuessRatio), 1, 25)}×`,
@@ -1623,7 +1622,7 @@ function buildGlobalBlocks(rng) {
         sub: 'Pace',
       },
       caption: pick(rng, [
-        'Speed ≠ intelligence. But it *is* funny.',
+        'Speed ≠ intelligence, but it’s good to know.',
         'Quick guesses still count as culture.',
         'Pace is a vibe.',
       ]),
@@ -1861,7 +1860,7 @@ function derivePersonalFromUserDailyProfile(payload) {
   const latestLocalCountry = normaliseCountryToCode(localStorage.getItem('akinto_country'))
 
   const resolvedCountryCode =
-    profileCountryCode || latestLocalCountry || personal.value.countryCode || 'xx'
+    profileCountryCode || latestLocalCountry || personal.value.countryCode || null
 
   const resolvedCountryName = countryNameFromCode(resolvedCountryCode)
 
@@ -1894,6 +1893,7 @@ function derivePersonalFromUserDailyProfile(payload) {
 
     countryCode: resolvedCountryCode,
     countryName: resolvedCountryName,
+    _attemptsByWindow: metrics.attemptsByWindow || {},
   }
 }
 
