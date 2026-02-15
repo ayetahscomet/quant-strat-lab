@@ -421,7 +421,7 @@ function generateMetricCommentary(p, g = {}) {
     completionFoot = map[completionTier] || base
 
     if (confidence === 'very-low') {
-      completionFoot += ' Early read — board trends may shift.'
+      completionFoot = completionFoot.replace(/\.$/, '') + '. Early read.'
     }
   }
 
@@ -480,7 +480,7 @@ function generateMetricCommentary(p, g = {}) {
   }
 
   if (confidence !== 'high') {
-    speedFoot += ' (Early data — distribution still forming.)'
+    speedFoot = speedFoot.replace(/\.$/, '') + '. Early data.'
   }
 
   /* ---------------------------
@@ -1363,7 +1363,7 @@ function buildGlobalBlocks(rng) {
       tier: 'major',
       shape: 'square',
       mini: {
-        big: `${Math.round(og.overGuessRatio)}×`,
+        big: `${clamp(Math.round(og.overGuessRatio), 1, 25)}×`,
         sub: 'Over-guess ratio',
       },
       caption: 'Confidence is not correctness.',
@@ -1373,7 +1373,9 @@ function buildGlobalBlocks(rng) {
   const entropyFactory = () => {
     if (typeof g.entropyIndex !== 'number') return null
 
-    const entropyPct = Math.round(g.entropyIndex * 100)
+    const raw = g.entropyIndex
+    const entropyPct =
+      raw > 1 ? clamp(Math.round(raw), 0, 100) : clamp(Math.round(raw * 100), 0, 100)
 
     let descriptor =
       entropyPct > 75
@@ -1505,7 +1507,10 @@ function buildGlobalBlocks(rng) {
         Array.isArray(g.countryLeaderboard) && g.countryLeaderboard.length
           ? g.countryLeaderboard
               .slice(0, 6)
-              .map((x, idx) => [`${idx + 1}. ${x.name}`, `${pct(x.value)}%`])
+              .map((x, idx) => [
+                `${idx + 1}. ${countryDisplay(x.country ?? x.name)}`,
+                `${pct(x.value)}%`,
+              ])
           : [
               ['1. —', '—'],
               ['2. —', '—'],
@@ -1776,8 +1781,6 @@ function buildGlobalBlocks(rng) {
 }
 
 function renderGlobalBlockCharts(rng) {
-  destroyCharts()
-
   for (const b of globalBlocks.value) {
     if (!b.chart) continue
 
@@ -2047,6 +2050,31 @@ const canonicalShareMetrics = computed(() => {
 
 /* ShareCard Features */
 
+function buildShareText() {
+  const p = personal.value
+
+  const completion = pct(p.completion)
+  const accuracy = pct(p.accuracy)
+
+  const paceLine =
+    typeof p.pacePercentile === 'number'
+      ? `Top ${pct(p.pacePercentile)}% for pace.`
+      : p.paceSeconds
+        ? `~${Math.max(1, Math.round(p.paceSeconds / 60))}m solve time.`
+        : ''
+
+  const tone =
+    completion === 100
+      ? 'Clean sweep.'
+      : completion >= 80
+        ? 'Sharp board.'
+        : completion >= 60
+          ? 'Solid coverage.'
+          : 'Experimental energy.'
+
+  return `${tone} ${completion}% completion · ${accuracy}% accuracy. ${paceLine} Think you’d score higher?`
+}
+
 function openShareOverlay() {
   shareOpen.value = true
   document.body.classList.add('blur-active')
@@ -2124,11 +2152,12 @@ async function tryNativeShare(blob) {
 
 async function shareToTwitter() {
   const blob = await generateShareImage()
-
   if (!blob) return
+
+  const usedNative = await tryNativeShare(blob)
   if (usedNative) return
 
-  const text = `I scored ${displayCompletion.value}% on Akinto today.`
+  const text = buildShareText()
   const url = 'https://akinto.io'
 
   window.open(
@@ -2139,8 +2168,9 @@ async function shareToTwitter() {
 
 async function shareToFacebook() {
   const blob = await generateShareImage()
-
   if (!blob) return
+
+  const usedNative = await tryNativeShare(blob)
   if (usedNative) return
 
   const url = 'https://akinto.io'
@@ -2150,20 +2180,24 @@ async function shareToFacebook() {
 
 async function shareToWhatsApp() {
   const blob = await generateShareImage()
-
   if (!blob) return
+
+  const usedNative = await tryNativeShare(blob)
   if (usedNative) return
 
-  const text = `I scored ${displayCompletion.value}% on Akinto today. https://akinto.io`
+  const text = `${buildShareText()} https://akinto.io`
 
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
 }
 
 async function shareToLinkedIn() {
   const blob = await generateShareImage()
-
   if (!blob) return
+
+  const usedNative = await tryNativeShare(blob)
   if (usedNative) return
+
+  const text = `Today’s Akinto analytics: ${pct(personal.value.completion)}% completion · ${pct(personal.value.accuracy)}% accuracy. A surprisingly good test of recall under pressure.`
 
   const url = 'https://akinto.io'
 
@@ -2322,8 +2356,8 @@ async function downloadImage() {
   align-items: flex-start;
   text-align: left;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
-  min-height: 90px;
-  max-height: 100px;
+  min-height: 100px;
+  max-height: none;
   max-width: 550px;
 }
 
@@ -2573,8 +2607,8 @@ async function downloadImage() {
 }
 
 .g-mini {
-  margin-top: auto;
-  padding-top: 14px;
+  margin-top: 12px;
+  padding-top: 6px;
 }
 
 .g-caption {
@@ -2598,7 +2632,7 @@ async function downloadImage() {
 
 .global-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   grid-auto-rows: minmax(120px, auto);
   gap: 18px;
   grid-auto-flow: dense;
