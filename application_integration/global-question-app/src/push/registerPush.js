@@ -20,7 +20,9 @@ function hasPushConsent() {
 }
 
 export async function registerPush() {
-  console.log('[PUSH] registerPush() start')
+  // ---------- SOURCE ----------
+  const source =
+    localStorage.getItem('akinto_source') || sessionStorage.getItem('akinto_source') || null
 
   // ---------- GDPR ----------
   if (!hasPushConsent()) {
@@ -96,6 +98,7 @@ export async function registerPush() {
         timezone: getTimezone(),
         userId: localStorage.getItem('akinto_user_id'),
         country: localStorage.getItem('akinto_country'),
+        source,
       }),
     })
 

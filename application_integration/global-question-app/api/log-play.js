@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
   try {
     const { dateKey } = pickDateKey(req)
-    const { userId, country, windowId, answers, correctAnswers, result } = req.body
+    const { userId, country, source, windowId, answers, correctAnswers, result } = req.body
 
     if (!userId || !dateKey || !windowId) {
       return res.status(400).json({ error: 'Missing required fields' })
@@ -20,10 +20,10 @@ export default async function handler(req, res) {
         fields: {
           UserID: userId,
           Country: country || 'xx',
+          Source: source || '',
           DateKey: dateKey,
           WindowID: windowId,
           Result: result === 'success' ? 'success' : 'lockout',
-          // <-- important change
           AnswersJSON: JSON.stringify(answers || []),
           CorrectAnswersJSON: JSON.stringify(correctAnswers || []),
           CreatedAt: new Date().toISOString(),

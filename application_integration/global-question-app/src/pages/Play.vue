@@ -269,6 +269,8 @@ const hardLocked = ref(false)
 
 const userId = getOrCreateUUID()
 const userCountry = localStorage.getItem('akinto_country') || 'XX' // XX = Unknown
+const source =
+  localStorage.getItem('akinto_source') || sessionStorage.getItem('akinto_source') || null
 
 const tz = ref(getTimezone())
 const currentWindow = ref(getCurrentWindow(tz.value))
@@ -859,6 +861,7 @@ async function onLockIn() {
     body: JSON.stringify({
       userId,
       country: userCountry,
+      source,
       dateKey: dateKey.value,
       windowId: curWin.value.id,
       attemptIndex,
@@ -921,6 +924,7 @@ async function logPlay(result) {
     body: JSON.stringify({
       userId,
       country: userCountry,
+      source,
       dateKey: dateKey.value,
       windowId: curWin.value.id,
       answers: answers.value,

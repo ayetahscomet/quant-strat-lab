@@ -236,14 +236,15 @@ function handleLandingKey(e) {
 onMounted(() => {
   // 🔹 1. Capture marketing source (QR tracking)
   const params = new URLSearchParams(window.location.search)
-  const src = params.get('src')
+  const srcRaw = params.get('src')
 
-  if (src) {
-    // store for this session only
+  const src = (srcRaw || '').trim()
+
+  if (src && /^[a-z0-9_]{1,64}$/i.test(src)) {
+    localStorage.setItem('akinto_source', src)
     sessionStorage.setItem('akinto_source', src)
 
-    // remove ?src= from URL so users see clean akinto.io
-    window.history.replaceState({}, document.title, '/')
+    window.history.replaceState({}, document.title, window.location.pathname)
   }
 
   // 🔹 2. Load existing country selection

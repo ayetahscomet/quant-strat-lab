@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
   try {
-    const { sub, timezone, userId, country } = req.body || {}
+    const { sub, timezone, userId, country, source } = req.body || {}
 
     console.log('[SAVE PUSH] body:', sub?.endpoint)
 
@@ -27,6 +27,7 @@ export default async function handler(req, res) {
     if (existing.length) {
       await base('PushSubscriptions').update(existing[0].id, {
         Timezone: tz,
+        Source: source || '',
       })
 
       return res.status(200).json({ ok: true, reused: true })
@@ -40,6 +41,7 @@ export default async function handler(req, res) {
           Timezone: tz,
           UserID: userId || null,
           Country: country || null,
+          Source: source || '',
           FirstSeenAt: new Date().toISOString(),
           LastPushedKey: null,
           LastWindowId: null,

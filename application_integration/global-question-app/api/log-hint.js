@@ -7,7 +7,7 @@ export default async function handler(req, res) {
 
   try {
     const { dateKey } = pickDateKey(req)
-    const { userId, country, windowId } = req.body || {}
+    const { userId, country, windowId, source } = req.body || {}
 
     if (!userId || !dateKey || !windowId) {
       return res.status(400).json({ error: 'Missing required fields' })
@@ -18,6 +18,7 @@ export default async function handler(req, res) {
         fields: {
           UserID: userId,
           Country: country || 'xx',
+          Source: source || '',
           DateKey: dateKey,
           WindowID: windowId,
           AttemptIndex: 998,
