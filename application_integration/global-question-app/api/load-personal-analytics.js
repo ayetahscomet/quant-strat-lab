@@ -15,12 +15,17 @@ function normalise(s) {
 }
 
 function safeJsonArray(v) {
-  try {
-    const arr = v ? JSON.parse(v) : []
-    return Array.isArray(arr) ? arr : []
-  } catch {
-    return []
+  // Airtable sometimes gives us arrays directly, sometimes JSON strings.
+  if (Array.isArray(v)) return v
+  if (typeof v === 'string') {
+    try {
+      const arr = v ? JSON.parse(v) : []
+      return Array.isArray(arr) ? arr : []
+    } catch {
+      return []
+    }
   }
+  return []
 }
 
 function clamp(n, a, b) {
@@ -179,7 +184,25 @@ export default async function handler(req, res) {
       .all()
 
     const question = questionRows[0]?.fields || {}
-    const answerCount = question.AnswerCount || null
+
+    // Robust correct answers (handles array, CSV string, JSON string)
+    let correctAnswers = []
+
+    // Preferred: a plain Airtable field like CorrectAnswers (array or CSV string)
+    if (Array.isArray(question.CorrectAnswers)) {
+      correctAnswers = question.CorrectAnswers
+    } else if (typeof question.CorrectAnswers === 'string') {
+      correctAnswers = question.CorrectAnswers.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    }
+
+    // Fallback: CorrectAnswersJSON (array or JSON string)
+    if (!correctAnswers.length) {
+      correctAnswers = safeJsonArray(question.CorrectAnswersJSON)
+    }
+
+    const answerCount = Number(question.AnswerCount) || correctAnswers.length || 0
 
     /* ====================================================
        User attempts
@@ -268,7 +291,7 @@ export default async function handler(req, res) {
 
       question: {
         answerCount,
-        correctAnswers: safeJsonArray(question.CorrectAnswersJSON),
+        correctAnswers,
       },
 
       attempts: derived.attempts,

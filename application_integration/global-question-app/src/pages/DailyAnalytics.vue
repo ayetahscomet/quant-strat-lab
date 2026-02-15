@@ -1603,11 +1603,12 @@ function derivePersonalFromUserDailyProfile(payload) {
     _totalPossible: metrics.totalSlots,
 
     attemptsTotal: metrics.totalAttemptsUsed,
+    windowsPlayed: metrics.windowsPlayed,
 
     hintsUsed: Number(prof.HintCount) || 0,
 
-    uniqueCorrect: metrics.correctCount,
-    windowsPlayed: metrics.windowsPlayed,
+    uniqueCorrect: metrics.uniqueCorrectCount,
+    correctEntries: metrics.correctEntries,
 
     completion: metrics.completion,
     completionReason: metrics.completionReason,
@@ -1624,11 +1625,6 @@ function derivePersonalFromUserDailyProfile(payload) {
 
     countryCode: resolvedCountryCode,
     countryName: resolvedCountryName,
-
-    submittedUnique: metrics.submittedUnique,
-    duplicatePenalty: metrics.duplicatePenalty,
-    _attemptsByWindow: metrics.attemptsByWindow,
-    totalAttemptsUsed,
   }
 }
 

@@ -177,6 +177,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { registerPush } from '@/push/registerPush'
 import { computeDailyMetrics } from '../../lib/metricsEngine.js'
+import { getTimezone, todayKey } from '../utils/windows.js'
 
 onMounted(() => {
   setTimeout(() => {
@@ -217,12 +218,6 @@ function getUserId() {
   return localStorage.getItem('akinto_uuid') || ''
 }
 
-function todayKey() {
-  return new Date().toLocaleDateString('en-CA', {
-    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  })
-}
-
 function computeFieldStatus(answers = [], correctAnswers = []) {
   const canon = correctAnswers.map(normalise)
   const used = new Set()
@@ -237,24 +232,29 @@ function computeFieldStatus(answers = [], correctAnswers = []) {
 
 async function loadSuccessSummaryFromAirtable() {
   const userId = getUserId()
-  const dateKey = todayKey()
+  const tz = getTimezone()
+  const dateKey = todayKey(tz)
   if (!userId || !dateKey) return
 
-  const res = await fetch('/api/load-day-progress', {
+  // Use the same payload shape as DailyAnalytics + ShareCard
+  const res = await fetch('/api/load-personal-analytics', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, dateKey }),
   })
 
   if (!res.ok) return
-  const data = await res.json()
+  const payload = await res.json()
 
-  const attempts = Array.isArray(data.attempts) ? data.attempts : []
-  const correctAnswers = Array.isArray(data.correctAnswers) ? data.correctAnswers : []
+  const attempts = Array.isArray(payload.attempts) ? payload.attempts : []
+  const prof = payload.profile || {}
+  const q = payload.question || {}
+
+  const correctAnswers = Array.isArray(q.correctAnswers) ? q.correctAnswers : []
 
   if (!attempts.length) return
 
-  // Prefer AttemptIndex = 999 (final snapshot), else the latest "success" record, else latest record
+  // Prefer AttemptIndex = 999 (final snapshot), else latest success, else latest
   const finalAttempt =
     attempts.find((a) => Number(a.attemptIndex) === 999) ||
     [...attempts].reverse().find((a) => a.result === 'success') ||
@@ -262,10 +262,9 @@ async function loadSuccessSummaryFromAirtable() {
 
   const answers = Array.isArray(finalAttempt.answers) ? finalAttempt.answers : []
 
-  // attemptsUsed: count attempts in the same window excluding the 999 marker
   const windowId = finalAttempt.windowId
   const attemptsUsed = attempts.filter(
-    (a) => a.windowId === windowId && Number(a.attemptIndex) !== 999,
+    (a) => a.windowId === windowId && Number(a.attemptIndex) !== 999 && a.result !== 'snapshot',
   ).length
 
   const fieldStatus = computeFieldStatus(answers, correctAnswers)
@@ -273,7 +272,6 @@ async function loadSuccessSummaryFromAirtable() {
   const incorrectCount = fieldStatus.filter((s) => s === 'incorrect').length
 
   let windowIndex = Number(finalAttempt.windowIndex ?? finalAttempt.windowId)
-
   if (!Number.isFinite(windowIndex)) {
     const d = new Date(finalAttempt.createdAt)
     const h = d.getHours()
@@ -281,13 +279,13 @@ async function loadSuccessSummaryFromAirtable() {
   }
 
   const cleanAttempts = attempts.filter(
-    (a) => Number(a.attemptIndex) !== 999 && a.result !== 'snapshot',
+    (a) => Number(a.attemptIndex) !== 999 && a.result !== 'snapshot' && !a?.isSummary,
   )
 
   metrics.value = computeDailyMetrics({
     attempts: cleanAttempts,
-    question: { answerCount: correctAnswers.length },
-    profile: {},
+    question: q,
+    profile: prof,
   })
 
   summary.value = {
@@ -303,8 +301,8 @@ async function loadSuccessSummaryFromAirtable() {
     incorrectCount,
     attemptsUsed: attemptsUsed || 1,
     completed: true,
-    hintUsed: !!data.hintsUsed || data.hintCount > 0,
-    hintCount: Number(data.hintCount || 0),
+    hintUsed: Number(prof.HintCount || 0) > 0,
+    hintCount: Number(prof.HintCount || 0),
   }
 }
 

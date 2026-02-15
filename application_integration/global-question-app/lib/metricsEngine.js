@@ -111,9 +111,25 @@ export function computeDailyMetrics({ attempts = [], question = {}, profile = {}
     totalSlotsUsed > 0 ? clamp(Math.round((correctEntries / totalSlotsUsed) * 100), 0, 100) : 0
 
   // --------------------------------------------------
-  // 6️⃣ PACE (only meaningful if solved)
+  // 6️⃣ PACE (meaningful if solved)
   // --------------------------------------------------
-  const paceSeconds = solved && profile?.SolveSeconds ? Number(profile.SolveSeconds) : null
+  // Prefer server-side SolveSeconds (if present),
+  // else derive from attempt timestamps so pages stay consistent.
+  let paceSeconds = null
+
+  if (solved && profile?.SolveSeconds != null && isFinite(Number(profile.SolveSeconds))) {
+    paceSeconds = Number(profile.SolveSeconds)
+  } else if (solved) {
+    const times = realAttempts
+      .map((a) => a?.createdAt || a?.CreatedAt)
+      .map((t) => (t ? new Date(t) : null))
+      .filter((d) => d && !Number.isNaN(d.getTime()))
+      .map((d) => d.getTime())
+
+    if (times.length >= 2) {
+      paceSeconds = Math.max(0, Math.round((Math.max(...times) - Math.min(...times)) / 1000))
+    }
+  }
 
   const rawPercentile =
     solved && profile?.PercentileSpeed != null ? normalisePercent(profile.PercentileSpeed) : null
