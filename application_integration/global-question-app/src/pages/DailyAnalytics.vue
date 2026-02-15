@@ -30,47 +30,45 @@
         </div>
       </div>
 
-      <!-- Primary visuals (always 3) -->
+      <!-- Primary Stats -->
       <div class="primary-stats-grid" v-if="personalReady">
+        <!-- Completion -->
         <div class="stat-card completion-card">
           <p class="stat-label">Completion</p>
-
           <div class="stat-row">
             <div class="ring-stack">
               <canvas ref="completionRing"></canvas>
               <span class="ring-center">{{ displayCompletion }}%</span>
             </div>
-
             <div class="stat-copy">
               <p class="stat-foot">{{ completionFoot }}</p>
             </div>
           </div>
         </div>
 
+        <!-- Accuracy -->
         <div class="stat-card accuracy-card">
           <p class="stat-label">Accuracy</p>
-
           <div class="stat-row">
             <div class="ring-stack">
               <canvas ref="accuracyRing"></canvas>
               <span class="ring-center">{{ displayAccuracy }}%</span>
             </div>
-
             <div class="stat-copy">
               <p class="stat-foot">{{ accuracyFoot }}</p>
             </div>
           </div>
         </div>
 
+        <!-- Pace -->
         <div class="stat-card pace-card">
           <p class="stat-label">Pace</p>
-
           <div class="stat-row">
             <div class="ring-stack">
               <canvas ref="speedRing"></canvas>
               <span class="ring-center">
                 {{
-                  typeof personal.pacePercentile === 'number' && personal.pacePercentile > 5
+                  typeof personal.pacePercentile === 'number'
                     ? displaySpeed + '%'
                     : personal.paceSeconds
                       ? Math.max(1, Math.round(personal.paceSeconds / 60)) + 'm'
@@ -78,7 +76,6 @@
                 }}
               </span>
             </div>
-
             <div class="stat-copy">
               <p class="stat-foot">{{ speedFoot }}</p>
             </div>
@@ -86,12 +83,13 @@
         </div>
       </div>
 
-      <!-- PERSONAL DYNAMIC AREA (2 cards + 1 chart) -->
+      <!-- Personal Dynamic Area -->
       <div class="personal-dynamics" v-if="personalReady">
         <div class="personal-card" v-for="card in personalCards" :key="card.id">
           <p class="card-kicker">{{ card.kicker }}</p>
           <h3 class="card-title">{{ card.title }}</h3>
           <p class="card-body">{{ card.body }}</p>
+
           <div class="card-mini" v-if="card.mini">
             <span class="mini-big">{{ card.mini.big }}</span>
             <span class="mini-sub">{{ card.mini.sub }}</span>
@@ -112,33 +110,21 @@
         <button class="cta" @click="goHome">Back to Akinto</button>
         <p class="micro-note">Tomorrow tells a new story.</p>
       </div>
-
-      <div class="left-skeleton" v-else>
-        <div class="sk-line w60" />
-        <div class="sk-line w40" />
-        <div class="sk-box" />
-        <div class="sk-grid">
-          <div class="sk-card" />
-          <div class="sk-card" />
-          <div class="sk-card" />
-        </div>
-        <div class="sk-box tall" />
-      </div>
     </section>
 
     <!-- RIGHT: GLOBAL ANALYTICS -->
     <section class="right-pane">
       <header class="right-header">
-        <div class="global-title-wrap">
+        <div>
           <h1 class="g-title">The Global Mind.</h1>
           <p class="g-sub">{{ globalSubline }}</p>
         </div>
+
         <button class="share-btn" @click="openShareOverlay" :disabled="!personalReady">
           {{ shareBtnLabel }}
         </button>
       </header>
 
-      <!-- Procedural “front page” -->
       <div class="global-grid" v-if="personalReady">
         <article
           v-for="block in globalBlocks"
@@ -152,25 +138,33 @@
             <h3 class="g-head">{{ block.title }}</h3>
             <p class="g-body" v-if="block.body">{{ block.body }}</p>
 
-            <!-- Mini numeric -->
+            <!-- Mini -->
             <div v-if="block.mini" class="g-mini">
               <div class="g-mini-big">{{ block.mini.big }}</div>
               <div class="g-mini-sub">{{ block.mini.sub }}</div>
             </div>
 
-            <!-- Table (leaderboard / comparisons) -->
+            <!-- Rare bubbles -->
+            <div v-if="block.rareList && block.rareList.length" class="rare-bubbles">
+              <span v-for="(ans, i) in block.rareList" :key="i" class="rare-pill">
+                {{ ans }}
+              </span>
+            </div>
+
+            <!-- Table -->
             <div v-if="block.table" class="g-table">
               <div class="g-table-row g-table-head">
                 <span>{{ block.table.head[0] }}</span>
                 <span>{{ block.table.head[1] }}</span>
               </div>
+
               <div class="g-table-row" v-for="(r, i) in block.table.rows" :key="i">
                 <span class="g-table-left">{{ r[0] }}</span>
                 <span class="g-table-right">{{ r[1] }}</span>
               </div>
             </div>
 
-            <!-- Mini chart -->
+            <!-- Chart -->
             <div v-if="block.chart" class="g-chart" :class="block.chart.size || 'sm'">
               <canvas :ref="(el) => registerGlobalChartRef(el, block.id)"></canvas>
             </div>
@@ -184,17 +178,10 @@
         <p class="rotation-note">Views refresh daily. Tomorrow tells a new story.</p>
         <div class="brand-tag">A game of Common Knowledge.</div>
       </div>
-
-      <div class="right-skeleton" v-else>
-        <div class="sk-right-title" />
-        <div class="sk-right-sub" />
-        <div class="sk-right-grid">
-          <div class="sk-right-block" v-for="i in 10" :key="i" />
-        </div>
-      </div>
     </section>
   </div>
-  <!-- Hidden Share Card Render Target -->
+
+  <!-- Hidden Share Render -->
   <div class="share-render-target">
     <ShareCard
       v-if="personalReady"
@@ -209,10 +196,9 @@
   <!-- SHARE OVERLAY -->
   <Transition name="share-sheet" appear>
     <div v-if="shareOpen" class="share-overlay" @click.self="closeShareOverlay">
-      <div class="share-modal" role="dialog" aria-modal="true" aria-label="Share results">
-        <button class="share-close" @click="closeShareOverlay" aria-label="Close">✕</button>
+      <div class="share-modal">
+        <button class="share-close" @click="closeShareOverlay">✕</button>
 
-        <!-- LIVE ShareCard -->
         <ShareCard
           ref="liveShareCardRef"
           :date="personal.dateKey"
@@ -221,7 +207,6 @@
           :global="global"
         />
 
-        <!-- SOCIAL BUTTON ROW -->
         <div class="share-actions">
           <button class="share-pill" @click="shareToTwitter">X</button>
           <button class="share-pill" @click="shareToFacebook">Facebook</button>
@@ -389,6 +374,187 @@ function normaliseCountryToCode(raw) {
   return hit?.code?.toLowerCase() || 'xx'
 }
 
+function bucketScore(n, bands = [30, 55, 70, 85]) {
+  if (!isFinite(n)) return 'unknown'
+  if (n < bands[0]) return 'very-low'
+  if (n < bands[1]) return 'low'
+  if (n < bands[2]) return 'mid'
+  if (n < bands[3]) return 'strong'
+  return 'elite'
+}
+
+function confidenceLevel(p, g) {
+  const players = g?.totalPlayers || 0
+  const submissions = p?.submittedUnique || 0
+
+  if (players < 20) return 'very-low'
+  if (players < 60) return 'low'
+  if (players < 150) return 'medium'
+  if (submissions < 3) return 'low'
+
+  return 'high'
+}
+
+function generateMetricCommentary(p, g = {}) {
+  const confidence = confidenceLevel(p, g)
+  const completionTier = bucketScore(p.completion)
+  const accuracyTier = bucketScore(p.accuracy)
+  const paceTier = bucketScore(p.pacePercentile)
+
+  /* ---------------------------
+     COMPLETION
+  ---------------------------- */
+
+  let completionFoot = 'Completion calibrating for this question.'
+
+  if (p.totalSlots > 0) {
+    const base = `${p.uniqueCorrect}/${p.totalSlots} found.`
+
+    const map = {
+      elite: `${base} Full board. No leftovers.`,
+      strong: `${base} High coverage. You left very little behind.`,
+      mid: `${base} Close — tomorrow tightens up.`,
+      low: `${base} Partial sweep. The grid had more to give.`,
+      'very-low': `${base} Opening moves only. Build from here.`,
+    }
+
+    completionFoot = map[completionTier] || base
+
+    if (confidence === 'very-low') {
+      completionFoot += ' Early read — board trends may shift.'
+    }
+  }
+
+  /* ---------------------------
+     ACCURACY
+  ---------------------------- */
+
+  let accuracyFoot = 'Accuracy appears once at least one distinct submission is logged.'
+
+  if (p.submittedUnique > 0) {
+    const base = `${p.uniqueCorrect} correct from ${p.submittedUnique} unique submissions.`
+
+    const map = {
+      elite: `${base} Clinical. Almost no wasted motion.`,
+      strong: `${base} High precision. You weren’t guessing.`,
+      mid: `${base} A few speculative swings — respectable hit rate.`,
+      low: `${base} Akinto scores unique submissions only. Pause before firing.`,
+      'very-low': `${base} Deep end energy. Slow down — distinct entries score better.`,
+    }
+
+    accuracyFoot = map[accuracyTier] || base
+
+    if (confidence === 'very-low') {
+      accuracyFoot += ' Small sample — precision stabilises with volume.'
+    }
+  }
+
+  /* ---------------------------
+     PACE
+  ---------------------------- */
+
+  let speedFoot = 'Pace calibrating as more players enter today.'
+
+  if (typeof p.pacePercentile === 'number') {
+    const percentile = pct(p.pacePercentile)
+
+    if (percentile <= 5) {
+      speedFoot =
+        'Today’s question demanded patience globally. Longer solve times often correlate with higher accuracy.'
+    } else {
+      const map = {
+        elite: `Blink-and-you-miss-it speed. Top ${percentile}%.`,
+        strong: `Quicker than most. Faster than ${percentile}% today.`,
+        mid: `Measured pace. Faster than ${percentile}% of players.`,
+        low: `Deliberate tempo. Faster than ${percentile}% today.`,
+        'very-low': `Slow burn. Faster than ${percentile}% — but speed isn’t everything.`,
+      }
+
+      speedFoot = map[paceTier]
+    }
+  } else if (p.paceSeconds) {
+    speedFoot = `~${Math.max(
+      1,
+      Math.round(p.paceSeconds / 60),
+    )} minutes from first to last move. Percentiles emerge as the day fills out.`
+  }
+
+  if (confidence !== 'high') {
+    speedFoot += ' (Early data — distribution still forming.)'
+  }
+
+  /* ---------------------------
+     HERO HEADLINE + OUTCOME
+  ---------------------------- */
+
+  const headlineTier =
+    p.completion === 100
+      ? 'elite'
+      : p.completion >= 80
+        ? 'strong'
+        : p.completion >= 55
+          ? 'mid'
+          : 'low'
+
+  const headlineVariants = {
+    elite: ['Clean sweep.', 'Flawless grid.', 'Board dominated.', 'No survivors.'],
+    strong: ['Sharp execution.', 'High-clarity thinking.', 'Confident coverage.', 'Strong finish.'],
+    mid: [
+      'Close enough to taste it.',
+      'Almost there.',
+      'Solid ground gained.',
+      'Progress with intent.',
+    ],
+    low: [
+      'Experimental energy.',
+      'A chaotic rehearsal.',
+      'Testing the waters.',
+      'Volume over victory.',
+    ],
+  }
+
+  const outcomeMap = {
+    success: 'You cleared the day.',
+    'exit-early': 'You chose to end early. Strategy counts.',
+    lockout: 'You hit a window cap.',
+    unknown: 'Today’s session is logged.',
+  }
+
+  const variants = headlineVariants[headlineTier] || ['Session logged.']
+  let headline = variants[Math.floor(p._rng() * variants.length)]
+
+  /* ---------------------------
+   ARCHETYPE FLAVOUR
+---------------------------- */
+
+  if (p.archetype) {
+    const arch = p.archetype.toLowerCase()
+
+    const archetypePrefixMap = {
+      explorer: 'Exploratory energy. ',
+      sniper: 'Precision mode. ',
+      sprinter: 'High-tempo thinking. ',
+      architect: 'Structured control. ',
+      opportunist: 'Adaptive instincts. ',
+    }
+
+    const prefix = archetypePrefixMap[arch]
+    if (prefix) {
+      headline = prefix + headline
+    }
+  }
+
+  const outcomeLine = outcomeMap[p.dayResult] || outcomeMap.unknown
+
+  return {
+    headline,
+    outcomeLine,
+    completionFoot,
+    accuracyFoot,
+    speedFoot,
+  }
+}
+
 /* Router Functions */
 
 function goHome() {
@@ -510,67 +676,22 @@ const GLOBAL_SUBLINES = [
 function buildHeroCopy(rng) {
   const p = personal.value
 
-  // headline by outcome + completion
-  const c = p.completion
-  const a = p.accuracy
-  const result = p.dayResult || 'unknown'
+  const commentary = generateMetricCommentary(p, global.value)
 
-  const headlinePools = {
-    perfect: ['Perfect day.', 'Clean sweep.', 'No notes.', 'Flawless run.'],
-    strong: ['High-precision session.', 'Sharp work.', 'Confident run.', 'Solid execution.'],
-    mid: ['Curious exploration.', 'Close enough to taste it.', 'Nearly there.', 'Good chaos.'],
-    low: [
-      'Chaos gremlin energy.',
-      'Bold guesses, loud brain.',
-      'Wild ride.',
-      'Experimental science.',
-    ],
-  }
+  heroHeadline.value = commentary.headline
 
-  const tier = c === 100 ? 'perfect' : c >= 80 ? 'strong' : c >= 55 ? 'mid' : 'low'
-  heroHeadline.value = pick(rng, headlinePools[tier])
+  /* ---------------------------
+     Hero Description
+  ---------------------------- */
 
   const paceLine =
     typeof p.pacePercentile === 'number'
       ? `Pace: top ${pct(p.pacePercentile)}%.`
       : p.paceSeconds
-        ? `${Math.max(1, Math.round(p.paceSeconds / 60))} min to solve today.`
-        : 'Pace: still calibrating.'
+        ? `${Math.max(1, Math.round(p.paceSeconds / 60))} minutes to solve.`
+        : 'Pace percentile forming.'
 
-  const outcomeLine =
-    result === 'success'
-      ? 'You finished the day.'
-      : result === 'exit-early'
-        ? 'You tapped out early. Self-care is strategy.'
-        : result === 'lockout'
-          ? 'You ran out of attempts in at least one window.'
-          : 'Today’s session is logged.'
-
-  heroDescription.value = `${outcomeLine} ${paceLine}`
-
-  // feet for the three big cards
-  const required = p.totalSlots || 0
-  const possible = p._totalPossible || required
-  const foundTowardCompletion = Math.min(p.uniqueCorrect, required)
-
-  completionFoot.value =
-    required > 0 && foundTowardCompletion >= required
-      ? `All required answers found. (${Math.min(p.uniqueCorrect, required)}/${required} today.)`
-      : required > 0
-        ? `${p.uniqueCorrect}/${required} found today.`
-        : `Completion is still calibrating for this question.`
-
-  accuracyFoot.value =
-    p.submittedUnique > 0
-      ? `${p.uniqueCorrect} correct out of ${p.submittedUnique} unique submissions.`
-      : 'Submission breakdown is still syncing — check back in a moment.'
-
-  speedFoot.value =
-    typeof p.pacePercentile === 'number' && p.pacePercentile > 5
-      ? `Faster than ${pct(p.pacePercentile)}% of players today.`
-      : p.paceSeconds
-        ? `Solve time: ${Math.max(1, Math.round(p.paceSeconds / 60))} minute(s). Percentile appears once enough players exist.`
-        : 'Pace is still syncing — check back shortly.'
+  heroDescription.value = `${commentary.outcomeLine} ${paceLine}`
 
   if (p.archetype) {
     heroDescription.value += ` Archetype: ${p.archetype}.`
@@ -579,126 +700,47 @@ function buildHeroCopy(rng) {
   if (p.firstSolveToday) {
     heroDescription.value += ` New personal streak record.`
   }
+
+  /* ---------------------------
+     Stat Footers
+  ---------------------------- */
+
+  completionFoot.value = commentary.completionFoot
+  accuracyFoot.value = commentary.accuracyFoot
+  speedFoot.value = commentary.speedFoot
 }
 
 function buildPersonalCards(rng) {
   const p = personal.value
-
-  const countryWelcome =
-    p.countryName && global.value.totalPlayers && global.value.totalPlayers <= 50
-      ? `Welcome to the early club.`
-      : null
+  const commentary = generateMetricCommentary(p, global.value)
 
   const templates = [
     () => ({
-      kicker: 'Your style today',
-      title:
-        p.completion === 100
-          ? 'Completion merchant.'
-          : p.completion >= 80
-            ? 'You don’t leave much behind.'
-            : p.completion >= 55
-              ? 'Selective, but with intent.'
-              : 'Maximum chaos, minimal regrets.',
-      body:
-        p.completion === 100
-          ? 'Full grid solved. That’s rare behaviour.'
-          : `You found ${p.uniqueCorrect}/${p.totalSlots}. Tomorrow, we tighten the screws.`,
+      kicker: 'Completion',
+      title: commentary.headline,
+      body: commentary.completionFoot,
       mini: { big: `${pct(p.completion)}%`, sub: 'Completion' },
     }),
+
     () => ({
-      kicker: 'Accuracy check',
+      kicker: 'Accuracy',
       title:
         p.accuracy >= 85
-          ? 'Sniper energy.'
+          ? 'Clinical precision.'
           : p.accuracy >= 70
-            ? 'Steady hands.'
+            ? 'Measured strikes.'
             : p.accuracy >= 55
-              ? 'Risk-on guesses.'
-              : 'You were auditioning answers.',
-      body:
-        p.submittedUnique > 0
-          ? `${p.uniqueCorrect} correct from ${p.submittedUnique} unique submissions. Duplicates removed.`
-          : 'No submissions recorded — we’ll call this a silent day.',
+              ? 'Risk-adjusted guessing.'
+              : 'Exploratory submissions.',
+      body: commentary.accuracyFoot,
       mini: { big: `${pct(p.accuracy)}%`, sub: 'Accuracy' },
-    }),
-
-    () => ({
-      kicker: 'Hint economy',
-      title:
-        p.hintsUsed === 0
-          ? 'No hints needed.'
-          : p.hintsUsed === 1
-            ? 'One hint. Surgical.'
-            : p.hintsUsed <= 3
-              ? 'Hints used tastefully.'
-              : 'You squeezed the hint lemon.',
-      body:
-        p.hintsUsed === 0
-          ? 'Raw knowledge, no scaffolding.'
-          : `Hints used: ${p.hintsUsed}. Still counts. Still valid.`,
-      mini: { big: `${p.hintsUsed}`, sub: 'Hints today' },
-    }),
-    () => ({
-      kicker: 'Attempts',
-      title:
-        p.attemptsTotal <= 2
-          ? 'Low attempt, high conviction.'
-          : p.attemptsTotal <= 5
-            ? 'You iterated like a scientist.'
-            : 'You stress-tested every window.',
-      body: `Attempts logged today: ${p.attemptsTotal}. Windows played: ${p.windowsPlayed}.`,
-      mini: { big: `${p.attemptsTotal}`, sub: 'Attempts' },
-    }),
-
-    () => ({
-      kicker: 'Passport check',
-      title: p.countryName ? `Hello, ${p.countryName}.` : 'Hello, traveller.',
-      body: p.countryName
-        ? countryWelcome
-          ? `Your country’s on the board. ${countryWelcome}`
-          : `Your stats will start shaping ${p.countryName}’s fingerprint over time.`
-        : 'Set your country to unlock extra global comparisons.',
-      mini: p.countryName ? { big: p.countryName, sub: 'Country' } : null,
-    }),
-    () => ({
-      kicker: 'Duplicates',
-      title:
-        p.duplicatePenalty === 0
-          ? 'No duplicates.'
-          : p.duplicatePenalty <= 2
-            ? 'Minor repeats.'
-            : 'You kept circling the same idea.',
-      body:
-        p.duplicatePenalty === 0
-          ? 'Every submission was distinct. Good discipline.'
-          : `Duplicates removed: ${p.duplicatePenalty}. (Still counts as effort.)`,
-      mini: { big: `${p.duplicatePenalty}`, sub: 'Duplicates' },
     }),
 
     () => ({
       kicker: 'Pace',
       title:
-        typeof p.pacePercentile === 'number'
-          ? p.pacePercentile >= 90
-            ? 'Blink-and-you-miss-it speed.'
-            : p.pacePercentile >= 70
-              ? 'Quick thinker.'
-              : p.pacePercentile >= 50
-                ? 'Comfortable pace.'
-                : 'Slow-cooked answers.'
-          : p.paceSeconds
-            ? 'Time signature.'
-            : 'Timing calibrating…',
-      body:
-        typeof p.pacePercentile === 'number'
-          ? `You were faster than ${pct(p.pacePercentile)}% of players today.`
-          : p.paceSeconds
-            ? `You moved from first to last action in ~${Math.max(
-                1,
-                Math.round(p.paceSeconds / 60),
-              )} minutes.`
-            : 'We’ll show a percentile once enough players exist today.',
+        typeof p.pacePercentile === 'number' ? `Top ${pct(p.pacePercentile)}%.` : 'Timing forming.',
+      body: commentary.speedFoot,
       mini: {
         big:
           typeof p.pacePercentile === 'number'
@@ -709,63 +751,35 @@ function buildPersonalCards(rng) {
         sub: 'Pace',
       },
     }),
+
     () => ({
       kicker: 'Outcome',
-      title:
-        p.dayResult === 'success'
-          ? 'You cleared the day.'
-          : p.dayResult === 'exit-early'
-            ? 'You chose peace.'
-            : p.dayResult === 'lockout'
-              ? 'Window locked.'
-              : 'Logged.',
+      title: commentary.outcomeLine,
       body:
         p.dayResult === 'success'
-          ? 'Daily finish secured. Come back tomorrow for a new question.'
+          ? 'Daily finish secured.'
           : p.dayResult === 'exit-early'
-            ? 'Ending early still stamps the day. Tomorrow is a reset.'
+            ? 'Strategic retreat.'
             : p.dayResult === 'lockout'
-              ? 'You hit a window cap. The timer is the boss now.'
-              : 'We’ve recorded your session.',
+              ? 'Timer won today.'
+              : 'Session stored.',
       mini: null,
     }),
 
     () => ({
-      kicker: 'Vibe check',
-      title: 'Ah - thinking like a strategist.',
+      kicker: 'Micro Insight',
+      title:
+        p.completion >= 80 && p.accuracy < 70
+          ? 'Coverage > precision.'
+          : p.accuracy >= 80 && p.completion < 80
+            ? 'Precision > volume.'
+            : 'Balanced pattern.',
       body:
-        p.accuracy >= 80 && p.completion < 80
-          ? 'High precision, selective coverage. You prioritise hits over volume.'
-          : p.completion >= 80 && p.accuracy < 70
-            ? 'High coverage, risk-on. You like to fill the board and refine later.'
-            : 'Balanced chaos. Which is… a valid lifestyle choice.',
-      mini: null,
-    }),
-    () => ({
-      kicker: 'Micro-flex',
-      title: p.hintsUsed === 0 ? 'No training wheels.' : 'Training wheels used responsibly.',
-      body:
-        p.hintsUsed === 0
-          ? 'You went raw. That’s either genius or stubbornness. Often both.'
-          : 'Hints are information, not weakness. You’re just… optimising.',
-      mini: null,
-    }),
-    () => ({
-      kicker: 'Signal',
-      title: 'Your answers had a signature.',
-      body:
-        p.duplicatePenalty === 0
-          ? 'Distinct submissions suggest strong recall rather than guess loops.'
-          : 'Repeats suggest a strong anchor. Tomorrow: diversify earlier.',
-      mini: null,
-    }),
-    () => ({
-      kicker: 'Daily note',
-      title: 'Tomorrow’s you will be dangerous.',
-      body:
-        p.completion < 80
-          ? 'You’ve already seen the question pattern. Next run should be sharper.'
-          : 'You’re building momentum. Keep the streak alive.',
+        p.completion >= 80 && p.accuracy < 70
+          ? 'You fill boards aggressively.'
+          : p.accuracy >= 80 && p.completion < 80
+            ? 'You prioritise clean hits.'
+            : 'No extreme bias detected.',
       mini: null,
     }),
   ]
@@ -773,20 +787,16 @@ function buildPersonalCards(rng) {
   const pool = templates.map((fn, idx) => ({ idx, fn }))
   shuffleInPlace(rng, pool)
 
-  const out = []
-  for (const t of pool) {
+  return pool.slice(0, 2).map((t) => {
     const card = t.fn()
-    out.push({
+    return {
       id: `pc_${t.idx}`,
       kicker: card.kicker,
       title: card.title,
       body: card.body,
       mini: card.mini || null,
-    })
-    if (out.length === 2) break
-  }
-
-  return out
+    }
+  })
 }
 
 /* Personal Chart Generation & Instances */
@@ -900,6 +910,62 @@ function makeMiniDoughnut(ctx, data, colors) {
       maintainAspectRatio: false,
       cutout: '72%',
       plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    },
+  })
+}
+
+function makeHeatmap(ctx, data) {
+  return new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map((d) => d.label),
+      datasets: [
+        {
+          data: data.map((d) => d.value),
+          backgroundColor: data.map((d) => {
+            const v = clamp(d.value, 0, 100)
+            const hue = 200 - v * 2
+            return `hsl(${hue}, 70%, 55%)`
+          }),
+          borderRadius: 6,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: { display: false },
+      },
+    },
+  })
+}
+
+function makeScatter(ctx, data) {
+  return new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          data: data.map((d) => ({
+            x: d.completion,
+            y: d.accuracy,
+          })),
+          backgroundColor: COLORS.blue,
+          pointRadius: 5,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { title: { display: false }, min: 0, max: 100 },
+        y: { min: 0, max: 100 },
+      },
     },
   })
 }
@@ -1267,6 +1333,159 @@ function buildGlobalBlocks(rng) {
     }),
   ]
 
+  const rareAnswerFactory = () => {
+    const rare = Array.isArray(g.rareAnswersToday) ? g.rareAnswersToday.slice(0, 5) : []
+
+    if (!rare.length) return null
+
+    return {
+      topic: 'rare',
+      kicker: 'Rarity',
+      title: 'Rarest correct answers today',
+      body: '',
+      tier: 'badge',
+      shape: 'wide',
+      mini: null,
+      rareList: rare.map((r) => r.answer),
+      caption: 'Low frequency. High culture.',
+    }
+  }
+
+  const overGuessFactory = () => {
+    const og = g.mostOverGuessedWrong
+    if (!og || !og.answer) return null
+
+    return {
+      topic: 'overguess',
+      kicker: 'Overconfidence',
+      title: 'Most over-guessed wrong answer',
+      body: `${og.answer} was guessed ${og.guessCount} times but only correct ${og.correctCount} times.`,
+      tier: 'major',
+      shape: 'square',
+      mini: {
+        big: `${Math.round(og.overGuessRatio)}×`,
+        sub: 'Over-guess ratio',
+      },
+      caption: 'Confidence is not correctness.',
+    }
+  }
+
+  const entropyFactory = () => {
+    if (typeof g.entropyIndex !== 'number') return null
+
+    const entropyPct = Math.round(g.entropyIndex * 100)
+
+    let descriptor =
+      entropyPct > 75
+        ? 'Wild disagreement.'
+        : entropyPct > 55
+          ? 'Healthy spread.'
+          : entropyPct > 35
+            ? 'Moderate consensus.'
+            : 'Heavy agreement.'
+
+    return {
+      topic: 'entropy',
+      kicker: 'Distribution',
+      title: 'Answer entropy index',
+      body: `${descriptor} Answers were dispersed across many unique entries.`,
+      tier: 'major',
+      shape: 'wide',
+      mini: {
+        big: `${entropyPct}%`,
+        sub: 'Entropy',
+      },
+      chart: {
+        type: 'line',
+        color: COLORS.pink,
+        data: [clamp(entropyPct - 10, 10, 100), entropyPct, clamp(entropyPct + 8, 10, 100)],
+      },
+      caption: 'Higher entropy = more cultural divergence.',
+    }
+  }
+
+  const entropyHeatmapFactory = () => {
+    if (!Array.isArray(g.entropyMatrix) || !g.entropyMatrix.length) return null
+
+    const mapped = g.entropyMatrix.slice(0, 8).map((x) => ({
+      label: x.bucket,
+      value: Math.round(x.entropy * 100),
+    }))
+
+    return {
+      topic: 'entropyHeat',
+      kicker: 'Shannon Entropy',
+      title: 'Answer dispersion heatmap',
+      body: 'Each slot’s disagreement level across the globe.',
+      tier: 'major',
+      shape: 'wide',
+      chart: {
+        type: 'heatmap',
+        data: mapped,
+      },
+      caption: 'Higher intensity = higher informational entropy.',
+    }
+  }
+
+  const countryScatterFactory = () => {
+    if (!Array.isArray(g.countryDisagreement)) return null
+
+    return {
+      topic: 'scatter',
+      kicker: 'Across Borders',
+      title: 'Country disagreement scatter',
+      body: 'Completion (x) vs Accuracy (y).',
+      tier: 'major',
+      shape: 'wide',
+      chart: {
+        type: 'scatter',
+        data: g.countryDisagreement,
+      },
+      caption: 'Clustering reveals national patterns.',
+    }
+  }
+
+  const volatilityFactory = () => {
+    if (!g.volatilityDifficulty) return null
+
+    const v = Math.round(g.volatilityDifficulty.volatility * 100)
+    const d = Math.round(g.volatilityDifficulty.difficulty * 100)
+
+    return {
+      topic: 'volatility',
+      kicker: 'Meta',
+      title: 'Answer volatility vs difficulty',
+      body: `Volatility: ${v}% · Difficulty: ${d}%.`,
+      tier: 'major',
+      shape: 'square',
+      chart: {
+        type: 'radar',
+        data: [v, d],
+      },
+      caption: 'Volatility measures answer dispersion over time.',
+    }
+  }
+
+  const clusterFactory = () => {
+    if (!Array.isArray(g.answerClusters)) return null
+
+    return {
+      topic: 'clusters',
+      kicker: 'Semantic',
+      title: 'Answer clusters detected',
+      body: '',
+      tier: 'minor',
+      shape: 'wide',
+      chart: {
+        type: 'bar',
+        labels: g.answerClusters.map((c) => c.label),
+        data: g.answerClusters.map((c) => c.size),
+        color: COLORS.lilac,
+      },
+      caption: 'Grouped by semantic proximity.',
+    }
+  }
+
   const extraFactories = []
 
   for (let i = 0; i < 12; i++) {
@@ -1463,7 +1682,20 @@ function buildGlobalBlocks(rng) {
     }))
   }
 
-  const pool = [...baseTemplates, ...extraFactories]
+  const rareBlock = rareAnswerFactory()
+  const overBlock = overGuessFactory()
+  const entropyBlock = entropyFactory()
+  const entropyHeatBlock = entropyHeatmapFactory()
+
+  const pool = [
+    ...(rareBlock ? [() => rareBlock] : []),
+    ...(overBlock ? [() => overBlock] : []),
+    ...(entropyBlock ? [() => entropyBlock] : []),
+    ...(entropyHeatBlock ? [() => entropyHeatBlock] : []),
+    ...baseTemplates,
+    ...extraFactories,
+  ]
+
   shuffleInPlace(rng, pool)
 
   const want = { hero: 1, major: 3, minor: 7, ticker: 2, badge: 1 }
@@ -1544,6 +1776,8 @@ function buildGlobalBlocks(rng) {
 }
 
 function renderGlobalBlockCharts(rng) {
+  destroyCharts()
+
   for (const b of globalBlocks.value) {
     if (!b.chart) continue
 
@@ -1559,10 +1793,42 @@ function renderGlobalBlockCharts(rng) {
 
     let instance = null
 
-    if (b.chart.type === 'doughnut') {
+    if (b.chart.type === 'heatmap') {
+      instance = makeHeatmap(ctx, b.chart.data)
+    } else if (b.chart.type === 'scatter') {
+      instance = makeScatter(ctx, b.chart.data)
+    } else if (b.chart.type === 'radar') {
+      instance = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['Volatility', 'Difficulty'],
+          datasets: [
+            {
+              data: b.chart.data,
+              backgroundColor: 'rgba(75,123,255,0.2)',
+              borderColor: COLORS.blue,
+              borderWidth: 2,
+              pointRadius: 0,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            r: {
+              ticks: { display: false },
+              grid: { color: 'rgba(0,0,0,0.08)' },
+            },
+          },
+        },
+      })
+    } else if (b.chart.type === 'doughnut') {
       const colors = Array.isArray(b.chart.colors)
         ? b.chart.colors
         : [b.chart.color || COLORS.blue, 'rgba(0,0,0,0.08)']
+
       instance = makeMiniDoughnut(ctx, data, colors)
     } else if (b.chart.type === 'bar') {
       instance = makeMiniBar(ctx, labels, data, b.chart.color || COLORS.blue)
@@ -1633,6 +1899,7 @@ onMounted(async () => {
 
   const seed = hashStringToInt(`${userId}::${dateKeyRef.value}::analytics`)
   const rng = mulberry32(seed)
+  personal.value._rng = rng
 
   personalSubline.value = pick(rng, PERSONAL_SUBLINES)
   globalSubline.value = pick(rng, GLOBAL_SUBLINES)
@@ -1665,6 +1932,15 @@ onMounted(async () => {
 
         speedPercentiles: g.distributions?.paceBuckets || null,
         globalStreak: null,
+
+        rareAnswersToday: Array.isArray(g.rareAnswersToday) ? g.rareAnswersToday : [],
+
+        mostOverGuessedWrong: g.mostOverGuessedWrong || null,
+        entropyIndex: typeof g.entropyIndex === 'number' ? g.entropyIndex : null,
+        entropyMatrix: Array.isArray(g.entropyMatrix) ? g.entropyMatrix : [],
+        countryDisagreement: Array.isArray(g.countryDisagreement) ? g.countryDisagreement : [],
+        volatilityDifficulty: g.volatilityDifficulty || null,
+        answerClusters: Array.isArray(g.answerClusters) ? g.answerClusters : [],
       }
 
       if (typeof g.pacePercentileForUser === 'number') {
@@ -1712,6 +1988,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   destroyCharts()
+  globalChartRefs.value.clear()
 })
 
 /* Fetcher Functions */
@@ -1806,19 +2083,21 @@ async function copyShareText() {
   }
 }
 
+let shareBusy = false
+
 async function generateShareImage() {
-  await nextTick()
+  if (shareBusy) return null
+  shareBusy = true
 
-  const el = liveShareCardRef.value.$el
-
-  const canvas = await html2canvas(el, {
-    scale: 3,
-    backgroundColor: null,
-  })
-
-  return new Promise((resolve) => {
-    canvas.toBlob(resolve, 'image/png')
-  })
+  try {
+    await nextTick()
+    await document.fonts.ready
+    const el = liveShareCardRef.value.$el
+    const canvas = await html2canvas(el, { scale: 3, backgroundColor: null })
+    return await new Promise((r) => canvas.toBlob(r, 'image/png'))
+  } finally {
+    shareBusy = false
+  }
 }
 
 async function tryNativeShare(blob) {
@@ -1846,7 +2125,7 @@ async function tryNativeShare(blob) {
 async function shareToTwitter() {
   const blob = await generateShareImage()
 
-  const usedNative = await tryNativeShare(blob)
+  if (!blob) return
   if (usedNative) return
 
   const text = `I scored ${displayCompletion.value}% on Akinto today.`
@@ -1861,7 +2140,7 @@ async function shareToTwitter() {
 async function shareToFacebook() {
   const blob = await generateShareImage()
 
-  const usedNative = await tryNativeShare(blob)
+  if (!blob) return
   if (usedNative) return
 
   const url = 'https://akinto.io'
@@ -1872,7 +2151,7 @@ async function shareToFacebook() {
 async function shareToWhatsApp() {
   const blob = await generateShareImage()
 
-  const usedNative = await tryNativeShare(blob)
+  if (!blob) return
   if (usedNative) return
 
   const text = `I scored ${displayCompletion.value}% on Akinto today. https://akinto.io`
@@ -1883,7 +2162,7 @@ async function shareToWhatsApp() {
 async function shareToLinkedIn() {
   const blob = await generateShareImage()
 
-  const usedNative = await tryNativeShare(blob)
+  if (!blob) return
   if (usedNative) return
 
   const url = 'https://akinto.io'
@@ -1894,12 +2173,27 @@ async function shareToLinkedIn() {
   )
 }
 
+let downloading = false
+
 async function downloadImage() {
-  const blob = await generateShareImage()
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = 'akinto-results.png'
-  link.click()
+  if (downloading) return
+  downloading = true
+
+  try {
+    const blob = await generateShareImage()
+    if (!blob) return
+
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'akinto-results.png'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  } finally {
+    downloading = false
+  }
 }
 </script>
 
@@ -2471,6 +2765,25 @@ async function downloadImage() {
   display: block;
 }
 
+.rare-bubbles {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rare-pill {
+  background: linear-gradient(135deg, #111, #2a2a2a);
+
+  color: #fff;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
 /* Footer Amendments */
 
 .right-footer {
@@ -2789,8 +3102,8 @@ async function downloadImage() {
   .analytics-wrapper {
     flex-direction: column;
     height: auto;
-    max-height: 100px;
   }
+
   .left-pane,
   .right-pane {
     width: 100%;
@@ -2842,6 +3155,7 @@ async function downloadImage() {
     width: 100%;
     min-width: 0;
     height: auto;
+    overflow-y: visible;
   }
 
   .left-pane {
@@ -2957,7 +3271,7 @@ async function downloadImage() {
   .global-grid {
     display: flex !important;
     flex-direction: column;
-    gap: auto;
+    gap: 16px;
   }
 
   .g-block {

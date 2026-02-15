@@ -39,7 +39,7 @@
 
     <div class="completion-copy">
       <div class="headline">{{ completionHeadline }}</div>
-      <div class="sub">{{ completionSubline }}</div>
+      <div class="subline">{{ completionSubline }}</div>
     </div>
 
     <!-- Brag strip -->
@@ -287,7 +287,7 @@ const topCountries = computed(() => {
 /* Card container */
 .share-card {
   width: 1200px;
-  height: 630px;
+  height: 700px;
   background:
     radial-gradient(1200px 630px at 20% 15%, rgba(255, 255, 255, 0.08), transparent 55%),
     linear-gradient(135deg, #0d0f11 0%, #14181d 100%);
@@ -296,7 +296,7 @@ const topCountries = computed(() => {
   border-radius: 32px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  justify-content: space-between;
   font-family:
     Inter,
     system-ui,
@@ -488,7 +488,8 @@ const topCountries = computed(() => {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
-  padding: 16px 18px;
+  padding: 22px 22px; /* increased */
+  margin-top: 18px;
 }
 
 .leaders-head {
@@ -509,10 +510,10 @@ const topCountries = computed(() => {
 }
 
 .leaders-grid {
-  margin-top: 12px;
+  margin-top: 16px; /* more air */
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px; /* rows breathe more */
 }
 
 .row {
@@ -522,7 +523,7 @@ const topCountries = computed(() => {
   background: rgba(0, 0, 0, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 14px;
-  padding: 10px 12px;
+  padding: 14px 16px; /* increased */
 }
 
 .left {
@@ -572,6 +573,25 @@ const topCountries = computed(() => {
   font-size: 16px;
   font-weight: 800;
   opacity: 0.85;
-  margin-top: auto;
+  margin-top: 22px; /* instead of auto */
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06); /* subtle separation */
+}
+
+.completion-copy {
+  margin: 24px 0 28px;
+}
+
+.headline {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.subline {
+  margin-top: 6px;
+  font-size: 15px;
+  opacity: 0.75;
+  line-height: 1.6;
 }
 </style>

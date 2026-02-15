@@ -171,6 +171,10 @@ function buildResponse({
   medianPaceSeconds,
   meanPaceSeconds,
 
+  rareAnswersToday,
+  mostOverGuessedWrong,
+  entropyIndex,
+
   // leaderboard
   countryLeaderboard,
   yourCountryRank,
@@ -186,7 +190,6 @@ function buildResponse({
 
   // new: bubbles & ranked rare
   commonGuesses,
-  rareCorrect,
   exitEarlyShare,
 
   // new: pace narrative
@@ -249,13 +252,18 @@ function buildResponse({
 
     // ✅ new for bubbles + rare ranking
     commonGuesses: Array.isArray(commonGuesses) ? commonGuesses : [],
-    rareCorrect: Array.isArray(rareCorrect) ? rareCorrect : [],
     exitEarlyShare: typeof exitEarlyShare === 'number' ? pct(exitEarlyShare) : null,
 
     // ✅ new for “fast vs average” copy
     paceDeltaSecondsForUser:
       typeof paceDeltaSecondsForUser === 'number' ? paceDeltaSecondsForUser : null,
     paceRelationForUser: paceRelationForUser || null,
+
+    rareAnswersToday: Array.isArray(rareAnswersToday) ? rareAnswersToday : [],
+
+    mostOverGuessedWrong: mostOverGuessedWrong || null,
+
+    entropyIndex: typeof entropyIndex === 'number' ? entropyIndex : null,
   }
 }
 
@@ -423,17 +431,71 @@ function computeCommonAndRare({
   const rareCorrect = [...correctSet]
     .map((ans) => {
       const n = guessCounts.get(ans) || 0
+      const share = totalPlayers ? (n / totalPlayers) * 100 : 0
+      const rarityPercentile = 100 - pct(share)
+
       return {
         answer: ans,
-        pct: totalPlayers ? pct((n / totalPlayers) * 100) : 0,
+        sharePct: pct(share),
+        rarityPercentile,
         players: n,
       }
     })
-    .sort((a, b) => a.pct - b.pct)
+    .sort((a, b) => b.rarityPercentile - a.rarityPercentile)
     .slice(0, topRare)
-    .map((x) => ({ answer: x.answer, pct: x.pct }))
 
   return { commonGuesses, rareCorrect }
+}
+
+function computeMostOverGuessedWrong({ guessCounts, correctAnswersList, totalPlayers }) {
+  const correctSet = new Set(correctAnswersList.map((x) => normalise(x)).filter(Boolean))
+
+  let worst = null
+
+  for (const [answer, guesses] of guessCounts.entries()) {
+    if (correctSet.has(answer)) continue
+    if (!totalPlayers || guesses < 3) continue
+
+    const guessShare = guesses / totalPlayers
+    const overGuessScore = guessShare * guesses
+
+    if (!worst || overGuessScore > worst.score) {
+      worst = {
+        answer,
+        guessCount: guesses,
+        correctCount: 0,
+        overGuessRatio: Math.round(guessShare * 100),
+        score: overGuessScore,
+      }
+    }
+  }
+
+  if (!worst) return null
+
+  return {
+    answer: worst.answer,
+    guessCount: worst.guessCount,
+    correctCount: 0,
+    overGuessRatio: worst.overGuessRatio,
+  }
+}
+
+function computeEntropyIndex(guessCounts, totalPlayers) {
+  if (!totalPlayers || guessCounts.size === 0) return null
+
+  let entropy = 0
+
+  for (const count of guessCounts.values()) {
+    const p = count / totalPlayers
+    if (p > 0) {
+      entropy -= p * Math.log2(p)
+    }
+  }
+
+  const maxEntropy = Math.log2(guessCounts.size)
+  if (!maxEntropy) return 0
+
+  return entropy / maxEntropy // normalised 0–1
 }
 
 /* ======================================================
@@ -493,6 +555,14 @@ export default async function handler(req, res) {
       topCommon: 8,
       topRare: 8,
     })
+
+    const mostOverGuessedWrong = computeMostOverGuessedWrong({
+      guessCounts: derived.guessCounts,
+      correctAnswersList: derived.correctAnswersList,
+      totalPlayers: derived.totalPlayers,
+    })
+
+    const entropyIndex = computeEntropyIndex(derived.guessCounts, derived.totalPlayers)
 
     const exitEarlyShare =
       derived.totalPlayers > 0 && derived.outcomeCounts['exit-early']
@@ -617,6 +687,10 @@ export default async function handler(req, res) {
           paceDeltaSecondsForUser,
           paceRelationForUser,
           paceSampleOK,
+
+          rareAnswersToday: rareCorrect,
+          mostOverGuessedWrong,
+          entropyIndex,
         }),
       )
     }
@@ -736,6 +810,10 @@ export default async function handler(req, res) {
         paceDeltaSecondsForUser,
         paceRelationForUser,
         paceSampleOK,
+
+        rareAnswersToday: rareCorrect,
+        mostOverGuessedWrong,
+        entropyIndex,
       }),
     )
   } catch (err) {
