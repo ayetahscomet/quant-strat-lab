@@ -59,18 +59,18 @@ const props = defineProps({
 
 const headline = computed(() => {
   if (props.mode === 'persistence') {
-    return 'You Stayed in the Fight.'
+    return 'You Went All In.'
   }
 
-  return 'Today wasn’t your day — and that’s completely okay.'
+  return 'Today Didn’t Quite Land.'
 })
 
 const subline = computed(() => {
   if (props.mode === 'persistence') {
-    return 'Most players exit early. You pushed all the way to the final window.'
+    return 'You played it through. That matters.'
   }
 
-  return 'See what you missed and come back stronger tomorrow.'
+  return 'Review the gaps and reset for tomorrow.'
 })
 
 function normalise(s) {
