@@ -2,12 +2,12 @@
   "crons": [
     {
       "path": "/api/push-window-open",
-      "schedule": "*/5 * * * *"
+      "schedule": "*/25 * * * *"
     },
 
     {
       "path": "/api/cron/daily-aggregate",
-      "schedule": "5 * * * *"
+      "schedule": "25 * * * *"
     },
     {
       "path": "/api/cron/daily-users",
@@ -15,11 +15,11 @@
     },
     {
       "path": "/api/cron/daily-cohorts",
-      "schedule": "15 * * * *"
+      "schedule": "25 * * * *"
     },
     {
       "path": "/api/cron/daily-badges",
-      "schedule": "20 * * * *"
+      "schedule": "25 * * * *"
     },
     {
       "path": "/api/cron/daily-push",

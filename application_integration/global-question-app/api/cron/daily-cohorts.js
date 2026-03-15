@@ -13,6 +13,21 @@ async function createInBatches(table, rows, size = 10) {
   }
 }
 
+async function fetchAll(table, formula) {
+  return base(table)
+    .select({
+      ...(typeof formula === 'string' && formula.length ? { filterByFormula: formula } : {}),
+      maxRecords: 5000,
+    })
+    .all()
+}
+
+async function updateInBatches(table, rows, size = 10) {
+  for (let i = 0; i < rows.length; i += size) {
+    await base(table).update(rows.slice(i, i + size))
+  }
+}
+
 /* =====================================================
    Handler
 ===================================================== */
@@ -106,8 +121,34 @@ export default async function handler(req, res) {
       })
     }
 
-    if (rows.length) {
-      await createInBatches('DailyCohorts', rows)
+    const existing = await fetchAll('DailyCohorts')
+    const existingByCohortDate = new Map(
+      existing.filter((r) => r.fields?.CohortDate).map((r) => [String(r.fields.CohortDate), r.id]),
+    )
+
+    const creates = []
+    const updates = []
+
+    for (const row of rows) {
+      const cohortDate = String(row.fields.CohortDate || '')
+      const existingId = existingByCohortDate.get(cohortDate)
+
+      if (existingId) {
+        updates.push({
+          id: existingId,
+          fields: row.fields,
+        })
+      } else {
+        creates.push(row)
+      }
+    }
+
+    if (creates.length) {
+      await createInBatches('DailyCohorts', creates)
+    }
+
+    if (updates.length) {
+      await updateInBatches('DailyCohorts', updates)
     }
 
     return res.status(200).json({

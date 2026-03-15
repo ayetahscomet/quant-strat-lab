@@ -154,7 +154,19 @@ export default async function handler(req, res) {
 
   const attemptRows = rows.filter((r) => {
     const ai = Number(r.AttemptIndex)
-    return ai >= 1 && ai <= 3
+    const result = String(r.Result || '')
+      .trim()
+      .toLowerCase()
+
+    return (
+      Number.isInteger(ai) &&
+      ai >= 1 &&
+      result !== 'snapshot' &&
+      result !== 'hint-used' &&
+      result !== 'success' &&
+      result !== 'lockout' &&
+      result !== 'exit-early'
+    )
   })
 
   const totalAttempts = attemptRows.length
@@ -231,8 +243,20 @@ export default async function handler(req, res) {
         ...x,
         _ai: Number(x.AttemptIndex),
         _t: x.CreatedAt ? new Date(x.CreatedAt).getTime() : null,
+        _result: String(x.Result || '')
+          .trim()
+          .toLowerCase(),
       }))
-      .filter((x) => x._ai >= 1 && x._ai <= 3)
+      .filter(
+        (x) =>
+          Number.isInteger(x._ai) &&
+          x._ai >= 1 &&
+          x._result !== 'snapshot' &&
+          x._result !== 'hint-used' &&
+          x._result !== 'success' &&
+          x._result !== 'lockout' &&
+          x._result !== 'exit-early',
+      )
       .sort((a, b) => (a._t || 0) - (b._t || 0))
 
     const hintCount = logs.filter(

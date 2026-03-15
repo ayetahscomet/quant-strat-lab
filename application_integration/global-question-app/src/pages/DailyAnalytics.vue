@@ -214,6 +214,16 @@
         <div class="share-actions">
           <button
             class="share-pill share-icon-pill"
+            @click="copyShareText"
+            :aria-label="copyBtnLabel"
+            :title="copyBtnLabel"
+          >
+            <span class="share-icon">⧉</span>
+            <span class="share-text">{{ copyBtnLabel }}</span>
+          </button>
+
+          <button
+            class="share-pill share-icon-pill"
             @click="shareToTwitter"
             aria-label="Share to X"
             title="Share to X"
@@ -528,7 +538,7 @@ function generateMetricCommentary(p, g = {}) {
   }
 
   if (confidence !== 'high') {
-    speedFoot = speedFoot.replace(/\.$/, '') + '. Early data.'
+    speedFoot = speedFoot.replace(/\.$/, '') + '.'
   }
 
   /* ---------------------------
@@ -1969,6 +1979,10 @@ function derivePersonalFromUserDailyProfile(payload) {
 
     completionWindowId,
     completionAt,
+
+    // keep raw daily attempts for written share-text generation
+    _shareAttempts: attempts,
+    _shareDateKey: payload?.dateKey || prof.DateKey || dateKeyRef.value || null,
   }
 }
 
@@ -2147,29 +2161,107 @@ const canonicalShareMetrics = computed(() => {
 
 /* ShareCard Features */
 
+function isRealShareAttempt(attempt) {
+  const result = String(attempt?.result || '')
+    .trim()
+    .toLowerCase()
+  const idx = Number(attempt?.attemptIndex ?? null)
+
+  return (
+    Number.isInteger(idx) &&
+    idx >= 1 &&
+    result !== 'snapshot' &&
+    result !== 'hint-used' &&
+    result !== 'success' &&
+    result !== 'lockout' &&
+    result !== 'exit-early'
+  )
+}
+
+function getAttemptTimestamp(attempt) {
+  const raw = attempt?.createdAt || attempt?.CreatedAt || null
+  if (!raw) return 0
+  const t = new Date(raw).getTime()
+  return Number.isFinite(t) ? t : 0
+}
+
+function normaliseAnswerKey(v) {
+  return String(v || '')
+    .trim()
+    .toLowerCase()
+}
+
+function buildAkintoShareDate(rawDateKey) {
+  const value = String(rawDateKey || '').trim()
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value || 'TODAY'
+  }
+
+  const [y, m, d] = value.split('-')
+  const monthNames = [
+    'JAN',
+    'FEB',
+    'MAR',
+    'APR',
+    'MAY',
+    'JUN',
+    'JUL',
+    'AUG',
+    'SEP',
+    'OCT',
+    'NOV',
+    'DEC',
+  ]
+  const monthIndex = Number(m) - 1
+  const month = monthNames[monthIndex] || m
+
+  return `${d}-${month}-${y}`
+}
+
+function buildAttemptProgressPattern(attempts, totalSlots) {
+  const validAttempts = Array.isArray(attempts)
+    ? [...attempts]
+        .filter(isRealShareAttempt)
+        .sort((a, b) => getAttemptTimestamp(a) - getAttemptTimestamp(b))
+    : []
+
+  const total = Math.max(1, Number(totalSlots) || 0)
+
+  if (!validAttempts.length) {
+    return '○'.repeat(total)
+  }
+
+  const cumulativeCorrect = new Set()
+
+  const segments = validAttempts.map((attempt) => {
+    const correctAnswers = Array.isArray(attempt?.correctAnswers) ? attempt.correctAnswers : []
+
+    for (const answer of correctAnswers) {
+      const key = normaliseAnswerKey(answer)
+      if (key) cumulativeCorrect.add(key)
+    }
+
+    const correctCount = Math.min(cumulativeCorrect.size, total)
+    return '●'.repeat(correctCount) + '○'.repeat(Math.max(0, total - correctCount))
+  })
+
+  return segments.join(' | ')
+}
+
 function buildShareText() {
-  const p = personal.value
+  const p = personal.value || {}
 
-  const completion = pct(p.completion)
-  const accuracy = pct(p.accuracy)
+  const dateLabel = buildAkintoShareDate(p._shareDateKey || dateKeyRef.value)
+  const totalSlots = Number(p.totalSlots || p._totalPossible || 0)
+  const pattern = buildAttemptProgressPattern(p._shareAttempts || [], totalSlots)
 
-  const paceLine =
-    typeof p.pacePercentile === 'number'
-      ? `Top ${pct(p.pacePercentile)}% for pace.`
-      : p.paceSeconds
-        ? `~${Math.max(1, Math.round(p.paceSeconds / 60))}m solve time.`
-        : ''
+  return `AKINTO ${dateLabel}
 
-  const tone =
-    completion === 100
-      ? 'Clean sweep.'
-      : completion >= 80
-        ? 'Sharp board.'
-        : completion >= 60
-          ? 'Solid coverage.'
-          : 'Experimental energy.'
+${pattern}
 
-  return `${tone} ${completion}% completion · ${accuracy}% accuracy. ${paceLine} Think you’d score higher?`
+A game of common knowledge.
+akinto.io`
 }
 
 function openShareOverlay() {
@@ -2182,29 +2274,25 @@ function closeShareOverlay() {
   document.body.classList.remove('blur-active')
 }
 
-const shareBtnLabel = ref('Share Results')
+const shareBtnLabel = ref('Share')
+const copyBtnLabel = ref('Copy')
+
 async function copyShareText() {
   if (!personalReady.value) return
 
-  const p = personal.value
-  const line1 = `Akinto - Daily Analytics (${p.dateKey})`
-  const line2 = `Completion: ${pct(p.completion)}% | Accuracy: ${pct(p.accuracy)}%`
-  const line3 =
-    typeof p.pacePercentile === 'number'
-      ? `Pace: faster than ${pct(p.pacePercentile)}% today`
-      : p.paceSeconds
-        ? `Pace: ~${Math.max(1, Math.round(p.paceSeconds / 60))}m from first to last move`
-        : `Pace: calibrating`
-  const line4 = `akinto.io`
+  const text = buildShareText()
 
-  const text = [line1, line2, line3, line4].join('\n')
   try {
     await navigator.clipboard.writeText(text)
-    shareBtnLabel.value = 'Copied ✓'
-    setTimeout(() => (shareBtnLabel.value = 'Copy Share Text'), 1400)
+    copyBtnLabel.value = 'Copied ✓'
+    setTimeout(() => {
+      copyBtnLabel.value = 'Copy'
+    }, 1400)
   } catch {
-    shareBtnLabel.value = 'Copy failed'
-    setTimeout(() => (shareBtnLabel.value = 'Copy Share Text'), 1400)
+    copyBtnLabel.value = 'Copy failed'
+    setTimeout(() => {
+      copyBtnLabel.value = 'Copy'
+    }, 1400)
   }
 }
 
@@ -2234,8 +2322,8 @@ async function tryNativeShare(blob) {
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
         files: [file],
-        title: 'Akinto Results',
-        text: `I scored ${displayCompletion.value}% on Akinto.`,
+        title: 'AKINTO',
+        text: buildShareText(),
         url: 'https://akinto.io',
       })
       return true
@@ -2258,7 +2346,7 @@ async function shareToTwitter() {
   const url = 'https://akinto.io'
 
   window.open(
-    `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+    `https://twitter.com/intent/tweet?text=${encodeURIComponent(`${text}\n\n${url}`)}`,
     '_blank',
   )
 }
@@ -2282,7 +2370,7 @@ async function shareToWhatsApp() {
   const usedNative = await tryNativeShare(blob)
   if (usedNative) return
 
-  const text = `${buildShareText()} https://akinto.io`
+  const text = `${buildShareText()}\n\nhttps://akinto.io`
 
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
 }
@@ -2293,8 +2381,6 @@ async function shareToLinkedIn() {
 
   const usedNative = await tryNativeShare(blob)
   if (usedNative) return
-
-  const text = `Today’s Akinto analytics: ${pct(personal.value.completion)}% completion · ${pct(personal.value.accuracy)}% accuracy. A surprisingly good test of recall under pressure.`
 
   const url = 'https://akinto.io'
 
@@ -3343,11 +3429,11 @@ async function downloadImage() {
   }
 
   .left-pane {
-    padding: 22px 16px 26px;
+    padding: 22px 16px 42px;
   }
 
   .right-pane {
-    padding: 24px 16px 28px;
+    padding: 24px 16px 56px;
   }
 
   .left-header {
@@ -3575,6 +3661,21 @@ async function downloadImage() {
 
   .share-icon {
     font-size: 13px;
+  }
+
+  .right-footer {
+    margin-top: 28px;
+    padding-top: 16px;
+    padding-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  .rotation-note {
+    line-height: 1.45;
+  }
+
+  .left-footer {
+    margin-bottom: 10px;
   }
 }
 </style>
