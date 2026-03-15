@@ -15,6 +15,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
+    const finalResult = result === 'success' ? 'success' : 'lockout'
+
+    // =====================================================
+    // 1️⃣ Log final attempt to UserAnswers
+    // =====================================================
+
     await base('UserAnswers').create([
       {
         fields: {
@@ -23,14 +29,42 @@ export default async function handler(req, res) {
           Source: source || '',
           DateKey: dateKey,
           WindowID: windowId,
-          Result: result === 'success' ? 'success' : 'lockout',
+          Result: finalResult,
           AnswersJSON: JSON.stringify(answers || []),
           CorrectAnswersJSON: JSON.stringify(correctAnswers || []),
           CreatedAt: new Date().toISOString(),
-          AttemptIndex: 999, // marker for final
+          AttemptIndex: 999,
         },
       },
     ])
+
+    // =====================================================
+    // 2️⃣ Update EmailSubscriptions (if exists)
+    // =====================================================
+
+    const subs = await base('EmailSubscriptions')
+      .select({
+        filterByFormula: `{UserID} = '${userId}'`,
+      })
+      .firstPage()
+
+    if (subs.length) {
+      const subRecord = subs[0]
+
+      if (finalResult === 'lockout') {
+        // User failed → mark them for next-window reminder
+        await base('EmailSubscriptions').update(subRecord.id, {
+          LastFailedWindowId: windowId,
+          LastFailedDateKey: dateKey,
+        })
+      } else {
+        // User succeeded → clear reminder flags
+        await base('EmailSubscriptions').update(subRecord.id, {
+          LastFailedWindowId: null,
+          LastFailedDateKey: null,
+        })
+      }
+    }
 
     return res.status(200).json({ ok: true })
   } catch (err) {

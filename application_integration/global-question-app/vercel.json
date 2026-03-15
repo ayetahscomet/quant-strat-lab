@@ -28,6 +28,11 @@
     {
       "path": "/api/end-day",
       "schedule": "55 23 * * *"
+    },
+
+    {
+      "path": "/api/email-window-open",
+      "schedule": "*/5 * * * *"
     }
   ],
 

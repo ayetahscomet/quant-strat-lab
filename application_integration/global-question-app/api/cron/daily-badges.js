@@ -3,10 +3,6 @@
 import { base } from '../../lib/airtable.js'
 import { pickDateKey } from '../../lib/dateKey.js'
 
-/* =====================================================
-   Helpers
-===================================================== */
-
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n))
 }
@@ -16,7 +12,6 @@ function pct(n) {
   return clamp(Math.round(n), 0, 100)
 }
 
-// percentile rank from bottom (ascending array)
 function pctRank(sortedAsc, value) {
   if (!sortedAsc.length) return null
   const idx = sortedAsc.findIndex((x) => x >= value)
@@ -45,31 +40,34 @@ async function updateInBatches(table, rows, size = 10) {
   }
 }
 
-function tierForBadge(badge, { accuracyTop, completionTop, speedTop, u }) {
-  // IMPORTANT: must match your Airtable single-select options exactly
-  // (Bronze / Silver / Gold / Platinum)
+function tierForBadge(badge, { speedTop, u }) {
   if (badge === 'Lightning Fast' && speedTop !== null && speedTop >= 90) return 'Platinum'
+
   if (
     badge === 'Top 10% Accuracy' ||
     badge === 'Top 10% Completion' ||
-    (badge === 'Sniper Accuracy' && (u.Accuracy || 0) >= 0.95)
-  )
+    (badge === 'Sniper Accuracy' && (Number(u.Accuracy) || 0) >= 95)
+  ) {
     return 'Gold'
+  }
+
   if (
     badge === 'Perfect Completion' ||
     badge === 'Sniper Accuracy' ||
     badge === 'Rare Finder' ||
     badge === 'Low Attempts, High Impact' ||
     badge === 'No Hints Used'
-  )
+  ) {
     return 'Silver'
+  }
+
   return 'Bronze'
 }
 
 function metricValueForBadge(badge, { u }) {
-  const accuracyPct = pct((u.Accuracy || 0) * 100)
-  const completionPct = pct((u.Completion || 0) * 100)
-  const solveSeconds = Number.isFinite(u.SolveSeconds) ? u.SolveSeconds : null
+  const accuracyPct = pct(Number(u.Accuracy) || 0)
+  const completionPct = pct(Number(u.Completion) || 0)
+  const solveSeconds = Number.isFinite(Number(u.SolveSeconds)) ? Number(u.SolveSeconds) : null
 
   switch (badge) {
     case 'Perfect Completion':
@@ -94,15 +92,14 @@ function metricValueForBadge(badge, { u }) {
   }
 }
 
-function descriptionForBadge(badge, { u, accuracyTop, completionTop, speedTop }) {
-  const accuracyPct = pct((u.Accuracy || 0) * 100)
-  const completionPct = pct((u.Completion || 0) * 100)
-  const seconds = Number.isFinite(u.SolveSeconds) ? u.SolveSeconds : null
+function descriptionForBadge(badge, { u, speedTop }) {
+  const accuracyPct = pct(Number(u.Accuracy) || 0)
+  const completionPct = pct(Number(u.Completion) || 0)
+  const seconds = Number.isFinite(Number(u.SolveSeconds)) ? Number(u.SolveSeconds) : null
   const rare = Number(u.RareAnswers || 0)
   const hints = Number(u.HintCount || 0)
   const attempts = Number(u.AttemptsUsed || 0)
 
-  // Tone: short, cheeky, DailyAnalytics-esque (no filler)
   switch (badge) {
     case 'Perfect Completion':
       return `Clean sweep — ${completionPct}% completion. No notes.`
@@ -127,14 +124,8 @@ function descriptionForBadge(badge, { u, accuracyTop, completionTop, speedTop })
   }
 }
 
-/* =====================================================
-   Handler
-===================================================== */
-
 export default async function handler(req, res) {
   const isVercelCron = req.headers['x-vercel-cron'] === '1'
-
-  // Still allow manual triggering via Bearer header or ?secret=
   const headerSecret = req.headers.authorization
   const querySecret = req.query?.secret ? `Bearer ${req.query.secret}` : null
   const expected = `Bearer ${process.env.CRON_SECRET || 'akinto-to-the-moon'}`
@@ -146,51 +137,49 @@ export default async function handler(req, res) {
   const { dateKey } = pickDateKey(req, { defaultOffsetDays: 0 })
   console.log('🏅 Awarding daily badges:', dateKey)
 
-  // Load daily profiles
   const profiles = await fetchAll('UserDailyProfile', `{DateKey}='${dateKey}'`)
-  if (!profiles.length) return res.status(200).json({ ok: true, message: 'no profiles', dateKey })
+  if (!profiles.length) {
+    return res.status(200).json({ ok: true, message: 'no profiles', dateKey })
+  }
 
   const users = profiles.map((r) => r.fields || {})
 
-  // Resolve Users table → Airtable record IDs (for linked UserID field)
   const userRecords = await fetchAll('Users')
   const userUuidToUserRecordId = new Map(userRecords.map((r) => [String(r.fields.UserID), r.id]))
   const userRecordIdToUserUuid = new Map(userRecords.map((r) => [r.id, String(r.fields.UserID)]))
 
-  // Prep percentiles (ascending arrays)
-  const accuracyVals = users.map((u) => u.Accuracy || 0).sort((a, b) => a - b)
-  const completionVals = users.map((u) => u.Completion || 0).sort((a, b) => a - b)
+  const accuracyVals = users.map((u) => Number(u.Accuracy) || 0).sort((a, b) => a - b)
+  const completionVals = users.map((u) => Number(u.Completion) || 0).sort((a, b) => a - b)
   const speedVals = users
-    .map((u) => (Number.isFinite(u.SolveSeconds) ? u.SolveSeconds : Infinity))
+    .map((u) => (Number.isFinite(Number(u.SolveSeconds)) ? Number(u.SolveSeconds) : Infinity))
     .sort((a, b) => a - b)
 
   const awards = []
 
   for (const u of users) {
-    const accuracyRank = pctRank(accuracyVals, u.Accuracy || 0)
-    const completionRank = pctRank(completionVals, u.Completion || 0)
-    const speedRank = Number.isFinite(u.SolveSeconds) ? pctRank(speedVals, u.SolveSeconds) : null
+    const accuracyRank = pctRank(accuracyVals, Number(u.Accuracy) || 0)
+    const completionRank = pctRank(completionVals, Number(u.Completion) || 0)
+    const speedRank = Number.isFinite(Number(u.SolveSeconds))
+      ? pctRank(speedVals, Number(u.SolveSeconds))
+      : null
 
-    // convert bottom-rank → top-percent (higher is better)
     const accuracyTop = accuracyRank !== null ? 100 - accuracyRank : null
     const completionTop = completionRank !== null ? 100 - completionRank : null
     const speedTop = speedRank !== null ? 100 - speedRank : null
 
     const badgeList = []
 
-    /* ---------------- CORE ---------------- */
-
-    if ((u.Completion || 0) >= 1) badgeList.push('Perfect Completion')
-    if ((u.Accuracy || 0) >= 0.9) badgeList.push('Sniper Accuracy')
-    if (speedRank !== null && speedRank <= 10) badgeList.push('Lightning Fast')
+    // UserDailyProfile stores 0–100 integers
+    if ((Number(u.Completion) || 0) >= 100) badgeList.push('Perfect Completion')
+    if ((Number(u.Accuracy) || 0) >= 90) badgeList.push('Sniper Accuracy')
+    if (speedTop !== null && speedTop >= 90) badgeList.push('Lightning Fast')
     if (accuracyTop !== null && accuracyTop >= 90) badgeList.push('Top 10% Accuracy')
     if (completionTop !== null && completionTop >= 90) badgeList.push('Top 10% Completion')
-    if ((u.HintCount || 0) === 0) badgeList.push('No Hints Used')
-    if ((u.RareAnswers || 0) >= 3) badgeList.push('Rare Finder')
-    if ((u.AttemptsUsed || 99) <= 2 && (u.Completion || 0) >= 0.8)
+    if ((Number(u.HintCount) || 0) === 0) badgeList.push('No Hints Used')
+    if ((Number(u.RareAnswers) || 0) >= 3) badgeList.push('Rare Finder')
+    if ((Number(u.AttemptsUsed) || 99) <= 2 && (Number(u.Completion) || 0) >= 80) {
       badgeList.push('Low Attempts, High Impact')
-
-    /* ---------------- PARTICIPATION ---------------- */
+    }
 
     badgeList.push('Played Today')
 
@@ -202,22 +191,22 @@ export default async function handler(req, res) {
 
       awards.push({
         fields: {
-          UserID: [userRecordId], // linked record
+          UserID: [userRecordId],
           DateKey: dateKey,
-
           BadgeName: badge,
           Tier: tierForBadge(badge, ctx),
           Description: descriptionForBadge(badge, ctx),
           MetricValue: metricValueForBadge(badge, ctx),
-
-          // Keep both: CreatedAt for “badge row timestamp”, GeneratedAt for cron metadata
           CreatedAt: new Date().toISOString(),
           GeneratedAt: new Date().toISOString(),
 
-          Accuracy: u.Accuracy ?? null,
-          Completion: u.Completion ?? null,
-          SolveSeconds: u.SolveSeconds ?? null,
+          // These Airtable columns are Percent fields -> store decimals
+          Accuracy: Number.isFinite(Number(u.Accuracy)) ? Number(u.Accuracy) / 100 : null,
+          Completion: Number.isFinite(Number(u.Completion)) ? Number(u.Completion) / 100 : null,
 
+          SolveSeconds: Number.isFinite(Number(u.SolveSeconds)) ? Number(u.SolveSeconds) : null,
+
+          // These are plain decimal/number columns, so 0–100 is fine
           AccuracyPct: accuracyTop,
           CompletionPct: completionTop,
           SpeedPct: speedTop,
@@ -225,10 +214,6 @@ export default async function handler(req, res) {
       })
     }
   }
-
-  /* =====================================================
-     De-dupe (idempotent) by UserRecordId + BadgeName + DateKey
-  ===================================================== */
 
   const existing = await fetchAll('UserDailyBadges', `{DateKey}='${dateKey}'`)
   const existingKeys = new Set(
@@ -242,15 +227,10 @@ export default async function handler(req, res) {
 
   if (toInsert.length) await createInBatches('UserDailyBadges', toInsert)
 
-  /* =====================================================
-   🔗 Link badges back to UserDailyProfile.UserDailyBadges
-===================================================== */
-
   const refreshedProfiles = await fetchAll('UserDailyProfile', `{DateKey}='${dateKey}'`)
   const profileByUserUuid = new Map(refreshedProfiles.map((p) => [String(p.fields.UserID), p]))
 
   const badgeRows = await fetchAll('UserDailyBadges', `{DateKey}='${dateKey}'`)
-
   const profileIdToBadges = new Map()
 
   for (const b of badgeRows) {
@@ -267,11 +247,11 @@ export default async function handler(req, res) {
     if (!profileRec) continue
 
     if (!profileIdToBadges.has(profileRec.id)) {
-      const existing = Array.isArray(profileRec.fields.UserDailyBadges)
+      const existingLinks = Array.isArray(profileRec.fields.UserDailyBadges)
         ? profileRec.fields.UserDailyBadges.filter((x) => typeof x === 'string')
         : []
 
-      profileIdToBadges.set(profileRec.id, new Set(existing))
+      profileIdToBadges.set(profileRec.id, new Set(existingLinks))
     }
 
     profileIdToBadges.get(profileRec.id).add(badgeId)
@@ -281,7 +261,6 @@ export default async function handler(req, res) {
 
   for (const [profileId, badgeSet] of profileIdToBadges.entries()) {
     const arr = [...badgeSet].filter((x) => typeof x === 'string')
-
     if (!arr.length) continue
 
     profileUpdates.push({

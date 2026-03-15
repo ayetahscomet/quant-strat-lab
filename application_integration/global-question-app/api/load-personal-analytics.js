@@ -52,6 +52,7 @@ function deriveFromAttempts(attemptRows) {
   let hintsUsed = 0
 
   let requiredSlotsGuess = 0
+  let lastValidSubmission = null
 
   for (const r of attemptRows) {
     const f = r.fields || {}
@@ -61,6 +62,23 @@ function deriveFromAttempts(attemptRows) {
     const answers = safeJsonArray(f.AnswersJSON)
     const correctAnswers = safeJsonArray(f.CorrectAnswersJSON)
     const incorrectAnswers = safeJsonArray(f.IncorrectAnswersJSON)
+
+    // Track last valid submission
+    if (
+      answers.length > 0 &&
+      f.Result !== 'snapshot' &&
+      f.AttemptIndex !== 999 &&
+      f.WindowID &&
+      f.CreatedAt
+    ) {
+      const submissionTime = new Date(f.CreatedAt)
+      if (!lastValidSubmission || submissionTime > new Date(lastValidSubmission.createdAt)) {
+        lastValidSubmission = {
+          windowId: f.WindowID,
+          createdAt: f.CreatedAt,
+        }
+      }
+    }
 
     if (correctAnswers.length > requiredSlotsGuess) {
       requiredSlotsGuess = correctAnswers.length
@@ -119,6 +137,9 @@ function deriveFromAttempts(attemptRows) {
     requiredSlotsGuess,
     submittedList: [...submittedSet],
     correctList: [...correctSet],
+
+    completionWindowId: lastValidSubmission?.windowId || null,
+    completionAt: lastValidSubmission?.createdAt || null,
   }
 }
 
@@ -287,6 +308,9 @@ export default async function handler(req, res) {
 
         Country: profile.Country || null,
         Region: profile.Region || null,
+
+        CompletionWindowId: derived.completionWindowId,
+        CompletionAt: derived.completionAt,
       },
 
       question: {

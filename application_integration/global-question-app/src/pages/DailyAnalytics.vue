@@ -27,6 +27,7 @@
             ✅ {{ Math.min(personal.uniqueCorrect, personal.totalSlots) }}/{{ personal.totalSlots }}
             found
           </span>
+          <span class="pill" v-if="completionWindowLabel"> 🕓 {{ completionWindowLabel }} </span>
         </div>
       </div>
 
@@ -125,7 +126,7 @@
         </button>
       </header>
 
-      <div class="global-grid" v-if="personalReady">
+      <div class="global-grid" v-if="personalReady && globalReady">
         <article
           v-for="block in globalBlocks"
           :key="block.id"
@@ -176,7 +177,6 @@
 
       <div class="right-footer" v-if="personalReady">
         <p class="rotation-note">Views refresh daily. Tomorrow tells a new story.</p>
-        <div class="brand-tag">A game of Common Knowledge.</div>
       </div>
     </section>
   </div>
@@ -197,22 +197,70 @@
   <Transition name="share-sheet" appear>
     <div v-if="shareOpen" class="share-overlay" @click.self="closeShareOverlay">
       <div class="share-modal">
-        <button class="share-close" @click="closeShareOverlay">✕</button>
+        <button class="share-close" @click="closeShareOverlay" aria-label="Close share overlay">
+          ✕
+        </button>
 
-        <ShareCard
-          ref="liveShareCardRef"
-          :date="personal.dateKey"
-          v-bind="canonicalShareMetrics"
-          :countryName="personal.countryName"
-          :global="global"
-        />
+        <div class="share-card-stage">
+          <ShareCard
+            ref="liveShareCardRef"
+            :date="personal.dateKey"
+            v-bind="canonicalShareMetrics"
+            :countryName="personal.countryName"
+            :global="global"
+          />
+        </div>
 
         <div class="share-actions">
-          <button class="share-pill" @click="shareToTwitter">X</button>
-          <button class="share-pill" @click="shareToFacebook">Facebook</button>
-          <button class="share-pill" @click="shareToWhatsApp">WhatsApp</button>
-          <button class="share-pill" @click="shareToLinkedIn">LinkedIn</button>
-          <button class="share-pill share-primary" @click="downloadImage">Download</button>
+          <button
+            class="share-pill share-icon-pill"
+            @click="shareToTwitter"
+            aria-label="Share to X"
+            title="Share to X"
+          >
+            <span class="share-icon">𝕏</span>
+            <span class="share-text">X</span>
+          </button>
+
+          <button
+            class="share-pill share-icon-pill"
+            @click="shareToFacebook"
+            aria-label="Share to Facebook"
+            title="Share to Facebook"
+          >
+            <span class="share-icon">f</span>
+            <span class="share-text">Facebook</span>
+          </button>
+
+          <button
+            class="share-pill share-icon-pill"
+            @click="shareToWhatsApp"
+            aria-label="Share to WhatsApp"
+            title="Share to WhatsApp"
+          >
+            <span class="share-icon">◔</span>
+            <span class="share-text">WhatsApp</span>
+          </button>
+
+          <button
+            class="share-pill share-icon-pill"
+            @click="shareToLinkedIn"
+            aria-label="Share to LinkedIn"
+            title="Share to LinkedIn"
+          >
+            <span class="share-icon">in</span>
+            <span class="share-text">LinkedIn</span>
+          </button>
+
+          <button
+            class="share-pill share-primary share-icon-pill"
+            @click="downloadImage"
+            aria-label="Download image"
+            title="Download image"
+          >
+            <span class="share-icon">↓</span>
+            <span class="share-text">Download</span>
+          </button>
         </div>
       </div>
     </div>
@@ -230,6 +278,7 @@ import { getTimezone, todayKey } from '../utils/windows.js'
 import html2canvas from 'html2canvas'
 import ShareCard from '@/components/ShareCard.vue'
 import { computeDailyMetrics } from '../../lib/metricsEngine.js'
+import { WINDOWS } from '../utils/windows.js'
 
 /* String/Number Helper Functions  */
 
@@ -554,6 +603,12 @@ function generateMetricCommentary(p, g = {}) {
   }
 }
 
+function windowLabel(id) {
+  if (!id) return '—'
+  const w = WINDOWS.find((w) => w.id === id)
+  return w?.label || id
+}
+
 /* Router Functions */
 
 function goHome() {
@@ -605,6 +660,7 @@ const globalBlocks = ref([])
 const shareCardRef = ref(null)
 const shareOpen = ref(false)
 const liveShareCardRef = ref(null)
+const globalReady = ref(false)
 
 /* Initial Statements of Required Constants (BLOCKS SET TO "NULL") */
 
@@ -691,6 +747,12 @@ function buildHeroCopy(rng) {
         : 'Pace percentile forming.'
 
   heroDescription.value = `${commentary.outcomeLine} ${paceLine}`
+
+  if (personal.value.completionWindowId) {
+    heroDescription.value += ` Completed during the ${windowLabel(
+      personal.value.completionWindowId,
+    )} window.`
+  }
 
   if (p.archetype) {
     heroDescription.value += ` Archetype: ${p.archetype}.`
@@ -1099,6 +1161,9 @@ function buildPersonalChart(rng) {
 function renderPersonalCharts(rng) {
   destroyCharts()
 
+  if (!personalReady.value) return
+  if (!personal.value) return
+
   const p = personal.value
   if (!completionRing.value || !accuracyRing.value || !speedRing.value) return
 
@@ -1354,6 +1419,8 @@ function buildGlobalBlocks(rng) {
     const og = g.mostOverGuessedWrong
     if (!og || !og.answer) return null
 
+    const formatted = String(og.answer)
+
     return {
       topic: 'overguess',
       kicker: 'Overconfidence',
@@ -1507,7 +1574,7 @@ function buildGlobalBlocks(rng) {
           ? g.countryLeaderboard
               .slice(0, 6)
               .map((x, idx) => [
-                `${idx + 1}. ${countryDisplay(x.country ?? x.name)}`,
+                `${idx + 1}. ${countryDisplay(x.name || x.country)}`,
                 `${pct(x.value)}%`,
               ])
           : [
@@ -1780,6 +1847,9 @@ function buildGlobalBlocks(rng) {
 }
 
 function renderGlobalBlockCharts(rng) {
+  if (!personalReady.value) return
+  if (!Array.isArray(globalBlocks.value) || !globalBlocks.value.length) return
+
   for (const b of globalBlocks.value) {
     if (!b.chart) continue
 
@@ -1845,6 +1915,8 @@ function renderGlobalBlockCharts(rng) {
 
 function derivePersonalFromUserDailyProfile(payload) {
   const prof = payload?.profile || {}
+  const completionWindowId = prof.CompletionWindowId || null
+  const completionAt = prof.CompletionAt || null
   const q = payload?.question || {}
   const attempts = Array.isArray(payload?.attempts) ? payload.attempts : []
 
@@ -1894,6 +1966,9 @@ function derivePersonalFromUserDailyProfile(payload) {
     countryCode: resolvedCountryCode,
     countryName: resolvedCountryName,
     _attemptsByWindow: metrics.attemptsByWindow || {},
+
+    completionWindowId,
+    completionAt,
   }
 }
 
@@ -1902,49 +1977,62 @@ onMounted(async () => {
 
   const seed = hashStringToInt(`${userId}::${dateKeyRef.value}::analytics`)
   const rng = mulberry32(seed)
-  personal.value._rng = rng
 
+  personal.value._rng = rng
   personalSubline.value = pick(rng, PERSONAL_SUBLINES)
   globalSubline.value = pick(rng, GLOBAL_SUBLINES)
 
   try {
-    // Personal analytics (UserDailyProfile)
-    const personalPayload = await fetchPersonalAnalytics()
+    // Fetch personal + global in parallel (prevents partial state binding)
+    const [personalPayload, g] = await Promise.all([
+      fetchPersonalAnalytics(),
+      fetchGlobalAnalytics(),
+    ])
+
+    // Derive personal first
     derivePersonalFromUserDailyProfile(personalPayload)
 
-    // Global analytics (DailyAggregates)
-    const g = await fetchGlobalAnalytics()
-
+    // Hydrate global safely
     if (g) {
       global.value = {
         totalPlayers: typeof g.totalPlayers === 'number' ? g.totalPlayers : 0,
+
         totalAttempts: typeof g.totalAttempts === 'number' ? g.totalAttempts : null,
 
         avgCompletion:
           typeof g.avgCompletion === 'number' ? normaliseAirtablePercent(g.avgCompletion) : null,
+
         avgAccuracy:
           typeof g.avgAccuracy === 'number' ? normaliseAirtablePercent(g.avgAccuracy) : null,
 
         countryLeaderboard: Array.isArray(g.countryLeaderboard) ? g.countryLeaderboard : [],
 
         yourCountryRank: typeof g.yourCountryRank === 'number' ? g.yourCountryRank : null,
+
         yourCountryAvgCompletion:
           typeof g.yourCountryAvgCompletion === 'number'
             ? normaliseAirtablePercent(g.yourCountryAvgCompletion)
             : null,
 
         speedPercentiles: g.distributions?.paceBuckets || null,
+
         globalStreak: null,
 
         rareAnswersToday: Array.isArray(g.rareAnswersToday) ? g.rareAnswersToday : [],
 
         mostOverGuessedWrong: g.mostOverGuessedWrong || null,
+
         entropyIndex: typeof g.entropyIndex === 'number' ? g.entropyIndex : null,
+
         entropyMatrix: Array.isArray(g.entropyMatrix) ? g.entropyMatrix : [],
+
         countryDisagreement: Array.isArray(g.countryDisagreement) ? g.countryDisagreement : [],
+
         volatilityDifficulty: g.volatilityDifficulty || null,
+
         answerClusters: Array.isArray(g.answerClusters) ? g.answerClusters : [],
       }
+      globalReady.value = true
 
       if (typeof g.pacePercentileForUser === 'number') {
         personal.value = {
@@ -1954,7 +2042,7 @@ onMounted(async () => {
       }
     }
 
-    // Build editorial copy + layout
+    // Build editorial copy + layout blocks
     buildHeroCopy(rng)
     personalCards.value = buildPersonalCards(rng)
 
@@ -1963,16 +2051,20 @@ onMounted(async () => {
 
     personalReady.value = true
 
-    // Render charts
+    // ---- CHART RENDER PHASE ----
+    destroyCharts()
+
     await nextTick()
     renderPersonalCharts(rng)
 
-    // second tick ONLY for global block charts
     await nextTick()
     renderGlobalBlockCharts(rng)
   } catch (e) {
     console.error('DailyAnalytics load error:', e)
-    // still show something minimal
+
+    // Minimal fallback UI (never blank page)
+    destroyCharts()
+
     personalReady.value = true
     personalCards.value = buildPersonalCards(mulberry32(seed + 1))
 
@@ -2028,6 +2120,11 @@ const displayAccuracy = computed(() => pct(personal.value.accuracy))
 const displaySpeed = computed(() =>
   typeof personal.value.pacePercentile === 'number' ? pct(personal.value.pacePercentile) : 55,
 )
+
+const completionWindowLabel = computed(() => {
+  if (!personal.value.completionWindowId) return null
+  return windowLabel(personal.value.completionWindowId)
+})
 
 const canonicalShareMetrics = computed(() => {
   const p = personal.value
@@ -2261,6 +2358,7 @@ async function downloadImage() {
   color: white;
   padding: 34px 30px 28px;
   padding-top: 50px;
+  padding-bottom: 110px;
   overflow-y: auto;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -2563,7 +2661,7 @@ async function downloadImage() {
   padding: 32px 36px 30px;
   overflow-y: auto;
   position: relative;
-  padding-bottom: 200px;
+  padding-bottom: 110px;
   padding-top: 50px;
 }
 
@@ -2927,22 +3025,20 @@ async function downloadImage() {
   position: fixed;
   inset: 0;
   z-index: 9999;
-
+  padding: 16px;
   background: rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-
   display: grid;
   place-items: center;
-
   overscroll-behavior: contain;
 }
 
 .share-modal {
-  width: min(920px, calc(100vw - 28px));
-  max-height: min(92vh, 920px);
+  width: min(920px, calc(100vw - 32px));
+  max-height: min(94vh, 920px);
   border-radius: 28px;
-  padding: 22px 22px 18px;
+  padding: 20px 20px 16px;
   position: relative;
   background: rgba(17, 17, 17, 0.86);
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -2954,42 +3050,69 @@ async function downloadImage() {
   -webkit-backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 16px;
+  align-items: stretch;
+  gap: 12px;
   transform-origin: center;
   will-change: transform, opacity, filter;
+  overflow: hidden;
 }
 
 .share-modal > * {
   max-width: 100%;
 }
 
-.share-modal .share-card-root {
+.share-card-stage {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.share-card-stage :deep(.share-card) {
   width: 100%;
   max-width: 820px;
+  margin: 0 auto;
 }
 
 .share-close {
   position: absolute;
   top: 14px;
   right: 14px;
-
   width: 36px;
   height: 36px;
   border-radius: 999px;
-
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.92);
-
   cursor: pointer;
   display: grid;
   place-items: center;
-
   transition:
     transform 0.18s ease,
     background 0.18s ease,
     opacity 0.18s ease;
+  z-index: 3;
+}
+
+.share-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    opacity 0.18s ease;
+  z-index: 3;
 }
 
 .share-close:hover {
@@ -3001,9 +3124,11 @@ async function downloadImage() {
   width: 100%;
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
-  padding: 4px 2px 2px;
+  align-items: center;
+  padding: 2px 0 0;
+  flex: 0 0 auto;
 }
 
 .share-actions button {
@@ -3011,7 +3136,7 @@ async function downloadImage() {
   color: white;
   border: 1.5px solid rgba(255, 255, 255, 0.2);
   border-radius: 999px;
-  padding: 10px 18px;
+  padding: 10px 16px;
   font-weight: 700;
   cursor: pointer;
   transition: 0.18s ease;
@@ -3027,12 +3152,11 @@ async function downloadImage() {
   border: 1.5px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.92);
-
   border-radius: 999px;
   padding: 10px 14px;
   font-weight: 750;
   cursor: pointer;
-
+  flex: 0 0 auto;
   transition:
     transform 0.18s ease,
     background 0.18s ease,
@@ -3054,6 +3178,32 @@ async function downloadImage() {
 .share-primary {
   background: rgba(255, 255, 255, 0.14);
   border-color: rgba(255, 255, 255, 0.24);
+}
+
+.share-icon-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.share-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.share-text {
+  display: inline-block;
+  line-height: 1;
 }
 
 /* Transformations and Transitions */
@@ -3341,6 +3491,90 @@ async function downloadImage() {
     font-size: 10px;
     background: #0d0f11;
     color: #fff;
+  }
+}
+
+@media (max-width: 720px) {
+  .share-overlay {
+    padding: 8px;
+  }
+
+  .share-modal {
+    width: min(100vw - 16px, 430px);
+    max-height: calc(100vh - 16px);
+    padding: 10px 8px 8px;
+    border-radius: 22px;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+
+  .share-card-stage {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .share-card-stage :deep(.share-card) {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .share-close {
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+  }
+
+  .share-actions {
+    gap: 6px;
+    padding: 0;
+    flex-wrap: nowrap;
+    justify-content: center;
+  }
+
+  .share-pill {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 999px;
+    flex: 0 0 40px;
+  }
+
+  .share-icon-pill {
+    gap: 0;
+  }
+
+  .share-icon {
+    font-size: 14px;
+  }
+
+  .share-text {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .share-modal {
+    width: calc(100vw - 10px);
+    max-height: calc(100vh - 10px);
+    padding: 8px 6px 6px;
+    border-radius: 18px;
+    gap: 6px;
+  }
+
+  .share-actions {
+    gap: 5px;
+  }
+
+  .share-pill {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+  }
+
+  .share-icon {
+    font-size: 13px;
   }
 }
 </style>

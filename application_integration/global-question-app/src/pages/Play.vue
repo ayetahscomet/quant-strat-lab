@@ -1,217 +1,251 @@
 <template>
-  <link rel="canonical" href="https://akinto.io/" />
-
-  <transition name="screen-fade" mode="out-in">
-    <!-- ===========================
+  <div class="play-route">
+    <transition name="screen-fade" mode="out-in">
+      <!-- ===========================
          GAMEPLAY VIEW
     ============================ -->
-    <div
-      v-if="currentView === 'play'"
-      :class="[
-        'play-wrapper',
-        timeClass,
-        { 'split-lockout-active': screenState === 'split-lockout' },
-      ]"
-    >
-      <!-- =======================================================
+      <div
+        v-if="currentView === 'play'"
+        :class="[
+          'play-wrapper',
+          timeClass,
+          { 'split-lockout-active': screenState === 'split-lockout' },
+        ]"
+      >
+        <!-- =======================================================
            HEADER (HIDDEN IN LOCKOUT)
       ======================================================= -->
-      <transition name="header-shift">
-        <header v-if="screenState !== 'split-lockout'" class="header gameplay-header">
-          <img src="/logo-800-full.svg" class="logo" @click="goHome" />
-          <span class="counter">
-            <span class="num-light">1</span> /
-            <span class="num-bold">1</span>
-          </span>
-          <span class="divider">|</span>
-          <span class="stage">{{ stageLabel }}</span>
-        </header>
-      </transition>
+        <transition name="header-shift">
+          <header v-if="screenState !== 'split-lockout'" class="header gameplay-header">
+            <img src="/logo-800-full.svg" class="logo" @click="goHome" />
+            <span class="counter">
+              <span class="num-light">1</span> /
+              <span class="num-bold">1</span>
+            </span>
+            <span class="divider">|</span>
+            <span class="stage">{{ stageLabel }}</span>
+          </header>
+        </transition>
 
-      <!-- =======================================================
+        <!-- =======================================================
            ATTEMPT DOTS (HIDDEN IN LOCKOUT)
       ======================================================= -->
-      <div v-if="screenState !== 'split-lockout'" class="attempts-row">
-        <span class="attempts-label">Attempts remaining:</span>
-        <div class="dots">
-          <span
-            v-for="n in MAX_ATTEMPTS"
-            :key="n"
-            :class="['dot', { active: n <= attemptsRemaining }]"
-          />
+        <div v-if="screenState !== 'split-lockout'" class="attempts-row">
+          <span class="attempts-label">Attempts remaining:</span>
+          <div class="dots">
+            <span
+              v-for="n in MAX_ATTEMPTS"
+              :key="n"
+              :class="['dot', { active: n <= attemptsRemaining }]"
+            />
+          </div>
         </div>
-      </div>
-      <div class="attempt-metric">
-        {{ fieldStatus.filter((s) => s === 'correct').length }} / {{ answers.length }} correct
-      </div>
+        <div class="attempt-metric">
+          {{ fieldStatus.filter((s) => s === 'correct').length }} / {{ answers.length }} correct
+        </div>
 
-      <!-- =======================================================
+        <!-- =======================================================
            SPLIT LOCKOUT MODE
       ======================================================= -->
-      <template v-if="screenState === 'split-lockout'">
-        <transition name="split-lock" mode="out-in">
-          <div class="lockout-split ready" :class="{ 'lockout-return': lockoutMode === 'return' }">
-            <!-- ============ LEFT PANE: LATEST ATTEMPT ============ -->
-            <div class="left-pane">
-              <h2 class="attempt-title">Latest Attempt</h2>
-              <p class="attempt-sub">Your final answers in this window</p>
-              <div
-                v-for="(ans, i) in answers"
-                :key="i"
-                class="locked-result"
-                :class="fieldStatus[i]"
-              >
-                {{ ans || '—' }}
+        <template v-if="screenState === 'split-lockout'">
+          <transition name="split-lock" mode="out-in">
+            <div
+              class="lockout-split ready"
+              :class="{ 'lockout-return': lockoutMode === 'return' }"
+            >
+              <!-- ============ LEFT PANE: LATEST ATTEMPT ============ -->
+              <div class="left-pane">
+                <h2 class="attempt-title">Latest Attempt</h2>
+                <p class="attempt-sub">Your final answers in this window</p>
+                <div
+                  v-for="(ans, i) in answers"
+                  :key="i"
+                  class="locked-result"
+                  :class="fieldStatus[i]"
+                >
+                  {{ ans || '—' }}
+                </div>
+              </div>
+
+              <!-- ============ RIGHT PANE: LOCKOUT CARD ============ -->
+              <div class="right-pane lockout-card">
+                <img src="/logo-800-full.svg" class="lockout-logo" @click="goHome" />
+
+                <h2 class="lockout-headline-strong">{{ lockoutHeadlineStrong }}</h2>
+                <h2 class="lockout-headline-sub">{{ lockoutHeadlineSub }}</h2>
+
+                <p class="midday-sub">Next window:</p>
+                <p class="midday-time">{{ nextSlotShort }}</p>
+                <p class="midday-countdown">Come back in {{ countdown }}</p>
+
+                <button
+                  class="notif-btn"
+                  :disabled="notificationsEnabled"
+                  @click="enableNotifications"
+                >
+                  {{ notificationsEnabled ? 'Email reminders enabled' : 'Enable email reminders' }}
+                </button>
               </div>
             </div>
+          </transition>
+        </template>
 
-            <!-- ============ RIGHT PANE: LOCKOUT CARD ============ -->
-            <div class="right-pane lockout-card">
-              <img src="/logo-800-full.svg" class="lockout-logo" @click="goHome" />
-
-              <h2 class="lockout-headline-strong">{{ lockoutHeadlineStrong }}</h2>
-              <h2 class="lockout-headline-sub">{{ lockoutHeadlineSub }}</h2>
-
-              <p class="midday-sub">Next window:</p>
-              <p class="midday-time">{{ nextSlotShort }}</p>
-              <p class="midday-countdown">Come back in {{ countdown }}</p>
-
-              <button
-                class="notif-btn"
-                :disabled="notificationsEnabled"
-                @click="enableNotifications"
-              >
-                Enable Notifications
-              </button>
-
-              <button class="exit-btn" @click="showExitConfirm = true">
-                <i>I’ve Had Enough for Today</i>
-              </button>
-            </div>
-          </div>
-        </transition>
-      </template>
-
-      <!-- =======================================================
+        <!-- =======================================================
            LOADING SCREEN
       ======================================================= -->
-      <template v-else-if="loading">
-        <div class="loading-screen">
-          <div class="loading-content">
-            <div class="loading-spinner"></div>
-            <p class="loading-text">Loading today’s question…</p>
+        <template v-else-if="loading">
+          <div class="loading-screen">
+            <div class="loading-content">
+              <div class="loading-spinner"></div>
+              <p class="loading-text">Loading today’s question…</p>
+            </div>
           </div>
-        </div>
-      </template>
+        </template>
 
-      <!-- =======================================================
+        <!-- =======================================================
            NORMAL GAMEPLAY MODE
       ======================================================= -->
-      <template v-else>
-        <h1 v-if="!question" class="question-title muted">No question found.</h1>
-        <h1 v-else class="question-title">{{ question }}</h1>
+        <template v-else>
+          <h1 v-if="!question" class="question-title muted">No question found.</h1>
+          <h1 v-else class="question-title">{{ question }}</h1>
 
-        <div
-          class="input-group stagger-on"
-          v-if="answers.length"
-          :class="{ visible: inputsVisible, 'final-attempt-replay': isReplaySequence }"
-        >
-          <input
-            v-for="(ans, i) in answers"
-            :key="`${i}-${shakeNonce}`"
-            v-model="answers[i]"
-            :placeholder="i + 1 + '.'"
-            :class="[
-              'answer-input',
-              fieldStatus[i],
-              'shake',
-              `stagger-${i}`,
-              { 'hero-flash': heroFlashIndex === i },
-            ]"
-            :disabled="fieldStatus[i] === 'correct'"
-            :ref="(el) => registerInputRef(el, i)"
-            @keydown="onKey($event, i)"
-          />
-        </div>
+          <div
+            class="input-group stagger-on"
+            v-if="answers.length"
+            :class="{ visible: inputsVisible, 'final-attempt-replay': isReplaySequence }"
+          >
+            <input
+              v-for="(ans, i) in answers"
+              :key="`${i}-${shakeNonce}`"
+              v-model="answers[i]"
+              :placeholder="i + 1 + '.'"
+              :class="[
+                'answer-input',
+                fieldStatus[i],
+                'shake',
+                `stagger-${i}`,
+                { 'hero-flash': heroFlashIndex === i },
+              ]"
+              :disabled="fieldStatus[i] === 'correct'"
+              :ref="(el) => registerInputRef(el, i)"
+              @keydown="onKey($event, i)"
+            />
+          </div>
 
-        <div class="button-row">
-          <button class="lock" @click="onLockIn" :disabled="attemptsRemaining <= 0">Lock In</button>
-        </div>
-      </template>
+          <div class="button-row">
+            <button class="lock" @click="onLockIn" :disabled="attemptsRemaining <= 0">
+              Lock In
+            </button>
+          </div>
+        </template>
 
-      <!-- =======================================================
+        <!-- =======================================================
      MODAL SYSTEM (SINGLE OVERLAY, CLEAN TRANSITIONS)
 ======================================================= -->
 
-      <transition name="modal-fade">
-        <div
-          v-if="modalMode || showExitConfirm || showFillWarning"
-          :class="['overlay', { 'modal-lower': modalMode && modalMode !== 'exit' }]"
-        >
-          <!-- FILL WARNING -->
-          <div v-if="showFillWarning" class="modal">
-            <h2 class="modal-title">Almost there!</h2>
-            <p class="modal-text">Fill all boxes first.</p>
-            <button class="modal-btn primary" @click="showFillWarning = false">OK</button>
-          </div>
+        <transition name="modal-fade">
+          <div
+            v-if="modalMode || showExitConfirm || showFillWarning || showEmailModal"
+            :class="['overlay', { 'modal-lower': modalMode && modalMode !== 'exit' }]"
+          >
+            <!-- FILL WARNING -->
+            <div v-if="showFillWarning" class="modal">
+              <h2 class="modal-title">Almost there!</h2>
+              <p class="modal-text">Fill all boxes first.</p>
+              <button class="modal-btn primary" @click="showFillWarning = false">OK</button>
+            </div>
 
-          <!-- ASK HINT -->
-          <div v-else-if="modalMode === 'askHint' && !hintUsedThisWindow" class="modal">
-            <h2 class="modal-title">Not quite.</h2>
-            <p class="modal-text modal-spaced">Some answers aren’t quite there. Want a hint?</p>
+            <!-- ASK HINT -->
+            <div v-else-if="modalMode === 'askHint' && !hintUsedThisWindow" class="modal">
+              <h2 class="modal-title">Not quite.</h2>
+              <p class="modal-text modal-spaced">Some answers aren’t quite there. Want a hint?</p>
 
-            <div class="modal-actions">
-              <button class="modal-btn secondary" @click="closeModal">No, retry</button>
-              <button class="modal-btn primary" @click="showHint">Yes, show hint</button>
+              <div class="modal-actions">
+                <button class="modal-btn secondary" @click="closeModal">No, retry</button>
+                <button class="modal-btn primary" @click="showHint">Yes, show hint</button>
+              </div>
+            </div>
+
+            <!-- HINT -->
+            <div v-else-if="modalMode === 'hint'" class="modal">
+              <h2 class="modal-title">Hint</h2>
+              <p class="modal-text modal-spaced">
+                {{ hintText || 'Hint coming soon.' }}
+              </p>
+              <button class="modal-btn primary" @click="closeHint">Back</button>
+            </div>
+
+            <!-- EXIT -->
+            <div v-else-if="showExitConfirm" class="modal">
+              <h2 class="modal-title">Finished for Today?</h2>
+              <p class="modal-text modal-spaced">
+                You’ll end today’s session early and see the correct answers.<br />
+                You can’t return until tomorrow.
+              </p>
+
+              <div class="modal-actions">
+                <button class="modal-btn secondary" @click="showExitConfirm = false">
+                  No, return
+                </button>
+                <button class="modal-btn primary" @click="confirmExitEarly">Yes, I’m Done</button>
+              </div>
+            </div>
+
+            <!-- EMAIL NOTIFICATIONS -->
+            <div v-else-if="showEmailModal" class="modal">
+              <h2 class="modal-title">Get a reminder?</h2>
+              <p class="modal-text modal-spaced">We’ll email you when your next window opens.</p>
+
+              <input
+                v-model="email"
+                type="email"
+                placeholder="you@domain.com"
+                class="answer-input"
+                style="width: 100%; margin: 10px 0 16px"
+                @keydown.enter.prevent="submitEmailNotifications"
+              />
+
+              <p v-if="emailStatus === 'success'" style="margin: 0 0 12px; font-weight: 600">
+                You’re subscribed ✅
+              </p>
+              <p v-else-if="emailStatus === 'error'" style="margin: 0 0 12px; color: #b00020">
+                Please enter a valid email (or try again).
+              </p>
+
+              <div class="modal-actions">
+                <button class="modal-btn secondary" @click="closeEmailModal">Not now</button>
+                <button class="modal-btn primary" @click="submitEmailNotifications">
+                  Enable email reminders
+                </button>
+              </div>
+
+              <p style="margin-top: 12px; font-size: 12px; opacity: 0.7">
+                You can unsubscribe any time from the email footer.
+              </p>
             </div>
           </div>
-
-          <!-- HINT -->
-          <div v-else-if="modalMode === 'hint'" class="modal">
-            <h2 class="modal-title">Hint</h2>
-            <p class="modal-text modal-spaced">
-              {{ hintText || 'Hint coming soon.' }}
-            </p>
-            <button class="modal-btn primary" @click="closeHint">Back</button>
-          </div>
-
-          <!-- EXIT -->
-          <div v-else-if="showExitConfirm" class="modal">
-            <h2 class="modal-title">Finished for Today?</h2>
-            <p class="modal-text modal-spaced">
-              You’ll end today’s session early and see the correct answers.<br />
-              You can’t return until tomorrow.
-            </p>
-
-            <div class="modal-actions">
-              <button class="modal-btn secondary" @click="showExitConfirm = false">
-                No, return
-              </button>
-              <button class="modal-btn primary" @click="confirmExitEarly">Yes, I’m Done</button>
-            </div>
-          </div>
-        </div>
-      </transition>
-    </div>
-    <!-- ===========================
+        </transition>
+      </div>
+      <!-- ===========================
       SUCCESS SUMMARY (FULL SCREEN)
 ============================ -->
-    <div v-else-if="currentView === 'success'" class="full-screen-summary">
-      <SuccessSummary :answers="answers" :correctAnswers="correctAnswers" @continue="goHome" />
-    </div>
+      <div v-else-if="currentView === 'success'" class="full-screen-summary">
+        <SuccessSummary :answers="answers" :correctAnswers="correctAnswers" @continue="goHome" />
+      </div>
 
-    <!-- ===========================
+      <!-- ===========================
       FAILURE SUMMARY (FULL SCREEN)
 ============================ -->
-    <div v-else-if="currentView === 'failure'" class="full-screen-summary">
-      <FailureSummary
-        mode="persistence"
-        :answers="answers"
-        :correctAnswers="correctAnswers"
-        @continue="goHome"
-      />
-    </div>
-  </transition>
+      <div v-else-if="currentView === 'failure'" class="full-screen-summary">
+        <FailureSummary
+          mode="persistence"
+          :answers="answers"
+          :correctAnswers="correctAnswers"
+          @continue="goHome"
+        />
+      </div>
+    </transition>
+  </div>
 </template>
 
 <script setup>
@@ -297,6 +331,10 @@ const hintUsedThisWindow = ref(false)
 const triedIncorrectToday = ref(new Set())
 const lockoutMode = ref(null)
 const notificationsEnabled = ref(false)
+
+const showEmailModal = ref(false)
+const email = ref('')
+const emailStatus = ref(null)
 
 const canPromptPush = computed(() => {
   return (
@@ -502,34 +540,21 @@ const nextSlotShort = computed(() => {
 async function enableNotifications() {
   const consent = localStorage.getItem('akinto_consent')
 
-  // If cookies not accepted → open banner
+  // still respect your consent gate if you want
   if (consent !== 'true') {
-    console.log('[PUSH] opening cookie banner')
     window.dispatchEvent(new Event('akinto:open-cookie-consent'))
     return
   }
 
-  // Already enabled
-  if (localStorage.getItem('akinto_push_enabled') === 'true') {
+  // already enabled (email)
+  if (localStorage.getItem('akinto_email_enabled') === 'true') {
     notificationsEnabled.value = true
     return
   }
 
-  try {
-    console.log('[PUSH] attempting registration')
-
-    const ok = await registerPush()
-
-    if (ok) {
-      localStorage.setItem('akinto_push_enabled', 'true')
-      notificationsEnabled.value = true
-      console.log('[PUSH] enabled')
-    } else {
-      console.warn('[PUSH] registerPush returned false')
-    }
-  } catch (err) {
-    console.error('[PUSH] enableNotifications failed', err)
-  }
+  // open modal
+  emailStatus.value = null
+  showEmailModal.value = true
 }
 
 /* ======================================================
@@ -956,6 +981,51 @@ function resolveCanonical(input, canon) {
   }
 
   return null
+}
+
+function isValidEmail(v) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || '').trim())
+}
+
+async function submitEmailNotifications() {
+  if (!isValidEmail(email.value)) {
+    emailStatus.value = 'error'
+    return
+  }
+
+  try {
+    emailStatus.value = null
+
+    const res = await fetch('/api/save-email-sub', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email.value.trim(),
+        timezone: tz.value,
+        userId,
+        country: userCountry,
+        source,
+      }),
+    })
+
+    if (!res.ok) throw new Error('save-email-sub failed')
+
+    localStorage.setItem('akinto_email_enabled', 'true')
+    notificationsEnabled.value = true
+    emailStatus.value = 'success'
+
+    // optional: auto-close after a beat
+    setTimeout(() => {
+      showEmailModal.value = false
+    }, 700)
+  } catch (e) {
+    console.error('[EMAIL] subscribe failed', e)
+    emailStatus.value = 'error'
+  }
+}
+
+function closeEmailModal() {
+  showEmailModal.value = false
 }
 
 /*=======================================================

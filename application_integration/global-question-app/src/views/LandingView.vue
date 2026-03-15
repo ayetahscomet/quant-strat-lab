@@ -1,119 +1,116 @@
 <template>
-  <!-- LANDING SCREEN -->
-  <div class="landing">
-    <div class="landing-inner">
-      <!-- Logo + Title -->
-      <div class="brand-row">
-        <img class="logo" src="/logo-800-full.svg" alt="Akinto logo" />
-        <div class="text-block">
-          <h1 class="app-name">AKINTO</h1>
-          <p class="motto">A Global Knowledge Game</p>
-        </div>
-      </div>
-
-      <!-- PLAY (gated by country) -->
-      <button class="play-btn" :disabled="!country" @click="goToGame">Play</button>
-      <p class="gate-note" v-if="!country">Select your country to begin.</p>
-
-      <p class="date">{{ today }}</p>
-
-      <!-- Country selector -->
-      <div class="country-row" @click="toggleDropdown">
-        <div class="flag-circle" :class="{ empty: !country }">
-          <img v-if="country" :src="getFlag(country)" :alt="`${getName(country)} flag`" />
+  <div class="landing-page">
+    <!-- LANDING SCREEN -->
+    <div class="landing">
+      <div class="landing-inner">
+        <div class="brand-row">
+          <img class="logo" src="/logo-800-full.svg" alt="Akinto logo" />
+          <div class="text-block">
+            <h1 class="app-name">AKINTO</h1>
+            <p class="motto">A Global Knowledge Game</p>
+          </div>
         </div>
 
-        <span class="country-text">
-          {{ country ? getName(country) : 'Select your country' }}
-        </span>
-        <span class="chevron">▼</span>
-      </div>
+        <button class="play-btn" :disabled="!country" @click="goToGame">Play</button>
+        <p class="gate-note" v-if="!country">Select your country to begin.</p>
 
-      <!-- Dropdown -->
-      <div v-if="showDropdown" class="dropdown-wrapper" @click="closeDropdown">
-        <div class="country-select-container" @click.stop>
-          <input
-            class="dropdown-search"
-            v-model="search"
-            type="text"
-            placeholder="Search country…"
-            autocomplete="off"
-          />
+        <p class="date">{{ today }}</p>
 
-          <div class="dropdown-list">
-            <div
-              v-for="c in filteredCountries"
-              :key="c.code"
-              class="dropdown-item"
-              @click="selectCountry(c.code)"
-            >
-              <img class="drop-flag" :src="getFlag(c.code)" :alt="`${c.name} flag`" />
-              <span>{{ c.name }}</span>
+        <div class="country-row" @click="toggleDropdown">
+          <div class="flag-circle" :class="{ empty: !country }">
+            <img v-if="country" :src="getFlag(country)" :alt="`${getName(country)} flag`" />
+          </div>
+
+          <span class="country-text">
+            {{ country ? getName(country) : 'Select your country' }}
+          </span>
+          <span class="chevron">▼</span>
+        </div>
+
+        <div v-if="showDropdown" class="dropdown-wrapper" @click="closeDropdown">
+          <div class="country-select-container" @click.stop>
+            <input
+              class="dropdown-search"
+              v-model="search"
+              type="text"
+              placeholder="Search country…"
+              autocomplete="off"
+            />
+
+            <div class="dropdown-list">
+              <div
+                v-for="c in filteredCountries"
+                :key="c.code"
+                class="dropdown-item"
+                @click="selectCountry(c.code)"
+              >
+                <img class="drop-flag" :src="getFlag(c.code)" :alt="`${c.name} flag`" />
+                <span>{{ c.name }}</span>
+              </div>
+
+              <div v-if="filteredCountries.length === 0" class="no-results">No matches.</div>
             </div>
+          </div>
+        </div>
 
-            <div v-if="filteredCountries.length === 0" class="no-results">No matches.</div>
+        <p class="micro" v-if="country">You can change this any time.</p>
+      </div>
+    </div>
+
+    <!-- SEO / HERO SCROLL SECTION -->
+    <section class="seo-hero" ref="seoHero">
+      <div class="seo-inner">
+        <header class="seo-head">
+          <h2>Akinto — The Global Daily Knowledge Game</h2>
+          <p class="seo-sub">A high-value habit for global literacy.</p>
+        </header>
+
+        <p class="seo-lead">
+          Akinto aims to become a benchmark app for global literacy and a place where curiosity
+          forms daily while a worldwide community grows around thoughtful exploration.
+        </p>
+
+        <p class="seo-lead">
+          What some call facts, we call globally common knowledge. Each day presents one carefully
+          designed question that rewards reflection over immediate correctness and shows how people
+          across countries approached the same challenge.
+        </p>
+
+        <div class="seo-cols">
+          <div class="seo-col">
+            <h3>How it works</h3>
+            <ul>
+              <li>🌍 One daily question that becomes a high-value habit</li>
+              <li>🧠 Reflective thought over immediate correctness</li>
+              <li>📊 Compare how the world thinks</li>
+              <li>🔔 Get notified when new windows open</li>
+              <li>🌱 Knowledge is not restricted. The mission is global accessibility.</li>
+            </ul>
+          </div>
+
+          <div class="seo-col">
+            <h3>Our learning philosophy</h3>
+            <p>Akinto is guided by simple principles:</p>
+            <ul>
+              <li>Discovery over memorisation</li>
+              <li>Curiosity over competition</li>
+              <li>Global perspective over narrow local knowledge</li>
+              <li>Simple, reflective and rooted in genuine exploration</li>
+            </ul>
+          </div>
+
+          <div class="seo-col seo-cta">
+            <h3>Join today</h3>
+            <p>
+              Become part of a global community built on curiosity and return each day to sharpen
+              your view of the world.
+            </p>
+            <button class="seo-play" @click="goToGame">Play today’s puzzle</button>
           </div>
         </div>
       </div>
-
-      <!-- Subtle hint if they open dropdown while already set   -->
-      <p class="micro" v-if="country">You can change this any time.</p>
-    </div>
+    </section>
   </div>
-
-  <!-- SEO / HERO SCROLL SECTION -->
-  <section class="seo-hero" ref="seoHero">
-    <div class="seo-inner">
-      <header class="seo-head">
-        <h2>Akinto — The Global Daily Knowledge Game</h2>
-        <p class="seo-sub">A high-value habit for global literacy.</p>
-      </header>
-
-      <p class="seo-lead">
-        Akinto aims to become a benchmark app for global literacy and a place where curiosity forms
-        daily while a worldwide community grows around thoughtful exploration.
-      </p>
-
-      <p class="seo-lead">
-        What some call facts, we call globally common knowledge. Each day presents one carefully
-        designed question that rewards reflection over immediate correctness and shows how people
-        across countries approached the same challenge.
-      </p>
-
-      <div class="seo-cols">
-        <div class="seo-col">
-          <h3>How it works</h3>
-          <ul>
-            <li>🌍 One daily question that becomes a high-value habit</li>
-            <li>🧠 Reflective thought over immediate correctness</li>
-            <li>📊 Compare how the world thinks</li>
-            <li>🔔 Get notified when new windows open</li>
-            <li>🌱 Knowledge is not restricted. The mission is global accessibility.</li>
-          </ul>
-        </div>
-
-        <div class="seo-col">
-          <h3>Our learning philosophy</h3>
-          <p>Akinto is guided by simple principles:</p>
-          <ul>
-            <li>Discovery over memorisation</li>
-            <li>Curiosity over competition</li>
-            <li>Global perspective over narrow local knowledge</li>
-            <li>Simple, reflective and rooted in genuine exploration</li>
-          </ul>
-        </div>
-
-        <div class="seo-col seo-cta">
-          <h3>Join today</h3>
-          <p>
-            Become part of a global community built on curiosity and return each day to sharpen your
-            view of the world.
-          </p>
-          <button class="seo-play" @click="goToGame">Play today’s puzzle</button>
-        </div>
-      </div>
-    </div>
-  </section>
 </template>
 
 <script setup>
@@ -143,10 +140,6 @@ const router = useRouter()
 const seoHero = ref(null)
 let seoObserver = null
 
-/**
- * Single source of truth:
- * - country is always a LOWERCASE ISO code, e.g. "gb"
- */
 const country = ref('')
 const showDropdown = ref(false)
 const search = ref('')
@@ -168,7 +161,6 @@ function normaliseCode(code) {
 
 function getFlag(code) {
   const c = normaliseCode(code)
-  // FlagCDN expects lowercase ISO code.
   return c ? `https://flagcdn.com/${c}.svg` : ''
 }
 
@@ -194,8 +186,6 @@ function persistCountry(code) {
   if (!c) return
 
   localStorage.setItem('akinto_country', c)
-
-  // Cookie mirror (formal consent banner later)
   document.cookie = `akinto_country=${c}; path=/; max-age=31536000`
 }
 
@@ -218,7 +208,6 @@ function closeDropdown() {
 
 function goToGame() {
   if (!country.value) {
-    // If they try anyway, guide them by opening the selector.
     showDropdown.value = true
     return
   }
@@ -234,20 +223,16 @@ function handleLandingKey(e) {
 }
 
 onMounted(() => {
-  // 🔹 1. Capture marketing source (QR tracking)
   const params = new URLSearchParams(window.location.search)
   const srcRaw = params.get('src')
-
   const src = (srcRaw || '').trim()
 
   if (src && /^[a-z0-9_]{1,64}$/i.test(src)) {
     localStorage.setItem('akinto_source', src)
     sessionStorage.setItem('akinto_source', src)
-
     window.history.replaceState({}, document.title, window.location.pathname)
   }
 
-  // 🔹 2. Load existing country selection
   const existing = localStorage.getItem('akinto_country')
   if (existing) country.value = normaliseCode(existing)
 
@@ -293,6 +278,11 @@ onBeforeUnmount(() => {
     sans-serif;
 }
 
+.landing-page {
+  width: 100%;
+}
+
+/* keep all your existing styles unchanged below */
 .landing {
   height: 100vh;
   width: 100vw;
@@ -306,7 +296,6 @@ onBeforeUnmount(() => {
   transform: translateY(-40px);
 }
 
-/* BRAND */
 .brand-row {
   display: flex;
   justify-content: center;
@@ -335,7 +324,6 @@ onBeforeUnmount(() => {
   color: #242227;
 }
 
-/* PLAY BUTTON */
 .play-btn {
   margin-top: 30px;
   padding: 12px 68px;
@@ -366,7 +354,6 @@ onBeforeUnmount(() => {
   opacity: 0.7;
 }
 
-/* DATE */
 .date {
   margin-top: 18px;
   font-size: 14px;
@@ -374,7 +361,6 @@ onBeforeUnmount(() => {
   color: #242227;
 }
 
-/* COUNTRY SELECTOR */
 .country-row {
   margin-top: 28px;
   display: flex;
@@ -425,7 +411,6 @@ onBeforeUnmount(() => {
   inset: 0;
   background: transparent;
   backdrop-filter: none;
-
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -433,7 +418,6 @@ onBeforeUnmount(() => {
   z-index: 50;
 }
 
-/* Dropdown container */
 .country-select-container {
   width: 260px;
   background: white;
@@ -443,7 +427,6 @@ onBeforeUnmount(() => {
   animation: dropdownPop 0.35s cubic-bezier(0.17, 0.85, 0.44, 1);
 }
 
-/* Search input */
 .dropdown-search {
   width: 100%;
   padding: 10px 12px;
@@ -459,7 +442,6 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.15);
 }
 
-/* Dropdown list */
 .dropdown-list {
   max-height: 210px;
   overflow-y: auto;
@@ -489,7 +471,7 @@ onBeforeUnmount(() => {
 
 .no-results {
   padding: 12px;
-  text-align: centre;
+  text-align: center;
   opacity: 0.6;
   font-size: 14px;
 }
@@ -499,10 +481,6 @@ onBeforeUnmount(() => {
   font-size: 12px;
   opacity: 0.55;
 }
-
-/* ================================
-   SEO HERO SCROLL SECTION
-================================ */
 
 .seo-hero {
   width: 100%;
@@ -586,7 +564,6 @@ onBeforeUnmount(() => {
   transform: translateY(-1px);
 }
 
-/* Responsive */
 @media (max-width: 900px) {
   .seo-cols {
     grid-template-columns: 1fr;
@@ -597,7 +574,13 @@ onBeforeUnmount(() => {
   }
 }
 
-/* Animation */
+@media (max-width: 520px) {
+  .logo {
+    width: 85px;
+    height: 85px;
+  }
+}
+
 @keyframes dropdownPop {
   from {
     transform: translateY(-6px) scale(0.97);

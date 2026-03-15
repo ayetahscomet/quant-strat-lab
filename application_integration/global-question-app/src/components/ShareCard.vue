@@ -53,20 +53,15 @@
       <div class="brag-right">
         <div class="kicker">Global Snapshot</div>
         <div class="lines">
-          <div class="line">
-            <span class="dim">Players today</span>
-            <span class="strong">{{ totalPlayersLabel }}</span>
-          </div>
-
           <div class="line" v-if="hasWorldAverages">
-            <span class="dim">World avg</span>
+            <span class="dim">World average</span>
             <span class="strong">
               {{ avgCompletionLabel }} completion · {{ avgAccuracyLabel }} accuracy
             </span>
           </div>
 
           <div class="line" v-else>
-            <span class="dim">World avg</span>
+            <span class="dim">World average</span>
             <span class="strong">Calibrating…</span>
           </div>
 
@@ -305,6 +300,12 @@ const topCountries = computed(() => {
     Roboto,
     Arial,
     sans-serif;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.share-card * {
+  box-sizing: border-box;
 }
 
 .share-card.compact {
@@ -316,26 +317,29 @@ const topCountries = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 20px;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 16px;
+  min-width: 0;
 }
 
 .logo {
   width: 74px;
   height: 74px;
-  border-radius: 8px; /* square-ish */
-  outline: 2px solid rgba(255, 255, 255, 0.9); /* white outline */
+  outline: 2px solid rgba(255, 255, 255, 0.9);
   outline-offset: 0px;
+  flex-shrink: 0;
 }
 
 .brand-text {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .akinto {
@@ -348,6 +352,7 @@ const topCountries = computed(() => {
 .tag {
   font-size: 15px;
   opacity: 0.72;
+  line-height: 1.35;
 }
 
 .meta {
@@ -355,11 +360,14 @@ const topCountries = computed(() => {
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .date {
   font-size: 16px;
   opacity: 0.7;
+  text-align: right;
+  line-height: 1.3;
 }
 
 .sample {
@@ -369,6 +377,7 @@ const topCountries = computed(() => {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
   opacity: 0.95;
+  white-space: nowrap;
 }
 
 .sample.warn {
@@ -381,7 +390,7 @@ const topCountries = computed(() => {
   display: flex;
   justify-content: space-between;
   gap: 26px;
-  margin-top: 6px;
+  margin-top: 18px;
 }
 
 .stat {
@@ -390,14 +399,17 @@ const topCountries = computed(() => {
   border-radius: 22px;
   text-align: left;
   box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  min-width: 0;
 }
 
 .completion {
   background: linear-gradient(180deg, #34e3a0, #1fbf85);
 }
+
 .accuracy {
   background: linear-gradient(180deg, #6d8cff, #4b63ff);
 }
+
 .pace {
   background: linear-gradient(180deg, #ffd36a, #ffb547);
   color: #111;
@@ -419,7 +431,25 @@ const topCountries = computed(() => {
 }
 
 .pace-val {
-  font-size: 44px; /* pace reads better */
+  font-size: 44px;
+}
+
+/* Completion copy */
+.completion-copy {
+  margin: 24px 0 28px;
+}
+
+.headline {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.subline {
+  margin-top: 6px;
+  font-size: 15px;
+  opacity: 0.75;
+  line-height: 1.6;
 }
 
 /* Brag strip */
@@ -435,6 +465,7 @@ const topCountries = computed(() => {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   padding: 18px 18px;
+  min-width: 0;
 }
 
 .kicker {
@@ -447,7 +478,7 @@ const topCountries = computed(() => {
 
 .score {
   margin-top: 8px;
-  font-size: 44px; /* reduced */
+  font-size: 44px;
   font-weight: 950;
   letter-spacing: -0.6px;
   line-height: 1.05;
@@ -481,6 +512,7 @@ const topCountries = computed(() => {
 .strong {
   font-weight: 800;
   opacity: 0.95;
+  text-align: right;
 }
 
 /* Leaders */
@@ -488,7 +520,7 @@ const topCountries = computed(() => {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
-  padding: 22px 22px; /* increased */
+  padding: 22px 22px;
   margin-top: 18px;
 }
 
@@ -496,6 +528,7 @@ const topCountries = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  gap: 16px;
 }
 
 .leaders-title {
@@ -507,13 +540,14 @@ const topCountries = computed(() => {
 .leaders-sub {
   font-size: 12px;
   opacity: 0.65;
+  text-align: right;
 }
 
 .leaders-grid {
-  margin-top: 16px; /* more air */
+  margin-top: 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px; /* rows breathe more */
+  gap: 14px;
 }
 
 .row {
@@ -523,7 +557,8 @@ const topCountries = computed(() => {
   background: rgba(0, 0, 0, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 14px;
-  padding: 14px 16px; /* increased */
+  padding: 14px 16px;
+  gap: 16px;
 }
 
 .left {
@@ -544,6 +579,7 @@ const topCountries = computed(() => {
   font-weight: 900;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
 .name {
@@ -559,12 +595,14 @@ const topCountries = computed(() => {
   font-size: 13px;
   font-weight: 900;
   opacity: 0.95;
+  flex-shrink: 0;
 }
 
 .leaders-empty {
   margin-top: 10px;
   font-size: 13px;
   opacity: 0.72;
+  line-height: 1.45;
 }
 
 /* Footer */
@@ -573,25 +611,384 @@ const topCountries = computed(() => {
   font-size: 16px;
   font-weight: 800;
   opacity: 0.85;
-  margin-top: 22px; /* instead of auto */
+  margin-top: 22px;
   padding-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06); /* subtle separation */
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.completion-copy {
-  margin: 24px 0 28px;
+/* =========================
+   TABLET
+========================= */
+@media (max-width: 1100px) {
+  .share-card {
+    width: 960px;
+    height: auto;
+    min-height: 700px;
+    padding: 42px 40px 34px;
+  }
+
+  .akinto {
+    font-size: 36px;
+  }
+
+  .stats {
+    gap: 18px;
+  }
+
+  .value {
+    font-size: 36px;
+  }
+
+  .pace-val {
+    font-size: 38px;
+  }
+
+  .brag {
+    grid-template-columns: 0.7fr 1.3fr;
+  }
 }
 
-.headline {
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.4;
+/* =========================
+   MOBILE / PORTRAIT
+========================= */
+@media (max-width: 768px) {
+  .share-card {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    min-height: auto;
+    padding: 18px 18px 16px;
+    border-radius: 24px;
+    justify-content: flex-start;
+    gap: 12px;
+    overflow: hidden;
+  }
+
+  .top {
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .brand {
+    align-items: flex-start;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .logo {
+    width: 44px;
+    height: 44px;
+  }
+
+  .brand-text {
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .akinto {
+    font-size: 20px;
+    letter-spacing: -0.4px;
+  }
+
+  .tag {
+    font-size: 10px;
+    line-height: 1.25;
+    max-width: 132px;
+  }
+
+  .meta {
+    gap: 6px;
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+
+  .date {
+    font-size: 10px;
+    line-height: 1.1;
+  }
+
+  .sample {
+    font-size: 9px;
+    padding: 4px 6px;
+    line-height: 1.05;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .pace {
+    grid-column: auto;
+  }
+
+  .stat {
+    padding: 12px 12px;
+    border-radius: 14px;
+    min-height: 74px;
+  }
+
+  .label {
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
+  .value {
+    font-size: 20px;
+    margin-top: 5px;
+    line-height: 1;
+  }
+
+  .pace-val {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .completion-copy {
+    margin: 0;
+  }
+
+  .headline {
+    font-size: 13px;
+    line-height: 1.22;
+  }
+
+  .subline {
+    margin-top: 2px;
+    font-size: 11px;
+    line-height: 1.28;
+  }
+
+  .brag {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .brag-left,
+  .brag-right {
+    padding: 12px 12px;
+    border-radius: 14px;
+  }
+
+  .kicker {
+    font-size: 10px;
+    letter-spacing: 0.6px;
+  }
+
+  .score {
+    margin-top: 6px;
+    font-size: 28px;
+    line-height: 1;
+  }
+
+  .micro {
+    margin-top: 6px;
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .lines {
+    margin-top: 8px;
+    gap: 8px;
+  }
+
+  .line {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 11px;
+  }
+
+  .dim {
+    max-width: 42%;
+    line-height: 1.25;
+  }
+
+  .strong {
+    max-width: 56%;
+    text-align: right;
+    line-height: 1.25;
+    font-size: 11px;
+  }
+
+  .leaders {
+    padding: 13px 14px;
+    border-radius: 16px;
+    margin-top: 0;
+  }
+
+  .leaders-head {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .leaders-title {
+    font-size: 13px;
+  }
+
+  .leaders-sub {
+    font-size: 10px;
+    text-align: right;
+  }
+
+  .leaders-grid {
+    margin-top: 10px;
+    gap: 8px;
+  }
+
+  .row {
+    padding: 10px 12px;
+    border-radius: 10px;
+    gap: 10px;
+  }
+
+  .rank {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+  }
+
+  .name {
+    max-width: 140px;
+    font-size: 11px;
+  }
+
+  .right {
+    font-size: 11px;
+  }
+
+  .leaders-empty {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .footer {
+    margin-top: 0;
+    padding-top: 10px;
+    font-size: 12px;
+  }
 }
 
-.subline {
-  margin-top: 6px;
-  font-size: 15px;
-  opacity: 0.75;
-  line-height: 1.6;
+/* =========================
+   VERY SMALL MOBILE
+========================= */
+@media (max-width: 420px) {
+  .share-card {
+    padding: 16px 16px 14px;
+    border-radius: 22px;
+    gap: 10px;
+  }
+
+  .top {
+    gap: 10px;
+  }
+
+  .logo {
+    width: 42px;
+    height: 42px;
+  }
+
+  .akinto {
+    font-size: 20px;
+  }
+
+  .tag {
+    font-size: 10px;
+    max-width: 128px;
+  }
+
+  .date {
+    font-size: 10px;
+  }
+
+  .sample {
+    font-size: 9px;
+    padding: 4px 6px;
+  }
+
+  .label {
+    font-size: 9px;
+    line-height: 1.1;
+  }
+
+  .stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .pace {
+    grid-column: auto;
+  }
+
+  .stat {
+    padding: 10px 10px;
+    min-height: 68px;
+    border-radius: 12px;
+  }
+
+  .value {
+    font-size: 18px;
+    margin-top: 4px;
+  }
+
+  .pace-val {
+    font-size: 18px;
+  }
+
+  .headline {
+    font-size: 13px;
+  }
+
+  .subline {
+    font-size: 11px;
+  }
+
+  .score {
+    font-size: 24px;
+  }
+
+  .micro {
+    font-size: 10px;
+  }
+
+  .line {
+    font-size: 10px;
+  }
+
+  .dim {
+    max-width: 40%;
+  }
+
+  .strong {
+    max-width: 58%;
+    font-size: 10px;
+  }
+
+  .leaders-title {
+    font-size: 12px;
+  }
+
+  .leaders-sub {
+    font-size: 9px;
+  }
+
+  .name {
+    max-width: 118px;
+    font-size: 10px;
+  }
+
+  .right {
+    font-size: 10px;
+  }
+
+  .footer {
+    font-size: 11px;
+  }
 }
 </style>

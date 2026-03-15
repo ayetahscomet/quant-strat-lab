@@ -1,5 +1,5 @@
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'share-mode-active': isShareMode }">
     <!-- GLOBAL COOKIE CONSENT -->
     <ConsentBanner />
 
@@ -7,11 +7,8 @@
       <RouterView />
     </transition>
 
-    <!-- GLOBAL GDPR -->
-    <ConsentBanner />
-
     <!-- GLOBAL FOOTER -->
-    <footer class="trust-footer">
+    <footer v-if="!isShareMode" class="trust-footer">
       <span>No ads. No paywalls. We only store gameplay data.</span>
       <span>
         <a href="/privacy">Privacy</a>
@@ -23,27 +20,34 @@
 </template>
 
 <script setup>
+import { ref, provide } from 'vue'
 import ConsentBanner from '@/components/ConsentBanner.vue'
+
+const isShareMode = ref(false)
+
+provide('setShareMode', (value) => {
+  isShareMode.value = !!value
+
+  if (value) {
+    document.body.classList.add('share-open')
+  } else {
+    document.body.classList.remove('share-open')
+  }
+})
 </script>
 
 <style>
-/* =========================================
-   Enhanced route transition (PATCH 14)
-   Smooth fade + gentle upward slide
-   Timing matches app animations
-========================================= */
-
 .route-fade-enter-from,
 .route-fade-leave-to {
   opacity: 0;
-  transform: translateY(18px); /* was 10px — now smoother */
+  transform: translateY(18px);
 }
 
 .route-fade-enter-active,
 .route-fade-leave-active {
   transition:
     opacity 0.45s ease,
-    transform 0.45s cubic-bezier(0.16, 0.84, 0.44, 1); /* premium easing */
+    transform 0.45s cubic-bezier(0.16, 0.84, 0.44, 1);
 }
 
 .route-fade-enter-to,
@@ -52,45 +56,36 @@ import ConsentBanner from '@/components/ConsentBanner.vue'
   transform: translateY(0);
 }
 
-/* ============================
-   GLOBAL TRUST FOOTER
-============================ */
-
 .app-shell {
   min-height: 100vh;
   position: relative;
 }
 
-/* pinned bottom */
 .trust-footer {
   position: fixed;
   bottom: 18px;
   left: 50%;
   transform: translateX(-50%);
-
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
-
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.15px;
-
   text-align: center;
-
   color: #111;
   opacity: 0.85;
-
   pointer-events: auto;
   z-index: 9999;
-
+  width: max-content;
+  max-width: 90vw;
+  white-space: nowrap;
   transition:
     color 0.25s ease,
     opacity 0.25s ease;
 }
 
-/* links */
 .trust-footer a {
   color: inherit;
   text-decoration: none;
@@ -106,26 +101,10 @@ import ConsentBanner from '@/components/ConsentBanner.vue'
   .trust-footer {
     font-size: 9.5px;
     bottom: 12px;
+    white-space: normal;
   }
 }
 
-.trust-footer {
-  width: max-content;
-  max-width: 90vw;
-  white-space: nowrap;
-}
-
-/* ============================
-   TRUST FOOTER COLOR MODES
-============================ */
-
-/* default = light background */
-.trust-footer {
-  color: #111;
-  opacity: 0.85;
-}
-
-/* when page is dark */
 body.dark-bg .trust-footer {
   color: #f2f2f2;
   opacity: 0.9;
@@ -133,5 +112,13 @@ body.dark-bg .trust-footer {
 
 body.dark-bg .trust-footer a {
   color: #ffffff;
+}
+
+.share-mode-active .trust-footer {
+  display: none !important;
+}
+
+.share-mode-active .trust-footer {
+  display: none !important;
 }
 </style>

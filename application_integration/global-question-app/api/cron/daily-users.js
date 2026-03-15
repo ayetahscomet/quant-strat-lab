@@ -5,10 +5,6 @@ import { pickDateKey } from '../../lib/dateKey.js'
 import { lookupCountry } from '../../src/data/countryMeta.js'
 import { continentFromCountry } from '../../src/data/continents.js'
 
-/* =====================================================
-   Helpers
-===================================================== */
-
 async function fetchAll(table, formula) {
   const opts = { maxRecords: 5000 }
 
@@ -31,10 +27,6 @@ async function updateInBatches(table, rows, size = 10) {
   }
 }
 
-/* ======================================
-   Percentile helper
-====================================== */
-
 function percentile(arr, v) {
   if (!arr.length) return null
   const sorted = [...arr].sort((a, b) => a - b)
@@ -43,14 +35,15 @@ function percentile(arr, v) {
   return Math.round((idx / sorted.length) * 100)
 }
 
-/* =====================================================
-   Handler
-===================================================== */
+function dateKeyMinusOne(dateKey) {
+  const d = new Date(`${dateKey}T12:00:00.000Z`)
+  d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
 
 export default async function handler(req, res) {
   try {
     const isVercelCron = req.headers['x-vercel-cron'] === '1'
-
     const headerSecret = req.headers.authorization
     const querySecret = req.query?.secret ? `Bearer ${req.query.secret}` : null
     const expected = `Bearer ${process.env.CRON_SECRET || ''}`
@@ -62,24 +55,21 @@ export default async function handler(req, res) {
     const { dateKey } = pickDateKey(req, { defaultOffsetDays: 0 })
     console.log('👤 Daily Users cron:', dateKey)
 
-    /* =====================================================
-       LOAD TODAY'S PROFILES
-    ===================================================== */
-
     const todayProfiles = await fetchAll('UserDailyProfile', `{DateKey}='${dateKey}'`)
 
     if (!todayProfiles.length) {
       return res.json({ ok: true, message: 'no users today' })
     }
 
-    /* =====================================================
-       COMPUTE DAILY PERCENTILES
-    ===================================================== */
+    // -----------------------------
+    // 1) Update daily percentiles
+    // -----------------------------
+    const accVals = todayProfiles.map((r) => Number(r.fields?.Accuracy) || 0)
 
-    const accVals = todayProfiles.map((r) => r.fields.Accuracy || 0)
+    const compVals = todayProfiles.map((r) => Number(r.fields?.Completion) || 0)
 
     const paceVals = todayProfiles.map((r) =>
-      Number.isFinite(r.fields.SolveSeconds) ? r.fields.SolveSeconds : 999999,
+      Number.isFinite(Number(r.fields?.SolveSeconds)) ? Number(r.fields.SolveSeconds) : 999999,
     )
 
     const percentileUpdates = []
@@ -90,16 +80,13 @@ export default async function handler(req, res) {
       percentileUpdates.push({
         id: rec.id,
         fields: {
-          PercentileAccuracy: percentile(accVals, f.Accuracy || 0) / 100,
-
-          PercentileCompletion:
-            percentile(
-              todayProfiles.map((r) => r.fields.Completion || 0),
-              f.Completion || 0,
-            ) / 100,
-
+          PercentileAccuracy: (percentile(accVals, Number(f.Accuracy) || 0) ?? 0) / 100,
+          PercentileCompletion: (percentile(compVals, Number(f.Completion) || 0) ?? 0) / 100,
           PercentileSpeed:
-            percentile(paceVals, Number.isFinite(f.SolveSeconds) ? f.SolveSeconds : 999999) / 100,
+            (percentile(
+              paceVals,
+              Number.isFinite(Number(f.SolveSeconds)) ? Number(f.SolveSeconds) : 999999,
+            ) ?? 0) / 100,
         },
       })
     }
@@ -108,116 +95,104 @@ export default async function handler(req, res) {
       await updateInBatches('UserDailyProfile', percentileUpdates)
     }
 
-    /* =====================================================
-       LOAD USERS TABLE
-    ===================================================== */
+    // Reload profiles so we have the newest percentile fields
+    const refreshedProfiles = await fetchAll('UserDailyProfile', `{DateKey}='${dateKey}'`)
 
     const existingUsers = await fetchAll('Users')
-    const usersById = new Map(existingUsers.map((r) => [r.fields.UserID, r]))
+    const usersById = new Map(existingUsers.map((r) => [String(r.fields?.UserID || ''), r]))
 
     const creates = []
     const updates = []
 
-    /* =====================================================
-       UPSERT USERS + STREAK LOGIC
-    ===================================================== */
+    const yesterdayKey = dateKeyMinusOne(dateKey)
 
-    for (const rec of todayProfiles) {
+    for (const rec of refreshedProfiles) {
       const f = rec.fields || {}
-      const userId = f.UserID
+      const userId = String(f.UserID || '')
       if (!userId) continue
 
-      const today = dateKey
+      const rawCC = String(f.Country || f.CountryCode || 'xx').toLowerCase()
+      const meta = lookupCountry(rawCC)
 
-      const rawCC = f.Country || f.CountryCode || 'xx'
-      const cc = String(rawCC).toLowerCase()
-
-      const meta = lookupCountry(cc)
-
-      const countryName = meta?.name || (cc === 'xx' ? 'Unknown' : cc.toUpperCase())
-
-      const region = continentFromCountry(cc) || 'Unknown'
-
-      const timezone =
-        meta?.timezone ||
-        Intl.DateTimeFormat('en-US', { timeZone: 'UTC' }).resolvedOptions().timeZone
+      const countryName = meta?.Country || (rawCC === 'xx' ? 'Unknown' : rawCC.toUpperCase())
+      const region = continentFromCountry(rawCC) || 'Unknown'
 
       const existing = usersById.get(userId)
-
       const pushOptIn = existing?.fields?.PushOptIn ?? false
 
-      let currentStreak = 1
-      let longestStreak = 1
-      let totalDays = 1
-      let streakBroken = false
-      let newRecord = false
-
-      /* ---------------- Archetype ---------------- */
-
-      const acc = f.Accuracy || 0
-      const comp = f.Completion || 0
-      const pacePct = f.PercentileSpeed || 0
-      const attempts = f.AttemptsUsed || 99
+      const acc = Number(f.Accuracy) || 0
+      const comp = Number(f.Completion) || 0
+      const pacePct = Number(f.PercentileSpeed) || 0
+      const attempts = Number(f.AttemptsUsed) || 99
 
       let archetype = 'Explorer'
-
-      if (acc > 0.85 && comp < 0.7) archetype = 'Sniper'
-      else if (pacePct > 0.8) archetype = 'Speedrunner'
+      if (acc >= 85 && comp < 70) archetype = 'Sniper'
+      else if (pacePct >= 0.8) archetype = 'Speedrunner'
       else if (attempts <= 2) archetype = 'Ghost'
-
-      /* ---------------- Existing user ---------------- */
 
       if (existing) {
         const prev = existing.fields || {}
 
-        totalDays = (prev.TotalDaysPlayed || 0) + 1
+        const prevLastPlayedDate = prev.LastPlayedDate
+          ? new Date(prev.LastPlayedDate).toISOString().slice(0, 10)
+          : null
 
-        const lastDate = prev.LastPlayedDate
+        const alreadyProcessedToday = prevLastPlayedDate === dateKey
 
-        if (lastDate) {
-          const prevISO = new Date(lastDate).toISOString().slice(0, 10)
+        let totalDays = Number(prev.TotalDaysPlayed) || 0
+        let currentStreak = Number(prev.CurrentStreak) || 0
+        let longestStreak = Number(prev.LongestStreak) || 0
+        let streakBroken = false
+        let newRecord = false
 
-          const y = new Date(today)
-          y.setUTCDate(y.getUTCDate() - 1)
-          const yesterdayISO = y.toISOString().slice(0, 10)
+        if (!alreadyProcessedToday) {
+          totalDays += 1
 
-          if (prevISO === yesterdayISO) {
-            currentStreak = (prev.CurrentStreak || 0) + 1
+          if (prevLastPlayedDate === yesterdayKey) {
+            currentStreak += 1
           } else {
-            streakBroken = true
+            currentStreak = 1
+            streakBroken = !!prevLastPlayedDate
           }
-        }
 
-        longestStreak = Math.max(prev.LongestStreak || 0, currentStreak)
-
-        if (currentStreak > (prev.LongestStreak || 0)) {
-          newRecord = true
+          if (currentStreak > longestStreak) {
+            longestStreak = currentStreak
+            newRecord = true
+          }
+        } else {
+          // Idempotent rerun for same date:
+          // do not re-increment totals or streaks
+          streakBroken = prev.StreakBrokenYesterday ?? false
+          newRecord = prev.NewLongestStreakToday ?? false
         }
 
         updates.push({
           id: existing.id,
           fields: {
-            LastSeenDate: today,
-            LastPlayedDate: today,
+            LastSeenDate: dateKey,
+            LastPlayedDate: dateKey,
 
-            CountryCode: cc,
+            CountryCode: rawCC,
             CountryName: countryName,
-
             Region: region,
-            Timezone: timezone,
+
+            // Keep existing timezone if present; do not overwrite with fake UTC
+            Timezone: prev.Timezone || null,
 
             TotalDaysPlayed: totalDays,
-            CurrentStreak: currentStreak,
-            LongestStreak: longestStreak,
+            CurrentStreak: currentStreak || 1,
+            LongestStreak: Math.max(longestStreak || 1, currentStreak || 1),
 
             StreakBrokenYesterday: streakBroken,
             NewLongestStreakToday: newRecord,
 
             PushOptIn: pushOptIn,
 
-            LastAccuracy: f.Accuracy,
-            LastCompletion: f.Completion,
-            LastSolveSeconds: f.SolveSeconds,
+            LastAccuracy: acc,
+            LastCompletion: comp,
+            LastSolveSeconds: Number.isFinite(Number(f.SolveSeconds))
+              ? Number(f.SolveSeconds)
+              : null,
 
             Archetype: archetype,
 
@@ -225,27 +200,35 @@ export default async function handler(req, res) {
           },
         })
       } else {
-        /* ---------------- New user ---------------- */
-
         creates.push({
           fields: {
             UserID: userId,
 
-            FirstSeenDate: today,
-            LastSeenDate: today,
-            LastPlayedDate: today,
+            FirstSeenDate: dateKey,
+            LastSeenDate: dateKey,
+            LastPlayedDate: dateKey,
 
-            CountryCode: cc,
+            CountryCode: rawCC,
             CountryName: countryName,
-
             Region: region,
-            Timezone: timezone,
+
+            // No trusted timezone source in this cron
+            Timezone: null,
 
             PushOptIn: false,
 
             TotalDaysPlayed: 1,
             CurrentStreak: 1,
             LongestStreak: 1,
+
+            StreakBrokenYesterday: false,
+            NewLongestStreakToday: true,
+
+            LastAccuracy: acc,
+            LastCompletion: comp,
+            LastSolveSeconds: Number.isFinite(Number(f.SolveSeconds))
+              ? Number(f.SolveSeconds)
+              : null,
 
             Archetype: archetype,
 
@@ -261,7 +244,7 @@ export default async function handler(req, res) {
     return res.json({
       ok: true,
       dateKey,
-      usersProcessed: todayProfiles.length,
+      usersProcessed: refreshedProfiles.length,
       created: creates.length,
       updated: updates.length,
     })
