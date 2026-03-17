@@ -543,42 +543,47 @@ export default async function handler(req, res) {
       const medianPaceSeconds = Number(readField(f, ['MedianPaceSeconds'], null))
       const meanPaceSeconds = Number(readField(f, ['AvgSolveSeconds', 'MeanPaceSeconds'], null))
 
-      // leaderboard: build from UserDailyProfile for the requested DateKey
+      // leaderboard: build from UserDailyProfile for the requested DateKey using ACCURACY
+      const MIN_COUNTRY_SAMPLE = 2
       const countryBuckets = new Map()
 
       for (const row of userDailyProfileRows) {
         const f = row.fields || {}
 
         const code = normalise(readField(f, ['Country'], ''))
-        const completionRaw = Number(readField(f, ['Completion'], null))
+        const accuracyRaw = Number(readField(f, ['Accuracy'], null))
 
-        if (!code || code === 'unknown' || !isFinite(completionRaw)) continue
+        if (!code || code === 'unknown' || !isFinite(accuracyRaw)) continue
 
         if (!countryBuckets.has(code)) {
           countryBuckets.set(code, {
             users: 0,
-            completionSum: 0,
+            accuracySum: 0,
           })
         }
 
         const bucket = countryBuckets.get(code)
         bucket.users += 1
-        bucket.completionSum += completionRaw
+        bucket.accuracySum += accuracyRaw
       }
 
       const allCountries = [...countryBuckets.entries()]
         .map(([code, bucket]) => {
-          const avgCompletion = bucket.users > 0 ? bucket.completionSum / bucket.users : 0
+          const avgAccuracy = bucket.users > 0 ? bucket.accuracySum / bucket.users : 0
 
           return {
             country: code,
             name: resolveCountryName(code),
             users: bucket.users,
-            value: pct(avgCompletion),
+            rawValue: avgAccuracy,
+            value: Math.round(avgAccuracy * 10) / 10,
           }
         })
-        .filter((x) => x.country && x.name)
-        .sort((a, b) => b.value - a.value)
+        .filter((x) => x.country && x.name && x.users >= MIN_COUNTRY_SAMPLE)
+        .sort((a, b) => {
+          if (b.rawValue !== a.rawValue) return b.rawValue - a.rawValue
+          return b.users - a.users
+        })
 
       const countryLeaderboard = allCountries.slice(0, 10)
 
@@ -687,42 +692,47 @@ export default async function handler(req, res) {
     const medianPaceSeconds = median(paceVals)
     const meanPaceSeconds = mean(paceVals)
 
-    // fallback leaderboard: still prefer UserDailyProfile for same-day country averages
+    // fallback leaderboard: still prefer UserDailyProfile for same-day country averages, using ACCURACY
+    const MIN_COUNTRY_SAMPLE = 2
     const countryBuckets = new Map()
 
     for (const row of userDailyProfileRows) {
       const f = row.fields || {}
 
       const code = normalise(readField(f, ['Country'], ''))
-      const completionRaw = Number(readField(f, ['Completion'], null))
+      const accuracyRaw = Number(readField(f, ['Accuracy'], null))
 
-      if (!code || code === 'unknown' || !isFinite(completionRaw)) continue
+      if (!code || code === 'unknown' || !isFinite(accuracyRaw)) continue
 
       if (!countryBuckets.has(code)) {
         countryBuckets.set(code, {
           users: 0,
-          completionSum: 0,
+          accuracySum: 0,
         })
       }
 
       const bucket = countryBuckets.get(code)
       bucket.users += 1
-      bucket.completionSum += completionRaw
+      bucket.accuracySum += accuracyRaw
     }
 
     const allCountries = [...countryBuckets.entries()]
       .map(([code, bucket]) => {
-        const avgCompletion = bucket.users > 0 ? bucket.completionSum / bucket.users : 0
+        const avgAccuracy = bucket.users > 0 ? bucket.accuracySum / bucket.users : 0
 
         return {
           country: code,
           name: resolveCountryName(code),
           users: bucket.users,
-          value: pct(avgCompletion),
+          rawValue: avgAccuracy,
+          value: Math.round(avgAccuracy * 10) / 10,
         }
       })
-      .filter((x) => x.country && x.name)
-      .sort((a, b) => b.value - a.value)
+      .filter((x) => x.country && x.name && x.users >= MIN_COUNTRY_SAMPLE)
+      .sort((a, b) => {
+        if (b.rawValue !== a.rawValue) return b.rawValue - a.rawValue
+        return b.users - a.users
+      })
 
     const countryLeaderboard = allCountries.slice(0, 10)
 

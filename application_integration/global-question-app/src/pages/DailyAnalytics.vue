@@ -1268,7 +1268,7 @@ function buildGlobalBlocks(rng) {
       title: p.countryName ? `${p.countryName} on the board` : 'Set your country to unlock this',
       body:
         p.countryName && typeof g.yourCountryAvgCompletion === 'number'
-          ? `Average completion in ${p.countryName}: ${pct(g.yourCountryAvgCompletion)}%.`
+          ? `Average accuracy in ${p.countryName}: ${pct(g.yourCountryAvgCompletion)}%.`
           : p.countryName
             ? `Processing today’s ${p.countryName} totals…`
             : 'Set your country to unlock this comparison.',
@@ -1277,7 +1277,7 @@ function buildGlobalBlocks(rng) {
       shape: 'tall',
       mini:
         p.countryName && typeof g.yourCountryAvgCompletion === 'number'
-          ? { big: `${pct(g.yourCountryAvgCompletion)}%`, sub: `${p.countryName} avg` }
+          ? { big: `${pct(g.yourCountryAvgCompletion)}%`, sub: `${p.countryName} accuracy` }
           : null,
       table:
         Array.isArray(g.countryLeaderboard) && g.countryLeaderboard.length
@@ -1291,7 +1291,10 @@ function buildGlobalBlocks(rng) {
                     normalise(String(x.name || x.country)) !== 'unknown',
                 )
                 .slice(0, 5)
-                .map((x) => [countryDisplay(x.name || x.country), `${pct(x.value)}%`]),
+                .map((x) => [
+                  countryDisplay(x.name || x.country),
+                  `${Math.round(Number(x.value || 0) * 10) / 10}%`,
+                ]),
             }
           : null,
       caption: p.countryName ? `Rank: ${countryRank}` : '',
@@ -1373,8 +1376,8 @@ function buildGlobalBlocks(rng) {
 
     () => ({
       kicker: 'Leaderboard',
-      title: 'Top countries (completion)',
-      body: 'A tiny league table. Big energy.',
+      title: 'Top countries (accuracy)',
+      body: 'A tiny league table. Precision wins.',
       tier: 'major',
       shape: 'square',
       table:
@@ -1391,7 +1394,7 @@ function buildGlobalBlocks(rng) {
                 .slice(0, 6)
                 .map((x, i) => [
                   `${i + 1}. ${countryDisplay(x.name || x.country)}`,
-                  `${pct(x.value)}%`,
+                  `${Math.round(Number(x.value || 0) * 10) / 10}%`,
                 ]),
             }
           : {
@@ -1597,7 +1600,7 @@ function buildGlobalBlocks(rng) {
               .slice(0, 6)
               .map((x, idx) => [
                 `${idx + 1}. ${countryDisplay(x.name || x.country)}`,
-                `${pct(x.value)}%`,
+                `${Math.round(Number(x.value || 0) * 10) / 10}%`,
               ])
           : [
               ['1. —', '—'],
@@ -1634,8 +1637,8 @@ function buildGlobalBlocks(rng) {
       return {
         topic: 'league',
         kicker: 'League table',
-        title: pick(rng, ['Top countries (today)', 'Global leaderboard', 'Completion league']),
-        body: 'Small table, big ego.',
+        title: pick(rng, ['Top countries by accuracy', 'Global leaderboard', 'Accuracy league']),
+        body: 'Small table, sharp guesses.',
         tier: 'major',
         shape: pick(rng, ['tall', 'square']),
         table: { head: ['Country', 'Avg'], rows: leagueRows },
@@ -1727,12 +1730,12 @@ function buildGlobalBlocks(rng) {
         `${countryLabel}, you’re up.`,
         'Country fingerprints',
         'National knowledge aura',
-        'Global culture check',
+        'Global accuracy check',
         'The borders are answering',
       ]),
       body: p.countryName
         ? typeof g.yourCountryAvgCompletion === 'number'
-          ? `${p.countryName} avg completion: ${pct(g.yourCountryAvgCompletion)}%.`
+          ? `${p.countryName} avg accuracy: ${pct(g.yourCountryAvgCompletion)}%.`
           : `Processing today’s ${p.countryName} totals…`
         : 'Set your country to unlock comparisons.',
       tier: pick(rng, ['minor', 'ticker']),
