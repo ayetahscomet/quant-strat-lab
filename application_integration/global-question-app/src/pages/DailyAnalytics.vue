@@ -2234,6 +2234,12 @@ function buildAkintoShareDate(rawDateKey) {
   return `${d}-${month}-${y}`
 }
 
+function getAttemptWindowKey(attempt) {
+  return String(attempt?.windowId || attempt?.WindowID || '')
+    .trim()
+    .toLowerCase()
+}
+
 function buildAttemptProgressPattern(attempts, totalSlots) {
   const validAttempts = Array.isArray(attempts)
     ? [...attempts]
@@ -2247,21 +2253,44 @@ function buildAttemptProgressPattern(attempts, totalSlots) {
     return '○'.repeat(total)
   }
 
-  const cumulativeCorrect = new Set()
+  const byWindow = new Map()
 
-  const segments = validAttempts.map((attempt) => {
-    const correctAnswers = Array.isArray(attempt?.correctAnswers) ? attempt.correctAnswers : []
+  for (const attempt of validAttempts) {
+    const windowKey = getAttemptWindowKey(attempt)
+    if (!windowKey) continue
 
-    for (const answer of correctAnswers) {
+    const answers = Array.isArray(attempt?.answers)
+      ? attempt.answers
+      : Array.isArray(attempt?.AnswersJSON)
+        ? attempt.AnswersJSON
+        : []
+
+    const correctAnswers = Array.isArray(attempt?.correctAnswers)
+      ? attempt.correctAnswers
+      : Array.isArray(attempt?.CorrectAnswersJSON)
+        ? attempt.CorrectAnswersJSON
+        : []
+
+    const correctSet = new Set(correctAnswers.map(normaliseAnswerKey).filter(Boolean))
+
+    let correctCountThisAttempt = 0
+    for (const answer of answers) {
       const key = normaliseAnswerKey(answer)
-      if (key) cumulativeCorrect.add(key)
+      if (key && correctSet.has(key)) {
+        correctCountThisAttempt++
+      }
     }
 
-    const correctCount = Math.min(cumulativeCorrect.size, total)
-    return '●'.repeat(correctCount) + '○'.repeat(Math.max(0, total - correctCount))
+    const prev = byWindow.get(windowKey) || 0
+    byWindow.set(windowKey, Math.max(prev, correctCountThisAttempt))
+  }
+
+  const segments = [...byWindow.values()].map((count) => {
+    const n = clamp(count, 0, total)
+    return '●'.repeat(n) + '○'.repeat(Math.max(0, total - n))
   })
 
-  return segments.join(' | ')
+  return segments.length ? segments.join(' | ') : '○'.repeat(total)
 }
 
 function buildShareText() {
