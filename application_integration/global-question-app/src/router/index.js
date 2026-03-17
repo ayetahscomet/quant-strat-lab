@@ -61,10 +61,9 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.meta?.requiresSetup) {
-    const cookiesAccepted = localStorage.getItem('akinto_consent') === 'true'
     const countrySelected = !!localStorage.getItem('akinto_country')
 
-    if (!cookiesAccepted || !countrySelected) {
+    if (!countrySelected) {
       return next({ path: '/', query: { setup: '1' } })
     }
   }
