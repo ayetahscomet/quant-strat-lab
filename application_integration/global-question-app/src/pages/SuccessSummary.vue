@@ -256,9 +256,20 @@ async function loadSuccessSummaryFromAirtable() {
 
   // Prefer AttemptIndex = 999 (final snapshot), else latest success, else latest
   const finalAttempt =
-    attempts.find((a) => Number(a.attemptIndex) === 999) ||
-    [...attempts].reverse().find((a) => a.result === 'success') ||
-    attempts[attempts.length - 1]
+    [...attempts]
+      .filter((a) => Number(a.attemptIndex) === 999)
+      .sort(
+        (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+      )[0] ||
+    [...attempts]
+      .filter((a) => a.result === 'success')
+      .sort(
+        (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+      )[0] ||
+    [...attempts].sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+    )[0] ||
+    null
 
   const answers = Array.isArray(finalAttempt.answers) ? finalAttempt.answers : []
 
