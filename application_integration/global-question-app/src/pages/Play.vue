@@ -85,6 +85,10 @@
                 >
                   {{ notificationsEnabled ? 'Email reminders enabled' : 'Enable email reminders' }}
                 </button>
+
+                <button class="exit-lockout-btn" @click="goToFailureSummary">
+                  I’ve Had Enough for Today
+                </button>
               </div>
             </div>
           </transition>
@@ -1028,6 +1032,23 @@ function closeEmailModal() {
   showEmailModal.value = false
 }
 
+async function goToFailureSummary() {
+  hardLocked.value = true
+
+  await fetch('/api/end-day', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      dateKey: dateKey.value,
+      result: 'exit-early',
+    }),
+  }).catch(() => null)
+
+  await logPlay('exit-early')
+  currentView.value = 'failure'
+}
+
 /*=======================================================
 Client Registration + Subscription
 ========================================================= */
@@ -1436,12 +1457,32 @@ body,
   background: #f2c33d;
   border-radius: 12px;
   font-size: 14px;
-  font-weight: 200;
+  font-weight: 500;
   border: 1.5px solid #ffa300;
   cursor: pointer;
+  min-width: 220px;
 }
 
 .notif-btn:hover {
+  transform: translateY(-3px);
+  opacity: 0.88;
+}
+
+.exit-lockout-btn {
+  margin-top: 18px;
+  padding: 12px 26px;
+  background: #bfbfbf;
+  color: #111;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  font-style: italic;
+  border: 1.5px solid #bfbfbf;
+  cursor: pointer;
+  min-width: 220px;
+}
+
+.exit-lockout-btn:hover {
   transform: translateY(-3px);
   opacity: 0.88;
 }

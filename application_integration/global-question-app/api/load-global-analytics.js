@@ -2,6 +2,7 @@
 
 import { base } from '../lib/airtable.js'
 import { pickDateKey } from '../lib/dateKey.js'
+import { countries } from '../src/data/countries.js'
 
 /* ======================================================
    Utils — normalisation / math
@@ -105,54 +106,17 @@ function readField(f, keys, fallback = null) {
 
 /* ======================================================
    Country name resolver (server-side)
-   - First tries fields in stats tables (CountryName / Name)
-   - Then uses a small built-in map for common codes
-   - Else falls back to uppercased code
+   - Uses shared countries.js as source of truth
 ====================================================== */
 
-const COUNTRY_NAME_FALLBACK = {
-  gb: 'United Kingdom',
-  uk: 'United Kingdom',
-  us: 'United States',
-  fr: 'France',
-  de: 'Germany',
-  es: 'Spain',
-  it: 'Italy',
-  ie: 'Ireland',
-  nl: 'Netherlands',
-  be: 'Belgium',
-  ch: 'Switzerland',
-  at: 'Austria',
-  se: 'Sweden',
-  no: 'Norway',
-  dk: 'Denmark',
-  fi: 'Finland',
-  pl: 'Poland',
-  pt: 'Portugal',
-  gr: 'Greece',
-  tr: 'Türkiye',
-  jp: 'Japan',
-  cn: 'China',
-  in: 'India',
-  au: 'Australia',
-  ca: 'Canada',
-  nz: 'New Zealand',
-  br: 'Brazil',
-  mx: 'Mexico',
-  ng: 'Nigeria',
-  za: 'South Africa',
-  gh: 'Ghana',
-  ke: 'Kenya',
-}
-
-function resolveCountryName(code, maybeName) {
+function resolveCountryName(code) {
   const c = normalise(code || '')
-  const name = String(maybeName || '').trim()
+  if (!c || c === 'unknown') return null
 
-  if (name && name.length >= 2 && name.toLowerCase() !== c) return name
-  if (COUNTRY_NAME_FALLBACK[c]) return COUNTRY_NAME_FALLBACK[c]
-  if (c) return c.toUpperCase()
-  return 'Unknown'
+  const match = countries.find((x) => normalise(x.code) === c)
+  if (match?.name) return match.name
+
+  return c.toUpperCase()
 }
 
 /* ======================================================
@@ -511,7 +475,7 @@ export default async function handler(req, res) {
     const userCountry = normalise(country || '')
 
     /* ============================================================
-       PATH A (REAL TABLES): DailyAggregates + DailyCountryStats/DailyRegionStats
+       PATH A (REAL TABLES): DailyAggregates + UserDailyProfile
        - Used when cron is working and tables exist
     ============================================================ */
 
@@ -522,18 +486,11 @@ export default async function handler(req, res) {
         sort: [{ field: 'GeneratedAt', direction: 'desc' }],
       })) || []
 
-    const countryRows =
-      (await trySelectAll('DailyCountryStats', {
-        maxRecords: 200,
+    const userDailyProfileRows =
+      (await trySelectAll('UserDailyProfile', {
+        maxRecords: 5000,
         filterByFormula: `{DateKey}='${dateKey}'`,
-        sort: [{ field: 'Players', direction: 'desc' }],
-      })) ||
-      (await trySelectAll('DailyRegionStats', {
-        maxRecords: 200,
-        filterByFormula: `{DateKey}='${dateKey}'`,
-        sort: [{ field: 'Players', direction: 'desc' }],
-      })) ||
-      []
+      })) || []
 
     /* ============================================================
        ALWAYS: compute bubbles + rare + exits from UserAnswers
@@ -586,40 +543,53 @@ export default async function handler(req, res) {
       const medianPaceSeconds = Number(readField(f, ['MedianPaceSeconds'], null))
       const meanPaceSeconds = Number(readField(f, ['AvgSolveSeconds', 'MeanPaceSeconds'], null))
 
-      // leaderboard
-      const countryLeaderboard = (countryRows || [])
-        .map((r) => {
-          const rf = r.fields || {}
+      // leaderboard: build from UserDailyProfile for the requested DateKey
+      const countryBuckets = new Map()
 
-          const code = normalise(readField(rf, ['CountryCode', 'Country', 'Code'], ''))
-          const users = Number(readField(rf, ['Players', 'Users', 'Count'], 0)) || 0
+      for (const row of userDailyProfileRows) {
+        const f = row.fields || {}
 
-          // "AVG" column: prefer completion avg
-          const value = Number(
-            readField(rf, ['AvgCompletion', 'AvgCompletionPct', 'CompletionAvg'], 0),
-          )
+        const code = normalise(readField(f, ['Country'], ''))
+        const completionRaw = Number(readField(f, ['Completion'], null))
 
-          // name: try table-provided name, else resolve
-          const nameFromTable = readField(rf, ['CountryName', 'Name', 'Label'], null)
+        if (!code || code === 'unknown' || !isFinite(completionRaw)) continue
+
+        if (!countryBuckets.has(code)) {
+          countryBuckets.set(code, {
+            users: 0,
+            completionSum: 0,
+          })
+        }
+
+        const bucket = countryBuckets.get(code)
+        bucket.users += 1
+        bucket.completionSum += completionRaw
+      }
+
+      const allCountries = [...countryBuckets.entries()]
+        .map(([code, bucket]) => {
+          const avgCompletion = bucket.users > 0 ? bucket.completionSum / bucket.users : 0
 
           return {
             country: code,
-            name: resolveCountryName(code, nameFromTable),
-            users,
-            value: pct(value),
+            name: resolveCountryName(code),
+            users: bucket.users,
+            value: pct(avgCompletion),
           }
         })
+        .filter((x) => x.country && x.name)
         .sort((a, b) => b.value - a.value)
-        .slice(0, 10)
+
+      const countryLeaderboard = allCountries.slice(0, 10)
 
       let yourCountryRank = null
       let yourCountryAvgCompletion = null
 
       if (userCountry) {
-        const idx = countryLeaderboard.findIndex((x) => normalise(x.country) === userCountry)
+        const idx = allCountries.findIndex((x) => normalise(x.country) === userCountry)
         if (idx !== -1) {
           yourCountryRank = idx + 1
-          yourCountryAvgCompletion = countryLeaderboard[idx].value
+          yourCountryAvgCompletion = allCountries[idx].value
         }
       }
 
@@ -717,23 +687,41 @@ export default async function handler(req, res) {
     const medianPaceSeconds = median(paceVals)
     const meanPaceSeconds = mean(paceVals)
 
-    // fallback leaderboard: average completion by country
-    const countryMap = new Map()
-    for (const u of derived.userSummaries) {
-      const c = u.country || 'unknown'
-      if (!countryMap.has(c)) countryMap.set(c, { users: 0, sum: 0 })
-      const obj = countryMap.get(c)
-      obj.users += 1
-      obj.sum += u.completionPct
+    // fallback leaderboard: still prefer UserDailyProfile for same-day country averages
+    const countryBuckets = new Map()
+
+    for (const row of userDailyProfileRows) {
+      const f = row.fields || {}
+
+      const code = normalise(readField(f, ['Country'], ''))
+      const completionRaw = Number(readField(f, ['Completion'], null))
+
+      if (!code || code === 'unknown' || !isFinite(completionRaw)) continue
+
+      if (!countryBuckets.has(code)) {
+        countryBuckets.set(code, {
+          users: 0,
+          completionSum: 0,
+        })
+      }
+
+      const bucket = countryBuckets.get(code)
+      bucket.users += 1
+      bucket.completionSum += completionRaw
     }
 
-    const allCountries = [...countryMap.entries()]
-      .map(([code, v]) => ({
-        country: code,
-        name: resolveCountryName(code, null),
-        users: v.users,
-        value: pct(v.sum / v.users),
-      }))
+    const allCountries = [...countryBuckets.entries()]
+      .map(([code, bucket]) => {
+        const avgCompletion = bucket.users > 0 ? bucket.completionSum / bucket.users : 0
+
+        return {
+          country: code,
+          name: resolveCountryName(code),
+          users: bucket.users,
+          value: pct(avgCompletion),
+        }
+      })
+      .filter((x) => x.country && x.name)
       .sort((a, b) => b.value - a.value)
 
     const countryLeaderboard = allCountries.slice(0, 10)
