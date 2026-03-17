@@ -53,29 +53,30 @@ export function computeDailyMetrics({ attempts = [], question = {}, profile = {}
   const totalAttemptsUsed = realAttempts.length
 
   // --------------------------------------------------
-  // 3️⃣ Count correct entries across ALL attempts
-  // numerator for accuracy
+  // 3️⃣ Track unique submitted + unique correct
   // --------------------------------------------------
-  let correctEntries = 0
+  const uniqueSubmitted = new Set()
   const uniqueCorrect = new Set()
 
   for (const a of realAttempts) {
     const correctAnswers = Array.isArray(a.correctAnswers) ? a.correctAnswers.map(normalise) : []
-
     const answers = Array.isArray(a.answers) ? a.answers : a.answer ? [a.answer] : []
 
     for (const ans of answers) {
       const norm = normalise(ans)
       if (!norm) continue
 
+      uniqueSubmitted.add(norm)
+
       if (correctAnswers.includes(norm)) {
-        correctEntries++
         uniqueCorrect.add(norm)
       }
     }
   }
 
+  const uniqueSubmittedCount = uniqueSubmitted.size
   const uniqueCorrectCount = uniqueCorrect.size
+  const correctEntries = uniqueCorrectCount
 
   // --------------------------------------------------
   // 4️⃣ COMPLETION (coverage of unique answers)
@@ -98,17 +99,13 @@ export function computeDailyMetrics({ attempts = [], question = {}, profile = {}
 
   // --------------------------------------------------
   // 5️⃣ ACCURACY (precision)
-  //
-  // denominator = attempts used × n inputs
-  //
-  // IMPORTANT:
-  // If player only played 4 windows,
-  // totalAttemptsUsed already reflects that.
+  // denominator = unique submitted answers
+  // numerator = unique correct answers
   // --------------------------------------------------
-  const totalSlotsUsed = n > 0 ? totalAttemptsUsed * n : 0
-
   const accuracy =
-    totalSlotsUsed > 0 ? clamp(Math.round((correctEntries / totalSlotsUsed) * 100), 0, 100) : 0
+    uniqueSubmittedCount > 0
+      ? clamp(Math.round((uniqueCorrectCount / uniqueSubmittedCount) * 100), 0, 100)
+      : 0
 
   // --------------------------------------------------
   // 6️⃣ PACE (meaningful if solved)
@@ -157,6 +154,7 @@ export function computeDailyMetrics({ attempts = [], question = {}, profile = {}
     windowsPlayed,
     totalAttemptsUsed,
     correctEntries,
+    uniqueSubmittedCount,
     uniqueCorrectCount,
     totalSlots: n,
   }

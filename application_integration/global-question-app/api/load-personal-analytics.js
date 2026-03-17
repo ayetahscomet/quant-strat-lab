@@ -147,17 +147,32 @@ function deriveFromAttempts(attemptRows) {
    Archetype classifier
 ====================================================== */
 
-function classifyArchetype({ completionPct, accuracyPct, paceSeconds }) {
-  if (completionPct === 100 && accuracyPct >= 90 && paceSeconds && paceSeconds < 180)
+function classifyArchetype({ completionPct, accuracyPct, paceSeconds, hintsUsed }) {
+  if (completionPct === 100 && accuracyPct >= 90 && paceSeconds && paceSeconds < 180) {
     return 'Speedrunner'
+  }
 
-  if (completionPct === 100 && accuracyPct >= 90) return 'Sniper'
+  if (completionPct === 100 && accuracyPct >= 90) {
+    return 'Sniper'
+  }
 
-  if (completionPct === 100 && accuracyPct < 60) return 'Explorer'
+  if ((hintsUsed || 0) >= 2) {
+    return 'Hint-lover'
+  }
 
-  if (completionPct >= 70 && paceSeconds && paceSeconds > 600) return 'Scholar'
+  if (completionPct === 100 && accuracyPct < 60) {
+    return 'Explorer'
+  }
 
-  return 'Learner'
+  if (completionPct < 40 && accuracyPct < 50) {
+    return 'Struggler'
+  }
+
+  if (completionPct >= 70 && accuracyPct >= 70) {
+    return 'Balanced'
+  }
+
+  return 'Explorer'
 }
 
 /* ======================================================
@@ -218,10 +233,7 @@ export default async function handler(req, res) {
         .filter(Boolean)
     }
 
-    // Fallback: CorrectAnswersJSON (array or JSON string)
-    if (!correctAnswers.length) {
-      correctAnswers = safeJsonArray(question.CorrectAnswersJSON)
-    }
+    // No secondary fallback in current schema; CorrectAnswers is the source of truth
 
     const answerCount = Number(question.AnswerCount) || correctAnswers.length || 0
 
@@ -259,16 +271,17 @@ export default async function handler(req, res) {
     const archetype =
       profile.Archetype ||
       classifyArchetype({
-        completionPct: derived.completionPct,
-        accuracyPct: derived.accuracyPct,
-        paceSeconds: derived.paceSeconds,
+        completionPct: profile.Completion ?? derived.completionPct,
+        accuracyPct: profile.Accuracy ?? derived.accuracyPct,
+        paceSeconds: profile.SolveSeconds ?? derived.paceSeconds,
+        hintsUsed: profile.HintCount ?? derived.hintsUsed,
       })
 
     const headerSentence = buildHeaderSentence({
-      completionPct: derived.completionPct,
-      accuracyPct: derived.accuracyPct,
-      paceSeconds: derived.paceSeconds,
-      paceRelation: profile.PaceRelation || null,
+      completionPct: profile.Completion ?? derived.completionPct,
+      accuracyPct: profile.Accuracy ?? derived.accuracyPct,
+      paceSeconds: profile.SolveSeconds ?? derived.paceSeconds,
+      paceRelation: null,
     })
 
     /* ====================================================
@@ -290,16 +303,17 @@ export default async function handler(req, res) {
         AttemptsUsed: profile.AttemptsUsed ?? derived.attempts.length,
         HintCount: profile.HintCount ?? derived.hintsUsed,
 
-        Accuracy: derived.accuracyPct,
-        Completion: derived.completionPct,
+        Accuracy: profile.Accuracy ?? derived.accuracyPct,
+        Completion: profile.Completion ?? derived.completionPct,
 
         SolveSeconds: profile.SolveSeconds ?? derived.paceSeconds,
 
-        DistinctAnswers: derived.uniqueCorrect,
-        RareAnswers: profile.RareAnswers ?? rareAnswersList.length,
+        DistinctAnswers: profile.DistinctAnswers ?? derived.uniqueSubmitted,
+        RareAnswers: profile.RareAnswers ?? 0,
 
         PercentileSpeed: profile.PercentileSpeed ?? null,
         PercentileAccuracy: profile.PercentileAccuracy ?? null,
+        PercentileCompletion: profile.PercentileCompletion ?? null,
 
         Archetype: archetype,
 

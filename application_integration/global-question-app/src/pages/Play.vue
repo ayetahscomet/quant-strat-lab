@@ -86,7 +86,7 @@
                   {{ notificationsEnabled ? 'Email reminders enabled' : 'Enable email reminders' }}
                 </button>
 
-                <button class="exit-lockout-btn" @click="goToFailureSummary">
+                <button class="exit-lockout-btn" @click="showExitConfirm = true">
                   I’ve Had Enough for Today
                 </button>
               </div>
@@ -181,17 +181,17 @@
 
             <!-- EXIT -->
             <div v-else-if="showExitConfirm" class="modal">
-              <h2 class="modal-title">Finished for Today?</h2>
+              <h2 class="modal-title">Are you sure?</h2>
               <p class="modal-text modal-spaced">
-                You’ll end today’s session early and see the correct answers.<br />
-                You can’t return until tomorrow.
+                If you end today’s session now, you’ll see the correct answers and won’t be able to
+                return to the game until tomorrow.
               </p>
 
               <div class="modal-actions">
                 <button class="modal-btn secondary" @click="showExitConfirm = false">
-                  No, return
+                  No, go back
                 </button>
-                <button class="modal-btn primary" @click="confirmExitEarly">Yes, I’m Done</button>
+                <button class="modal-btn primary" @click="confirmExitEarly">Yes, I’m done</button>
               </div>
             </div>
 
@@ -1030,23 +1030,6 @@ async function submitEmailNotifications() {
 
 function closeEmailModal() {
   showEmailModal.value = false
-}
-
-async function goToFailureSummary() {
-  hardLocked.value = true
-
-  await fetch('/api/end-day', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      userId,
-      dateKey: dateKey.value,
-      result: 'exit-early',
-    }),
-  }).catch(() => null)
-
-  await logPlay('exit-early')
-  currentView.value = 'failure'
 }
 
 /*=======================================================
