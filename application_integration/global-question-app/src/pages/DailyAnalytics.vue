@@ -1284,8 +1284,14 @@ function buildGlobalBlocks(rng) {
           ? {
               head: ['Country', 'Avg'],
               rows: g.countryLeaderboard
+                .filter(
+                  (x) =>
+                    x &&
+                    (x.name || x.country) &&
+                    normalise(String(x.name || x.country)) !== 'unknown',
+                )
                 .slice(0, 5)
-                .map((x) => [countryDisplay(x.country ?? x.name), `${pct(x.value)}%`]),
+                .map((x) => [countryDisplay(x.name || x.country), `${pct(x.value)}%`]),
             }
           : null,
       caption: p.countryName ? `Rank: ${countryRank}` : '',
@@ -1376,9 +1382,15 @@ function buildGlobalBlocks(rng) {
           ? {
               head: ['Country', 'Avg'],
               rows: g.countryLeaderboard
+                .filter(
+                  (x) =>
+                    x &&
+                    (x.name || x.country) &&
+                    normalise(String(x.name || x.country)) !== 'unknown',
+                )
                 .slice(0, 6)
                 .map((x, i) => [
-                  `${i + 1}. ${countryDisplay(x.country ?? x.name)}`,
+                  `${i + 1}. ${countryDisplay(x.name || x.country)}`,
                   `${pct(x.value)}%`,
                 ]),
             }
@@ -2419,7 +2431,7 @@ async function downloadImage() {
 
 .analytics-wrapper {
   display: flex;
-  width: 100vw;
+  width: 100%;
   min-height: 100vh;
   overflow-x: hidden;
   margin: 0;
@@ -2439,6 +2451,7 @@ async function downloadImage() {
 .left-pane {
   flex: 0 0 38%;
   max-width: 38%;
+  width: 38%;
   min-width: 360px;
   background: #0d0f11;
   color: white;
@@ -2447,6 +2460,7 @@ async function downloadImage() {
   padding-bottom: 110px;
   overflow-y: auto;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
 }
 
 .left-header {
@@ -2749,6 +2763,9 @@ async function downloadImage() {
   position: relative;
   padding-bottom: 110px;
   padding-top: 50px;
+  flex: 1 1 0;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .right-header {
