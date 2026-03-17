@@ -144,7 +144,13 @@ async function loadFailureSummaryFromAirtable() {
       const idx = Number(a.attemptIndex)
       return idx >= 1 && idx <= 3
     })
-    .sort((a, b) => Number(b.attemptIndex) - Number(a.attemptIndex))
+    .sort((a, b) => {
+      const ta = new Date(a.createdAt || 0).getTime()
+      const tb = new Date(b.createdAt || 0).getTime()
+
+      if (tb !== ta) return tb - ta
+      return Number(b.attemptIndex || 0) - Number(a.attemptIndex || 0)
+    })
 
   const finalAttempt = realAttempts.length ? realAttempts[0] : null
 
