@@ -6,7 +6,7 @@
         <!-- Square logo with white outline -->
         <img src="/logo-800-full.svg" class="logo" alt="Akinto" />
         <div class="brand-text">
-          <div class="akinto">AKINTO</div>
+          <div class="akinto">Akinto</div>
           <div class="tag">A game of Common Knowledge.</div>
         </div>
       </div>

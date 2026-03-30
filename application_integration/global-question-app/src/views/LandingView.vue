@@ -6,7 +6,7 @@
         <div class="brand-row">
           <img class="logo" src="/logo-800-full.svg" alt="Akinto logo" />
           <div class="text-block">
-            <h1 class="app-name">AKINTO</h1>
+            <h1 class="app-name">Akinto</h1>
             <p class="motto">A Global Knowledge Game</p>
           </div>
         </div>
@@ -80,11 +80,17 @@
           <div class="seo-col">
             <h3>How it works</h3>
             <ul>
-              <li>🌍 One daily question that becomes a high-value habit</li>
-              <li>🧠 Reflective thought over immediate correctness</li>
-              <li>📊 Compare how the world thinks</li>
-              <li>🔔 Get notified when new windows open</li>
-              <li>🌱 Knowledge is not restricted. The mission is global accessibility.</li>
+              <li>
+                <strong>A Daily Ritual:</strong> One curated question designed to become a
+                high-value habit
+              </li>
+              <li>
+                <strong>Deep Reflection:</strong> Thoughtful inquiry prioritised over immediate
+                correctness
+              </li>
+              <li>
+                <strong>Global Insight:</strong> Compare your perspective with how the world thinks
+              </li>
             </ul>
           </div>
 
@@ -92,10 +98,10 @@
             <h3>Our learning philosophy</h3>
             <p>Akinto is guided by simple principles:</p>
             <ul>
-              <li>Discovery over memorisation</li>
-              <li>Curiosity over competition</li>
-              <li>Global perspective over narrow local knowledge</li>
-              <li>Simple, reflective and rooted in genuine exploration</li>
+              <li><strong>Discovery</strong> over memorisation</li>
+              <li><strong>Curiosity</strong> over competition</li>
+              <li><strong>Global perspective</strong> over narrow local knowledge</li>
+              <li><strong>Simplicity</strong> rooted in genuine exploration</li>
             </ul>
           </div>
 
@@ -348,6 +354,11 @@ onBeforeUnmount(() => {
   transform: none;
 }
 
+.seo-col li strong {
+  color: #f0e68c; /* A soft khaki/gold */
+  font-weight: 700;
+}
+
 .gate-note {
   margin: 10px 0 0;
   font-size: 13px;
@@ -535,9 +546,11 @@ onBeforeUnmount(() => {
 
 .seo-col ul {
   padding-left: 18px;
+  padding-top: 0px;
 }
 
 .seo-col li {
+  margin-top: 5px;
   margin-bottom: 10px;
   font-size: 15px;
 }

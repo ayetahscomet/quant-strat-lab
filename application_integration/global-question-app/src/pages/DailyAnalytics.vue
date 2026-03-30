@@ -2300,7 +2300,7 @@ function buildShareText() {
   const totalSlots = Number(p.totalSlots || p._totalPossible || 0)
   const pattern = buildAttemptProgressPattern(p._shareAttempts || [], totalSlots)
 
-  return `AKINTO ${dateLabel}
+  return `Akinto ${dateLabel}
 
 ${pattern}
 
@@ -2366,7 +2366,7 @@ async function tryNativeShare(blob) {
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
         files: [file],
-        title: 'AKINTO',
+        title: 'Akinto',
         text: buildShareText(),
         url: 'https://akinto.io',
       })
