@@ -2199,10 +2199,6 @@ body,
 }
 
 .lockout-return .right-pane {
-  transform: translateX(-12%);
-}
-
-.lockout-return .right-pane {
   width: 100%;
   min-width: 100%;
 }
