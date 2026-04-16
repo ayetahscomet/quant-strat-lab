@@ -2614,22 +2614,15 @@ body,
   border-color: #111;
 }
 
-/* FORCE all inner text to white */
-.lockout-attempt-pill.correct * {
-  color: #fff !important;
-}
-
-/* extra safety for known elements */
-.lockout-attempt-pill.correct .lockout-attempt-text {
-  color: #fff !important;
-}
-
+.lockout-attempt-pill.correct .lockout-attempt-text,
 .lockout-attempt-pill.correct .lockout-attempt-state {
   color: #fff !important;
 }
 
 .lockout-attempt-pill.correct .lockout-attempt-index {
+  background: rgba(255, 255, 255, 0.14);
   color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .lockout-attempt-pill.correct .lockout-attempt-text,
@@ -3791,6 +3784,130 @@ body {
     content: '';
     display: block;
     height: env(safe-area-inset-bottom);
+  }
+
+  /* ---------- RETURN LOCKOUT MARINATE SECTION ---------- */
+
+  .lockout-return .right-pane {
+    transform: none !important;
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  .lockout-card {
+    padding: 36px 18px 28px !important;
+    overflow-y: auto;
+    overflow-x: hidden;
+    align-items: center;
+    text-align: center;
+  }
+
+  .lockout-headline-strong {
+    font-size: 24px;
+    line-height: 1.15;
+  }
+
+  .lockout-headline-sub {
+    font-size: 16px;
+    line-height: 1.35;
+    max-width: 320px;
+  }
+
+  .lockout-live-copy {
+    max-width: 300px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .lockout-return-cue {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    line-height: 1.35;
+    text-align: center;
+  }
+
+  .lockout-return-detail {
+    width: 100%;
+    max-width: 100%;
+    margin-top: 0;
+    padding: 28px 16px 20px;
+    box-sizing: border-box;
+  }
+
+  .lockout-return-detail-inner {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .lockout-return-kicker {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+
+  .lockout-return-title {
+    font-size: 18px;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+
+  .lockout-question-card,
+  .lockout-attempt-review {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 18px;
+    padding: 14px 14px 12px;
+    box-sizing: border-box;
+  }
+
+  .lockout-question-text {
+    font-size: 15px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .lockout-attempt-stack {
+    gap: 10px;
+  }
+
+  .lockout-attempt-pill {
+    width: 100%;
+    min-height: 0;
+    padding: 10px 12px;
+    border-radius: 14px;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+  }
+
+  .lockout-attempt-index {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    font-size: 12px;
+  }
+
+  .lockout-attempt-body {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .lockout-attempt-text {
+    font-size: 15px;
+    line-height: 1.3;
+    text-align: left;
+    word-break: break-word;
+  }
+
+  .lockout-attempt-state {
+    font-size: 11px;
+    line-height: 1.2;
+    text-align: left;
   }
 }
 </style>
