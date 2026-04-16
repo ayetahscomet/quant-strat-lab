@@ -122,7 +122,9 @@
                   </button>
 
                   <div v-if="lockoutMode === 'return'" class="lockout-scroll-cue">
-                    <span class="lockout-scroll-cue-text">Let the question marinate for a sec</span>
+                    <span class="lockout-scroll-cue-text"
+                      >Let the question marinate for a second.</span
+                    >
                     <span class="lockout-scroll-cue-arrow">↓</span>
                   </div>
                 </div>
@@ -131,7 +133,7 @@
                   <div class="lockout-marinate-inner">
                     <p class="lockout-marinate-kicker">Still locked out</p>
 
-                    <h3 class="lockout-marinate-title">Let the question marinate for a sec</h3>
+                    <h3 class="lockout-marinate-title">Let the question marinate for a second.</h3>
 
                     <div class="lockout-question-card">
                       <p class="lockout-question-label">Question</p>
@@ -2611,6 +2613,15 @@ body,
   background: #111;
   color: #fff;
   border-color: #111;
+}
+
+.lockout-attempt-pill.correct .lockout-attempt-text,
+.lockout-attempt-pill.correct .lockout-attempt-state {
+  color: #fff;
+}
+
+.lockout-attempt-pill.correct .lockout-attempt-index {
+  color: #fff;
 }
 
 .lockout-attempt-pill.incorrect {
