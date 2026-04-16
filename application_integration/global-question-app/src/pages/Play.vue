@@ -3580,7 +3580,7 @@ body {
    MOBILE GAMEPLAY TUNING
 ============================================================ */
 @media (max-width: 600px) {
-  /* ---------- FULL HEIGHT + BG LOCK ---------- */
+  /* ---------- GENERAL MOBILE GAMEPLAY ---------- */
 
   .logo {
     width: 45px;
@@ -3588,14 +3588,13 @@ body {
     outline: 1px solid #000000;
     cursor: pointer;
   }
+
   .play-wrapper {
     min-height: 100svh;
     height: auto;
     padding-top: 100px;
     padding-bottom: 100px;
   }
-
-  /* ---------- HEADER CLUSTER ---------- */
 
   .header {
     margin-top: 12px;
@@ -3607,11 +3606,11 @@ body {
     display: flex;
     gap: 22px;
     min-width: 150px;
+    margin-top: 10px;
   }
 
   .divider {
     opacity: 0.5;
-    font-weight: 400px;
     font-size: 20px;
   }
 
@@ -3628,15 +3627,11 @@ body {
     opacity: 0.7;
   }
 
-  /* ---------- QUESTION ---------- */
-
   .question-title {
     font-size: 20px;
     margin-bottom: 18px;
     max-width: 92%;
   }
-
-  /* ---------- INPUT STACK ---------- */
 
   .input-group {
     min-width: 200px;
@@ -3648,18 +3643,10 @@ body {
     padding: 0.7rem 1rem;
   }
 
-  /* ---------- LOCK BUTTON ---------- */
-
-  .button-row {
-    margin-top: 10px;
-  }
-
   .lock {
     width: 92%;
     max-width: 420px;
   }
-
-  /* ---------- ATTEMPT DOTS ---------- */
 
   .dots {
     gap: 8px;
@@ -3670,111 +3657,10 @@ body {
     height: 13px;
   }
 
-  /* ---------- MODALS ---------- */
-
   .modal {
     width: 88%;
     max-width: 420px;
   }
-
-  /* ---------- SPLIT LOCKOUT ---------- */
-
-  .lockout-split {
-    grid-template-columns: 100%;
-    min-height: 100svh;
-    height: auto;
-  }
-
-  .left-pane {
-    display: none;
-  }
-
-  .right-pane {
-    width: 100%;
-  }
-
-  .lockout-top {
-    min-height: 100svh;
-    padding: 40px 18px 28px;
-  }
-
-  .lockout-logo {
-    margin-top: 20px;
-    width: 90px;
-    height: 90px;
-  }
-
-  .lockout-headline-strong {
-    font-size: 26px;
-  }
-
-  .lockout-headline-sub {
-    font-size: 18px;
-    line-height: 1.35;
-    max-width: 320px;
-  }
-
-  .lockout-live-copy {
-    max-width: 300px;
-    font-size: 12px;
-  }
-
-  .lockout-scroll-cue {
-    margin-top: 20px;
-  }
-
-  .lockout-scroll-cue-text {
-    font-size: 12px;
-  }
-
-  .lockout-marinate {
-    padding-bottom: 34px;
-  }
-
-  .lockout-marinate-inner {
-    width: calc(100% - 24px);
-    padding-top: 22px;
-  }
-
-  .lockout-marinate-title {
-    font-size: 22px;
-    margin-bottom: 14px;
-  }
-
-  .lockout-question-card,
-  .lockout-attempt-card {
-    border-radius: 18px;
-    padding: 14px;
-  }
-
-  .lockout-question-text {
-    font-size: 18px;
-  }
-
-  .lockout-attempt-pill {
-    grid-template-columns: 28px minmax(0, 1fr);
-    gap: 10px;
-    padding: 12px 12px;
-  }
-
-  .lockout-attempt-index {
-    width: 28px;
-    height: 28px;
-    font-size: 11px;
-  }
-
-  .lockout-attempt-text {
-    font-size: 15px;
-  }
-
-  .lockout-attempt-state {
-    grid-column: 2 / 3;
-    justify-self: start;
-    margin-top: 2px;
-    font-size: 10px;
-  }
-
-  /* ---------- SCROLL SAFETY ---------- */
 
   .play-wrapper::after {
     content: '';
@@ -3782,79 +3668,183 @@ body {
     height: env(safe-area-inset-bottom);
   }
 
-  /* ---------- RETURN LOCKOUT MARINATE SECTION ---------- */
+  /* ---------- MOBILE SPLIT LOCKOUT ---------- */
 
-  .lockout-return .right-pane {
-    transform: none !important;
+  .play-wrapper.split-lockout-active {
+    padding: 0 !important;
+    overflow: hidden;
+  }
+
+  .lockout-split {
+    position: fixed;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100svh;
+    min-height: 100svh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #f5f5f5;
+  }
+
+  .left-pane {
+    display: none !important;
+  }
+
+  .right-pane {
     width: 100% !important;
     min-width: 100% !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  .lockout-return .right-pane {
+    width: 100% !important;
+    min-width: 100% !important;
+    transform: none !important;
   }
 
   .lockout-card {
-    padding: 36px 18px 28px !important;
-    overflow-y: auto;
-    overflow-x: hidden;
-    align-items: center;
+    width: 100%;
+    min-height: auto;
+    padding: 0 !important;
+    background: #f5f5f5;
+    overflow: visible;
+    align-items: stretch;
     text-align: center;
   }
 
+  /* ---------- TOP LOCKOUT SCREEN ---------- */
+
+  .lockout-top {
+    min-height: 100svh;
+    padding: 32px 20px 28px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .lockout-logo {
+    width: 88px;
+    height: 88px;
+    margin-top: 8px;
+    margin-bottom: 22px;
+  }
+
   .lockout-headline-strong {
-    font-size: 24px;
-    line-height: 1.15;
+    font-size: 26px;
+    line-height: 1.12;
+    margin: 0;
   }
 
   .lockout-headline-sub {
-    font-size: 16px;
+    font-size: 18px;
     line-height: 1.35;
     max-width: 320px;
+    margin: 10px 0 0;
+  }
+
+  .lockout-card .midday-sub {
+    margin-top: 28px;
+    font-size: 14px;
+  }
+
+  .lockout-card .midday-time {
+    font-size: 28px;
+    line-height: 1.1;
+    margin-top: 8px;
+  }
+
+  .lockout-card .midday-countdown {
+    margin-top: 8px;
+    font-size: 14px;
   }
 
   .lockout-live-copy {
     max-width: 300px;
+    margin-top: 12px;
     font-size: 13px;
     line-height: 1.45;
   }
 
-  .lockout-return-cue {
-    margin-top: 24px;
-    margin-bottom: 16px;
+  .notif-btn,
+  .exit-lockout-btn {
+    min-width: 0;
+    width: min(100%, 280px);
+  }
+
+  .lockout-scroll-cue {
+    margin-top: 30px;
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.78;
+  }
+
+  .lockout-scroll-cue-text {
     font-size: 13px;
     line-height: 1.35;
     text-align: center;
   }
 
-  .lockout-return-detail {
-    width: 100%;
-    max-width: 100%;
-    margin-top: 0;
-    padding: 28px 16px 20px;
-    box-sizing: border-box;
+  .lockout-scroll-cue-arrow {
+    font-size: 18px;
+    line-height: 1;
   }
 
-  .lockout-return-detail-inner {
+  /* ---------- RETURN / MARINATE SECTION ---------- */
+
+  .lockout-marinate {
     width: 100%;
-    max-width: 100%;
+    background: #f5f5f5;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 26px 0 34px;
   }
 
-  .lockout-return-kicker {
-    font-size: 11px;
+  .lockout-marinate-inner {
+    width: calc(100% - 24px);
+    margin: 0 auto;
+    padding-top: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+  }
+
+  .lockout-marinate-kicker {
+    margin: 0 0 8px;
+    font-size: 10px;
     letter-spacing: 0.1em;
-    margin-bottom: 8px;
   }
 
-  .lockout-return-title {
+  .lockout-marinate-title {
+    margin: 0 0 14px;
     font-size: 18px;
     line-height: 1.2;
-    margin-bottom: 16px;
+    letter-spacing: -0.01em;
   }
 
   .lockout-question-card,
-  .lockout-attempt-review {
+  .lockout-attempt-card {
     width: 100%;
-    max-width: 100%;
-    border-radius: 18px;
-    padding: 14px 14px 12px;
     box-sizing: border-box;
+    border-radius: 18px;
+    padding: 14px;
+    background: #fff;
+  }
+
+  .lockout-attempt-card {
+    margin-top: 12px;
+  }
+
+  .lockout-question-label {
+    font-size: 10px;
+    letter-spacing: 0.09em;
+    margin-bottom: 8px;
   }
 
   .lockout-question-text {
@@ -3864,36 +3854,32 @@ body {
   }
 
   .lockout-attempt-stack {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
   }
 
   .lockout-attempt-pill {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
     width: 100%;
     min-height: 0;
-    padding: 10px 12px;
-    border-radius: 14px;
-    align-items: center;
-    gap: 10px;
     box-sizing: border-box;
+    padding: 12px;
+    border-radius: 14px;
   }
 
   .lockout-attempt-index {
     width: 28px;
     height: 28px;
     min-width: 28px;
-    font-size: 12px;
-  }
-
-  .lockout-attempt-body {
-    min-width: 0;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
+    font-size: 11px;
   }
 
   .lockout-attempt-text {
+    min-width: 0;
     font-size: 15px;
     line-height: 1.3;
     text-align: left;
@@ -3901,7 +3887,10 @@ body {
   }
 
   .lockout-attempt-state {
-    font-size: 11px;
+    grid-column: 2 / 3;
+    justify-self: start;
+    margin-top: 2px;
+    font-size: 10px;
     line-height: 1.2;
     text-align: left;
   }
