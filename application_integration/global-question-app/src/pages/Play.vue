@@ -2611,8 +2611,25 @@ body,
 
 .lockout-attempt-pill.correct {
   background: #111;
-  color: #fff;
   border-color: #111;
+}
+
+/* FORCE all inner text to white */
+.lockout-attempt-pill.correct * {
+  color: #fff !important;
+}
+
+/* extra safety for known elements */
+.lockout-attempt-pill.correct .lockout-attempt-text {
+  color: #fff !important;
+}
+
+.lockout-attempt-pill.correct .lockout-attempt-state {
+  color: #fff !important;
+}
+
+.lockout-attempt-pill.correct .lockout-attempt-index {
+  color: #fff !important;
 }
 
 .lockout-attempt-pill.correct .lockout-attempt-text,
