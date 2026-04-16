@@ -917,8 +917,16 @@ const timeClass = computed(() => {
 ====================================================== */
 
 onMounted(async () => {
-  // check day-end OR window lockout FIRST
+  // check day-end FIRST
   const blocked = await resolveDailyStateBeforePlay()
+
+  if (blocked) {
+    await loadLandingBoardState()
+    return
+  }
+
+  // always load the question first so lockout re-entry has context
+  await loadTodayQuestion()
 
   const lockRes = await fetch('/api/load-session', {
     method: 'POST',
@@ -934,21 +942,33 @@ onMounted(async () => {
     const data = await lockRes.json()
 
     if (!data.dayEnded && data.attempts?.length >= MAX_ATTEMPTS) {
-      screenState.value = 'split-lockout'
+      // hydrate the saved latest attempt + statuses before showing return lockout
+      if (Array.isArray(data.latestAnswers) && data.latestAnswers.length) {
+        answers.value = data.latestAnswers
+      }
+
+      hintUsedThisWindow.value = !!data.hintUsed
+      attemptsRemaining.value = 0
       hardLocked.value = true
+      screenState.value = 'split-lockout'
       lockoutMode.value = 'return'
+
+      // ensure answer array matches question size
+      if (answers.value.length !== answerCount.value) {
+        answers.value = [
+          ...answers.value,
+          ...Array(Math.max(0, answerCount.value - answers.value.length)).fill(''),
+        ].slice(0, answerCount.value)
+      }
+
+      recomputeFieldStatusFromAnswers()
+
       loading.value = false
       await loadLandingBoardState()
       return
     }
   }
 
-  if (blocked) {
-    await loadLandingBoardState()
-    return
-  }
-
-  await loadTodayQuestion()
   await loadSessionState()
   applyHydratedState()
   loadReferralLink()
@@ -1121,10 +1141,9 @@ function recomputeFieldStatusFromAnswers() {
     if (!a) return ''
 
     const canonical = normalise(a)
-
     const isCorrect = correctAnswers.value.some((c) => normalise(c) === canonical)
 
-    return isCorrect ? 'correct' : ''
+    return isCorrect ? 'correct' : 'incorrect'
   })
 }
 
