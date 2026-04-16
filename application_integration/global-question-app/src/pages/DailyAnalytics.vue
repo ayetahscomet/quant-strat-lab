@@ -1347,18 +1347,23 @@ function buildGlobalBlocks(rng) {
     }),
 
     () => ({
-      kicker: 'Cheeky',
-      title: 'Thinking like a…',
+      kicker: 'Completion',
+      title: 'What your score is really saying',
       body:
-        p.completion >= 80 && p.accuracy < 70
-          ? 'Board-filler. High coverage, higher risk. Respect.'
-          : p.accuracy >= 80 && p.completion < 80
-            ? 'Selective sniper. Low volume, high hit rate.'
-            : 'Balanced chaos. Which is… a valid strategy.',
+        p.dayResult === 'exit-early'
+          ? 'You chose to exit early, so your completion rate reflects an unfinished day.'
+          : p.completion >= 80
+            ? 'You covered most of the board and left little behind.'
+            : p.completion >= 50
+              ? 'You made meaningful progress, but some coverage was left on the table.'
+              : 'This was more exploratory than complete - which is still useful signal.',
       tier: 'minor',
       shape: 'square',
       mini: null,
-      caption: 'Not a stereotype. A statistical mood.',
+      caption:
+        p.dayResult === 'exit-early'
+          ? 'Exiting early lowers completion by design.'
+          : 'Completion reflects how much of the board you actually covered.',
     }),
 
     () => ({
@@ -1670,17 +1675,24 @@ function buildGlobalBlocks(rng) {
       ]),
       body:
         typeof g.avgCompletion === 'number'
-          ? `You completed ${pct(p.completion)}%. World average: ${pct(g.avgCompletion)}%.`
-          : `You completed ${pct(p.completion)}%. Processing global totals…`,
+          ? p.dayResult === 'exit-early'
+            ? `You exited early, so your completion settled at ${pct(p.completion)}%. World average: ${pct(g.avgCompletion)}%.`
+            : `You completed ${pct(p.completion)}%. World average: ${pct(g.avgCompletion)}%.`
+          : p.dayResult === 'exit-early'
+            ? `You exited early, so your completion settled at ${pct(p.completion)}%. Processing global totals…`
+            : `You completed ${pct(p.completion)}%. Processing global totals…`,
 
       tier: pick(rng, ['minor', 'ticker']),
       shape: pick(rng, ['wide', 'square']),
       mini: { big: `${pct(p.completion)}%`, sub: 'You' },
-      caption: pick(rng, [
-        'Context makes it sting (or sparkle).',
-        'We love a percentile era.',
-        'Data, but make it drama.',
-      ]),
+      caption:
+        p.dayResult === 'exit-early'
+          ? 'Exiting early affects completion by design.'
+          : pick(rng, [
+              'Context makes it sting (or sparkle).',
+              'We love a percentile era.',
+              'Data, but make it drama.',
+            ]),
     }))
   }
 
@@ -2486,13 +2498,14 @@ async function downloadImage() {
   flex: 0 0 38%;
   max-width: 38%;
   width: 38%;
-  min-width: 360px;
+  min-width: 0;
   background: #0d0f11;
   color: white;
   padding: 34px 30px 28px;
   padding-top: 50px;
   padding-bottom: 110px;
   overflow-y: auto;
+  overflow-x: hidden;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   box-sizing: border-box;
 }
@@ -3463,10 +3476,11 @@ async function downloadImage() {
 }
 
 @media (max-width: 720px) {
-  /* ---- SHELL ---- */
   .analytics-wrapper {
     flex-direction: column;
     height: auto;
+    width: 100%;
+    overflow-x: hidden;
   }
 
   .left-pane,
@@ -3477,6 +3491,8 @@ async function downloadImage() {
     min-width: 0;
     height: auto;
     overflow-y: visible;
+    overflow-x: hidden;
+    box-sizing: border-box;
   }
 
   .left-pane {
@@ -3504,6 +3520,17 @@ async function downloadImage() {
     font-size: 13px;
   }
 
+  .hero-box,
+  .stat-card,
+  .personal-card,
+  .chart-dynamic,
+  .g-block {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
   .hero-box {
     padding: 14px;
   }
@@ -3526,13 +3553,10 @@ async function downloadImage() {
     padding: 12px 0 20px;
   }
 
-  .canvas-wrap {
-    width: 56px;
-    height: 56px;
-  }
-
   .stat-row {
     gap: 14px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .ring-stack {
@@ -3555,6 +3579,16 @@ async function downloadImage() {
 
   .chart-dynamic {
     grid-column: auto;
+    min-height: 260px;
+    overflow: hidden;
+  }
+
+  .personal-chart canvas,
+  .g-chart canvas {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    display: block;
   }
 
   .left-footer {
@@ -3571,15 +3605,6 @@ async function downloadImage() {
     align-items: flex-start;
     gap: 8px;
     margin-bottom: 16px;
-    max-height: 300px;
-  }
-
-  .g-title {
-    margin-bottom: 4px;
-  }
-
-  .g-title {
-    margin-bottom: 4px;
   }
 
   .share-btn {
@@ -3596,7 +3621,6 @@ async function downloadImage() {
   }
 
   .g-block {
-    width: 100%;
     margin: 0;
     padding-left: 14px !important;
   }
@@ -3605,29 +3629,12 @@ async function downloadImage() {
     margin-bottom: 4px;
   }
 
-  .g-block > aside,
-  .g-block > .side-rail,
-  .g-block > .vertical-label,
-  .g-block > .speed-rail {
-    display: none;
-  }
-
   .g-body {
     margin-bottom: 2px;
   }
 
   .g-caption {
     margin-top: 6px;
-  }
-
-  .brand-tag {
-    border: 1px solid #111;
-    border-radius: 100px;
-    padding-left: 10px;
-    font-weight: 500;
-    font-size: 10px;
-    background: #0d0f11;
-    color: #fff;
   }
 }
 

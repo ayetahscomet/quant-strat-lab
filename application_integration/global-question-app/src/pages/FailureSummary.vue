@@ -229,6 +229,7 @@ import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import html2canvas from 'html2canvas'
 import ShareCard from '@/components/ShareCard.vue'
+import { computeDailyMetrics } from '../../lib/metricsEngine.js'
 
 const router = useRouter()
 
@@ -304,19 +305,41 @@ const feedbackForm = ref({
   furtherComments: '',
 })
 
-const shareCountryName = computed(() => {
-  const raw = localStorage.getItem('akinto_country') || ''
-  return raw ? raw.toUpperCase() : null
-})
-
-const shareGlobal = computed(() => ({
+const metrics = ref(null)
+const shareGlobalData = ref({
   totalPlayers: null,
   avgCompletion: null,
   avgAccuracy: null,
   yourCountryRank: null,
   yourCountryAvgCompletion: null,
   countryLeaderboard: [],
-}))
+})
+
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n))
+}
+
+function pct(n) {
+  const x = Number(n)
+  if (!isFinite(x)) return 0
+  return clamp(Math.round(x), 0, 100)
+}
+
+function normaliseAirtablePercent(x) {
+  if (x === null || x === undefined) return null
+  let n = Number(x)
+  if (!isFinite(n)) return null
+  if (n > 0 && n <= 1) n *= 100
+  while (n > 100) n /= 10
+  return n
+}
+
+const shareCountryName = computed(() => {
+  const raw = localStorage.getItem('akinto_country') || ''
+  return raw ? raw.toUpperCase() : null
+})
+
+const shareGlobal = computed(() => shareGlobalData.value)
 
 const failureCorrectCount = computed(
   () => summary.value.fieldStatus.filter((s) => s === 'correct').length,
@@ -335,14 +358,33 @@ const failureCompletion = computed(() => {
   return Math.round((failureCorrectCount.value / failureTotal.value) * 100)
 })
 
-const canonicalShareMetrics = computed(() => ({
-  completion: failureCompletion.value,
-  accuracy: failureAccuracy.value,
-  pace: '-',
-  pacePercentile: null,
-  completionReason: failureCompletion.value === 100 ? 'solved' : 'engaged',
-  dailyScore: Math.round(failureCompletion.value * 0.6 + failureAccuracy.value * 0.4),
-}))
+const canonicalShareMetrics = computed(() => {
+  if (metrics.value) {
+    return {
+      completion: pct(metrics.value.completion),
+      accuracy: pct(metrics.value.accuracy),
+      pace:
+        typeof metrics.value.pacePercentile === 'number'
+          ? `${pct(metrics.value.pacePercentile)}%`
+          : metrics.value.paceSeconds
+            ? `${Math.max(1, Math.round(metrics.value.paceSeconds / 60))}m`
+            : '-',
+      pacePercentile:
+        typeof metrics.value.pacePercentile === 'number' ? metrics.value.pacePercentile : null,
+      completionReason: metrics.value.completionReason || 'engaged',
+      dailyScore: pct(metrics.value.dailyScore),
+    }
+  }
+
+  return {
+    completion: failureCompletion.value,
+    accuracy: failureAccuracy.value,
+    pace: '-',
+    pacePercentile: null,
+    completionReason: failureCompletion.value === 100 ? 'solved' : 'engaged',
+    dailyScore: Math.round(failureCompletion.value * 0.6 + failureAccuracy.value * 0.4),
+  }
+})
 
 const unlockedCountryCount = computed(() => unlockedCountries.value.length)
 
@@ -447,6 +489,70 @@ function todayKey() {
   })
 }
 
+async function createReferralLink() {
+  const userId = getUserId()
+  if (!userId) return null
+
+  try {
+    const res = await fetch('/api/create-referral-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    })
+
+    const data = await res.json().catch(() => ({}))
+
+    if (!res.ok) {
+      console.error('FailureSummary create-referral-link failed:', res.status, data)
+      return null
+    }
+
+    const url = data?.referralUrl || null
+
+    if (url) {
+      referralLink.value = url
+    }
+
+    return url
+  } catch (e) {
+    console.error('FailureSummary create-referral-link error:', e)
+    return null
+  }
+}
+
+async function ensureReferralLink() {
+  if (referralLink.value) return referralLink.value
+
+  const created = await createReferralLink()
+  if (created) return created
+
+  const userId = getUserId()
+  if (!userId) return null
+
+  try {
+    const res = await fetch('/api/load-growth-state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    })
+
+    if (!res.ok) return null
+
+    const data = await res.json()
+    const url = data?.referralUrl || null
+
+    if (url) {
+      referralLink.value = url
+      return url
+    }
+
+    return null
+  } catch (e) {
+    console.error('FailureSummary ensureReferralLink fallback error:', e)
+    return null
+  }
+}
+
 async function loadGrowthState() {
   const userId = getUserId()
   if (!userId) return
@@ -460,25 +566,26 @@ async function loadGrowthState() {
       body: JSON.stringify({ userId }),
     })
 
-    if (!res.ok) {
-      referralLink.value = `https://akinto.io/?ref=${userId}`
-      return
+    if (res.ok) {
+      const data = await res.json()
+
+      referralLink.value = data.referralUrl || ''
+      invitedUsersCount.value = Number(data.invitedUsersCount || 0)
+      crossBorderInvitesCount.value = Number(data.crossBorderInvitesCount || 0)
+      unlockedCountries.value = Array.isArray(data.unlockedCountries) ? data.unlockedCountries : []
+      unlockedCountryNames.value = Array.isArray(data.unlockedCountryNames)
+        ? data.unlockedCountryNames
+        : []
+      latestUnlockedCountryName.value = String(data.latestUnlockedCountryName || '')
+      todaysBoardCountryCount.value = Number(data.todaysBoardCountryCount || 0)
     }
 
-    const data = await res.json()
-
-    referralLink.value = data.referralUrl || `https://akinto.io/?ref=${userId}`
-    invitedUsersCount.value = Number(data.invitedUsersCount || 0)
-    crossBorderInvitesCount.value = Number(data.crossBorderInvitesCount || 0)
-    unlockedCountries.value = Array.isArray(data.unlockedCountries) ? data.unlockedCountries : []
-    unlockedCountryNames.value = Array.isArray(data.unlockedCountryNames)
-      ? data.unlockedCountryNames
-      : []
-    latestUnlockedCountryName.value = String(data.latestUnlockedCountryName || '')
-    todaysBoardCountryCount.value = Number(data.todaysBoardCountryCount || 0)
+    if (!referralLink.value) {
+      await ensureReferralLink()
+    }
   } catch (e) {
     console.error('FailureSummary growth load error:', e)
-    referralLink.value = `https://akinto.io/?ref=${userId}`
+    await ensureReferralLink()
   } finally {
     growthLoading.value = false
   }
@@ -499,14 +606,89 @@ async function loadLiveBoardState() {
   }
 }
 
-async function handleInviteShare() {
-  if (!referralLink.value) {
-    await loadGrowthState()
-  }
+async function loadShareAnalytics() {
+  const userId = getUserId()
+  const dateKey = todayKey()
 
-  if (!referralLink.value) {
-    const userId = getUserId()
-    referralLink.value = `https://akinto.io/?ref=${userId}`
+  if (!userId || !dateKey) return
+
+  try {
+    const [personalRes, globalRes] = await Promise.all([
+      fetch('/api/load-personal-analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, dateKey }),
+      }),
+      fetch('/api/load-global-analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          dateKey,
+          country: localStorage.getItem('akinto_country') || 'xx',
+        }),
+      }),
+    ])
+
+    if (personalRes.ok) {
+      const payload = await personalRes.json()
+      metrics.value = computeDailyMetrics({
+        attempts: Array.isArray(payload.attempts) ? payload.attempts : [],
+        question: payload.question || {},
+        profile: payload.profile || {},
+      })
+    }
+
+    if (globalRes.ok) {
+      const g = await globalRes.json()
+
+      shareGlobalData.value = {
+        totalPlayers: typeof g.totalPlayers === 'number' ? g.totalPlayers : null,
+        avgCompletion:
+          typeof g.avgCompletion === 'number' ? normaliseAirtablePercent(g.avgCompletion) : null,
+        avgAccuracy:
+          typeof g.avgAccuracy === 'number' ? normaliseAirtablePercent(g.avgAccuracy) : null,
+        yourCountryRank: typeof g.yourCountryRank === 'number' ? g.yourCountryRank : null,
+        yourCountryAvgCompletion:
+          typeof g.yourCountryAvgCompletion === 'number'
+            ? normaliseAirtablePercent(g.yourCountryAvgCompletion)
+            : null,
+        countryLeaderboard: Array.isArray(g.countryLeaderboard) ? g.countryLeaderboard : [],
+      }
+
+      if (
+        metrics.value &&
+        typeof g.pacePercentileForUser === 'number' &&
+        metrics.value.pacePercentile == null
+      ) {
+        metrics.value = {
+          ...metrics.value,
+          pacePercentile: normaliseAirtablePercent(g.pacePercentileForUser),
+          dailyScore: Math.max(
+            0,
+            Math.min(
+              100,
+              Math.round(
+                metrics.value.completion * 0.5 +
+                  metrics.value.accuracy * 0.3 +
+                  normaliseAirtablePercent(g.pacePercentileForUser) * 0.2,
+              ),
+            ),
+          ),
+        }
+      }
+    }
+  } catch (e) {
+    console.error('FailureSummary share analytics load error:', e)
+  }
+}
+
+async function handleInviteShare() {
+  const resolvedReferralLink = await ensureReferralLink()
+
+  if (!resolvedReferralLink) {
+    console.error('No referral link available for failure summary share')
+    return
   }
 
   try {
@@ -514,7 +696,7 @@ async function handleInviteShare() {
       await navigator.share({
         title: 'Akinto',
         text: inviteShareText.value,
-        url: referralLink.value,
+        url: resolvedReferralLink,
       })
       return
     }
@@ -526,16 +708,14 @@ async function handleInviteShare() {
 }
 
 async function copyInviteLink() {
-  if (!referralLink.value) {
-    await loadGrowthState()
+  const resolvedReferralLink = await ensureReferralLink()
+
+  if (!resolvedReferralLink) {
+    console.error('No referral link available to copy from failure summary')
+    return
   }
 
-  if (!referralLink.value) {
-    const userId = getUserId()
-    referralLink.value = `https://akinto.io/?ref=${userId}`
-  }
-
-  const payload = `${inviteShareText.value}\n\n${referralLink.value}`
+  const payload = `${inviteShareText.value}\n\n${resolvedReferralLink}`
 
   try {
     if (navigator.clipboard && window.isSecureContext) {
@@ -654,6 +834,7 @@ onMounted(() => {
   loadFailureSummaryFromAirtable().catch((e) => console.error('FailureSummary load error:', e))
   loadGrowthState().catch((e) => console.error('FailureSummary growth error:', e))
   loadLiveBoardState().catch((e) => console.error('FailureSummary live board error:', e))
+  loadShareAnalytics().catch((e) => console.error('FailureSummary share analytics error:', e))
 })
 
 async function submitAnswerIssue() {

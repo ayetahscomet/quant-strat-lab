@@ -51,31 +51,27 @@
       <div class="brag-right">
         <div class="kicker">Global Snapshot</div>
         <div class="lines">
-          <div class="line" v-if="hasWorldAverages">
+          <div class="line">
             <span class="dim">World average</span>
             <span class="strong">
-              {{ avgCompletionLabel }} completion · {{ avgAccuracyLabel }} accuracy
+              {{
+                hasWorldAverages
+                  ? `${avgCompletionLabel} completion · ${avgAccuracyLabel} accuracy`
+                  : totalPlayers && totalPlayers > 0
+                    ? 'Calibrating global averages…'
+                    : 'Global data warming up'
+              }}
             </span>
           </div>
 
-          <div class="line" v-else>
-            <span class="dim">World average</span>
-            <span class="strong">Calibrating…</span>
-          </div>
-
           <div class="line">
-            <span class="dim">{{ countryComparisonTitle }}</span>
+            <span class="dim">{{ countryMetricLabel }}</span>
             <span class="strong">{{ countryComparisonLine }}</span>
           </div>
 
-          <div class="line" v-if="yourCountryRank !== null">
+          <div class="line">
             <span class="dim">Country rank</span>
             <span class="strong">{{ rankLine }}</span>
-          </div>
-
-          <div class="line" v-else>
-            <span class="dim">Country rank</span>
-            <span class="strong">Not enough data yet</span>
           </div>
         </div>
       </div>
@@ -85,7 +81,7 @@
     <div class="leaders">
       <div class="leaders-head">
         <div class="leaders-title">Top countries today</div>
-        <div class="leaders-sub">by average completion</div>
+        <div class="leaders-sub">by average accuracy</div>
       </div>
 
       <div class="leaders-grid" v-if="topCountries.length">
@@ -110,19 +106,13 @@ import { computed } from 'vue'
 
 const props = defineProps({
   date: String,
-
-  // canonical metrics from engine
   completion: Number,
   accuracy: Number,
   dailyScore: Number,
   pace: String,
   pacePercentile: Number,
   completionReason: String,
-
-  // country
   countryName: String,
-
-  // full global object
   global: {
     type: Object,
     default: () => ({}),
@@ -140,12 +130,11 @@ function pct(n) {
 }
 
 const safeCompletion = computed(() => clamp(Math.round(Number(props.completion) || 0), 0, 100))
-
 const safeAccuracy = computed(() => clamp(Math.round(Number(props.accuracy) || 0), 0, 100))
 
 const paceText = computed(() => {
   if (props.pace) return props.pace
-  return '-'
+  return '—'
 })
 
 const completionHeadline = computed(() => {
@@ -160,10 +149,6 @@ const completionSubline = computed(() => {
   return 'More windows, more signal.'
 })
 
-/**
- * Daily Score (same spirit as your global tile):
- * 0.50 * completion + 0.30 * accuracy + 0.20 * pacePercentile (or 50 if null)
- */
 const dailyScore = computed(() => {
   const score = Number(props.dailyScore)
   if (isFinite(score)) return clamp(Math.round(score), 0, 100)
@@ -171,106 +156,86 @@ const dailyScore = computed(() => {
 })
 
 const scoreLine = computed(() => {
-  const c = pct(props.completion) ?? 0
-  const a = pct(props.accuracy) ?? 0
   const p =
     typeof props.pacePercentile === 'number'
       ? clamp(Math.round(props.pacePercentile), 0, 100)
       : null
 
-  if (p === null) return `Built from completion + accuracy (pace calibrating).`
-  if (p >= 80) return `High score energy - pace carried.`
-  if (p >= 60) return `Strong balance across the board.`
-  return `Solid score - pace has room to run.`
+  if (p === null) return 'Built from completion + accuracy (pace calibrating).'
+  if (p >= 80) return 'High score energy - pace carried.'
+  if (p >= 60) return 'Strong balance across the board.'
+  return 'Solid score - pace has room to run.'
 })
 
-/** Sample-size / credibility badge */
-const sampleTier = computed(() => {
-  const n = props.global?.totalPlayers
-  if (typeof n !== 'number') return 'none'
-  if (n >= 50) return 'strong'
-  if (n >= 15) return 'ok'
-  if (n >= 5) return 'light'
-  return 'tiny'
-})
-
-const sampleLabel = computed(() => {
-  const n = props.global?.totalPlayers
-  if (typeof n !== 'number') return `Sample: -`
-  if (n < 5) return `Sample: early (${n})`
-  if (n < 15) return `Sample: building (${n})`
-  return `Sample: ${n} players`
-})
-
-const isCompact = computed(() => {
-  const n = props.global?.totalPlayers
-  // compact when we have very little global data (keeps it tidy)
-  return typeof n === 'number' && n < 5
-})
-
-/** Global labels */
-const totalPlayersLabel = computed(() => {
-  const n = props.global?.totalPlayers
-  return typeof n === 'number' ? `${n}` : '-'
-})
+const totalPlayers = computed(() =>
+  typeof props.global?.totalPlayers === 'number' ? props.global.totalPlayers : null,
+)
 
 const hasWorldAverages = computed(() => {
   return (
-    typeof props.global?.avgCompletion === 'number' || typeof props.global?.avgAccuracy === 'number'
+    typeof props.global?.avgCompletion === 'number' && typeof props.global?.avgAccuracy === 'number'
   )
 })
 
 const avgCompletionLabel = computed(() => {
   const v = pct(props.global?.avgCompletion)
-  return v === null ? '-' : `${v}%`
+  return v === null ? '—' : `${v}%`
 })
 
 const avgAccuracyLabel = computed(() => {
   const v = pct(props.global?.avgAccuracy)
-  return v === null ? '-' : `${v}%`
+  return v === null ? '—' : `${v}%`
 })
 
-/** Country comparison + narrative */
-const countryComparisonTitle = computed(() => {
-  return props.countryName ? `${props.countryName} vs world` : `Your country vs world`
+const countryMetricLabel = computed(() => {
+  return props.countryName ? `${props.countryName} vs world` : 'Your country vs world'
 })
 
-const countryComparisonLine = computed(() => {
-  const you = pct(props.global?.yourCountryAvgCompletion)
-  const world = pct(props.global?.avgCompletion)
-
-  // no country selected
-  if (!props.countryName) {
-    return world !== null ? `World ${world}% (set country for comparison)` : 'Calibrating…'
-  }
-
-  // country selected but no data yet
-  if (you === null && world === null) return 'Calibrating…'
-  if (you !== null && world === null) return `${you}% (world loading)`
-  if (you === null && world !== null) return `World ${world}%`
-
-  return `${you}% vs ${world}% completion`
+const countryAccuracy = computed(() => {
+  const v = pct(props.global?.yourCountryAvgCompletion)
+  return v === null ? null : v
 })
 
 const yourCountryRank = computed(() => {
   return typeof props.global?.yourCountryRank === 'number' ? props.global.yourCountryRank : null
 })
 
-const rankLine = computed(() => {
-  return yourCountryRank.value !== null ? `#${yourCountryRank.value} today` : ''
+const countryComparisonLine = computed(() => {
+  const worldAcc = pct(props.global?.avgAccuracy)
+  const countryAcc = countryAccuracy.value
+
+  if (!props.countryName) {
+    return worldAcc !== null
+      ? `World accuracy ${worldAcc}%`
+      : 'Set your country to unlock this comparison.'
+  }
+
+  if (countryAcc !== null && worldAcc !== null) {
+    return `${countryAcc}% vs ${worldAcc}% accuracy`
+  }
+
+  if (countryAcc !== null && worldAcc === null) {
+    return `${countryAcc}% accuracy`
+  }
+
+  return `To rank ${props.countryName}, we need more players from ${props.countryName}.`
 })
 
-/** Top 3 countries */
+const rankLine = computed(() => {
+  if (yourCountryRank.value !== null) return `#${yourCountryRank.value} today`
+  if (props.countryName) return `Need more players from ${props.countryName}`
+  return 'Set your country to unlock rank'
+})
+
 const topCountries = computed(() => {
-  const arr = Array.isArray(props.global?.countryLeaderboard)
-    ? props.global?.countryLeaderboard
-    : []
+  const arr = Array.isArray(props.global?.countryLeaderboard) ? props.global.countryLeaderboard : []
+
   return arr
     .filter((x) => x && (x.name || x.country))
     .slice(0, 3)
     .map((x) => ({
       country: String(x.country || ''),
-      name: String(x.name || x.country || '-'),
+      name: String(x.name || x.country || '—'),
       value: pct(x.value) ?? 0,
     }))
 })

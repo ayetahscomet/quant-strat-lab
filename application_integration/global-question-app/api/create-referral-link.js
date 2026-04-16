@@ -37,9 +37,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing userId' })
     }
 
-    // =====================================================
-    // 1. Try to find user
-    // =====================================================
     let users = await base('Users')
       .select({
         filterByFormula: `{UserID} = '${userId}'`,
@@ -49,27 +46,17 @@ export default async function handler(req, res) {
 
     let user
 
-    // =====================================================
-    // 2. CREATE USER IF MISSING (CRITICAL FIX)
-    // =====================================================
     if (!users.length) {
-      const created = await base('Users').create({
+      user = await base('Users').create({
         UserID: userId,
-        CreatedAt: new Date().toISOString(),
       })
-
-      user = created
     } else {
       user = users[0]
     }
 
     const fields = user.fields || {}
+    let referralCode = fields.ReferralCode || null
 
-    let referralCode = fields.ReferralCode
-
-    // =====================================================
-    // 3. Generate referral code if missing
-    // =====================================================
     if (!referralCode) {
       referralCode = await generateUniqueCode()
 
@@ -78,11 +65,7 @@ export default async function handler(req, res) {
       })
     }
 
-    // =====================================================
-    // 4. Return link
-    // =====================================================
     const baseUrl = process.env.PUBLIC_BASE_URL || process.env.BASE_URL || 'https://akinto.io'
-
     const referralUrl = `${baseUrl}/?ref=${referralCode}`
 
     return res.status(200).json({

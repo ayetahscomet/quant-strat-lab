@@ -423,33 +423,54 @@ const feedbackForm = ref({
   furtherComments: '',
 })
 
-const shareCountryName = computed(() => {
-  const raw = localStorage.getItem('akinto_country') || ''
-  return raw ? raw.toUpperCase() : null
-})
-
-const shareGlobal = computed(() => ({
+const shareGlobalData = ref({
   totalPlayers: null,
   avgCompletion: null,
   avgAccuracy: null,
   yourCountryRank: null,
   yourCountryAvgCompletion: null,
   countryLeaderboard: [],
-}))
+})
+
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n))
+}
+
+function pctSafe(n) {
+  const x = Number(n)
+  if (!isFinite(x)) return 0
+  return clamp(Math.round(x), 0, 100)
+}
+
+function normaliseAirtablePercent(x) {
+  if (x === null || x === undefined) return null
+  let n = Number(x)
+  if (!isFinite(n)) return null
+  if (n > 0 && n <= 1) n *= 100
+  while (n > 100) n /= 10
+  return n
+}
+
+const shareCountryName = computed(() => {
+  const raw = localStorage.getItem('akinto_country') || ''
+  return raw ? raw.toUpperCase() : null
+})
+
+const shareGlobal = computed(() => shareGlobalData.value)
 
 const canonicalShareMetrics = computed(() => ({
-  completion: Math.max(0, Math.min(100, Math.round(metrics.value?.completion ?? 0))),
-  accuracy: Math.max(0, Math.min(100, Math.round(metrics.value?.accuracy ?? 0))),
+  completion: pctSafe(metrics.value?.completion ?? 0),
+  accuracy: pctSafe(metrics.value?.accuracy ?? 0),
   pace:
     typeof metrics.value?.pacePercentile === 'number'
-      ? `${Math.max(0, Math.min(100, Math.round(metrics.value.pacePercentile)))}%`
+      ? `${pctSafe(metrics.value.pacePercentile)}%`
       : metrics.value?.paceSeconds
         ? `${Math.max(1, Math.round(metrics.value.paceSeconds / 60))}m`
         : '-',
   pacePercentile:
     typeof metrics.value?.pacePercentile === 'number' ? metrics.value.pacePercentile : null,
   completionReason: metrics.value?.completionReason || 'engaged',
-  dailyScore: Math.max(0, Math.min(100, Math.round(metrics.value?.dailyScore ?? 0))),
+  dailyScore: pctSafe(metrics.value?.dailyScore ?? 0),
 }))
 
 /**
@@ -512,6 +533,65 @@ async function loadLiveBoardState() {
     liveTodayCountryCount.value = Number(data.todayCountryCount || 0)
   } catch (e) {
     console.error('SuccessSummary live board load error:', e)
+  }
+}
+
+async function loadShareGlobalState() {
+  const userId = getUserId()
+  if (!userId || !summary.value.date) return
+
+  try {
+    const res = await fetch('/api/load-global-analytics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        dateKey: summary.value.date,
+        country: localStorage.getItem('akinto_country') || 'xx',
+      }),
+    })
+
+    if (!res.ok) return
+
+    const g = await res.json()
+
+    shareGlobalData.value = {
+      totalPlayers: typeof g.totalPlayers === 'number' ? g.totalPlayers : null,
+      avgCompletion:
+        typeof g.avgCompletion === 'number' ? normaliseAirtablePercent(g.avgCompletion) : null,
+      avgAccuracy:
+        typeof g.avgAccuracy === 'number' ? normaliseAirtablePercent(g.avgAccuracy) : null,
+      yourCountryRank: typeof g.yourCountryRank === 'number' ? g.yourCountryRank : null,
+      yourCountryAvgCompletion:
+        typeof g.yourCountryAvgCompletion === 'number'
+          ? normaliseAirtablePercent(g.yourCountryAvgCompletion)
+          : null,
+      countryLeaderboard: Array.isArray(g.countryLeaderboard) ? g.countryLeaderboard : [],
+    }
+
+    if (
+      metrics.value &&
+      typeof g.pacePercentileForUser === 'number' &&
+      metrics.value.pacePercentile == null
+    ) {
+      metrics.value = {
+        ...metrics.value,
+        pacePercentile: normaliseAirtablePercent(g.pacePercentileForUser),
+        dailyScore: Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(
+              metrics.value.completion * 0.5 +
+                metrics.value.accuracy * 0.3 +
+                normaliseAirtablePercent(g.pacePercentileForUser) * 0.2,
+            ),
+          ),
+        ),
+      }
+    }
+  } catch (e) {
+    console.error('SuccessSummary share global load error:', e)
   }
 }
 
@@ -680,10 +760,13 @@ async function loadSuccessSummaryFromAirtable() {
   }
 }
 
-onMounted(() => {
-  loadSuccessSummaryFromAirtable().catch((e) => console.error('SuccessSummary load error:', e))
+onMounted(async () => {
+  await loadSuccessSummaryFromAirtable().catch((e) =>
+    console.error('SuccessSummary load error:', e),
+  )
   loadGrowthState().catch((e) => console.error('SuccessSummary growth error:', e))
   loadLiveBoardState().catch((e) => console.error('SuccessSummary live board error:', e))
+  loadShareGlobalState().catch((e) => console.error('SuccessSummary share global error:', e))
 })
 
 /* ---------- Basic derived values ---------- */

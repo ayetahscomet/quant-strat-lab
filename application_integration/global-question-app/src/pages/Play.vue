@@ -650,8 +650,12 @@ function startCountdown() {
   countdownTimer = setInterval(updateCountdown, 1000)
 }
 
-function openShareModal() {
+async function openShareModal() {
   showShareModal.value = true
+
+  if (!referralLink.value && !referralLoading.value) {
+    await ensureReferralLink()
+  }
 }
 
 function closeShareModal() {
@@ -698,30 +702,39 @@ async function resolveDailyStateBeforePlay() {
   return false
 }
 
+const inviteShareText = computed(() => {
+  if (unlockedCountries.value.length > 0) {
+    return `I’ve unlocked ${unlockedCountries.value.length} ${unlockedCountries.value.length === 1 ? 'country' : 'countries'} on Akinto. Play today’s board and add your country.`
+  }
+
+  return `Play today’s Akinto board with me. Invite someone abroad and unlock a new country comparison.`
+})
+
 async function loadReferralLink() {
   try {
     referralLoading.value = true
 
-    const res = await fetch('/api/create-referral-link', {
+    const res = await fetch('/api/load-growth-state', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId }),
     })
 
-    const data = await res.json().catch(() => ({}))
-
     if (!res.ok) {
-      console.error('create-referral-link failed:', res.status, data)
+      referralLink.value = `https://akinto.io/?ref=${userId}`
       return
     }
 
-    referralLink.value = data.referralUrl || null
+    const data = await res.json()
 
-    if (!referralLink.value) {
-      console.error('No referralUrl returned from create-referral-link')
-    }
+    referralLink.value = data.referralUrl || `https://akinto.io/?ref=${userId}`
+
+    invitedUsersCount.value = Number(data.invitedUsersCount || 0)
+    crossBorderInvitesCount.value = Number(data.crossBorderInvitesCount || 0)
+    unlockedCountries.value = Array.isArray(data.unlockedCountries) ? data.unlockedCountries : []
   } catch (e) {
     console.error('Referral link load failed', e)
+    referralLink.value = `https://akinto.io/?ref=${userId}`
   } finally {
     referralLoading.value = false
   }
@@ -733,14 +746,14 @@ async function handleNativeShare() {
   }
 
   if (!referralLink.value) {
-    referralLink.value = 'https://akinto.io/?ref=TEST123'
+    referralLink.value = `https://akinto.io/?ref=${userId}`
   }
 
   try {
     if (navigator.share) {
       await navigator.share({
         title: 'Akinto',
-        text: 'Play today’s global knowledge puzzle with me on Akinto.',
+        text: inviteShareText.value,
         url: referralLink.value,
       })
       return
@@ -758,15 +771,17 @@ async function copyLink() {
   }
 
   if (!referralLink.value) {
-    referralLink.value = 'https://akinto.io/?ref=TEST123'
+    referralLink.value = `https://akinto.io/?ref=${userId}`
   }
+
+  const payload = `${inviteShareText.value}\n\n${referralLink.value}`
 
   try {
     if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(referralLink.value)
+      await navigator.clipboard.writeText(payload)
     } else {
       const textArea = document.createElement('textarea')
-      textArea.value = referralLink.value
+      textArea.value = payload
       textArea.setAttribute('readonly', '')
       textArea.style.position = 'absolute'
       textArea.style.left = '-9999px'
@@ -784,6 +799,33 @@ async function copyLink() {
   } catch (e) {
     console.error('Copy failed', e)
   }
+}
+
+async function ensureReferralLink() {
+  if (referralLink.value) return referralLink.value
+
+  const createdLink = await loadReferralLink()
+  if (createdLink) return createdLink
+
+  try {
+    const res = await fetch('/api/load-growth-state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      if (data?.referralUrl) {
+        referralLink.value = data.referralUrl
+        return referralLink.value
+      }
+    }
+  } catch (e) {
+    console.error('Growth-state referral fallback failed', e)
+  }
+
+  return null
 }
 
 async function loadGrowthState() {
@@ -973,8 +1015,8 @@ onMounted(async () => {
 
   await loadSessionState()
   applyHydratedState()
-  loadReferralLink()
   await loadGrowthState()
+  await loadReferralLink()
   await loadLandingBoardState()
 })
 
