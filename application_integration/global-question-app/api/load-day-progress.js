@@ -62,7 +62,8 @@ export default async function handler(req, res) {
     // ---------- DAILY DERIVED METRICS ----------
 
     const finalMarkers = attempts.filter(
-      (a) => a.result === 'success' || a.result === 'lockout' || a.result === 'exit-early',
+      (a) =>
+        Number(a.attemptIndex) === 999 && ['success', 'lockout', 'exit-early'].includes(a.result),
     )
 
     const finalResult = finalMarkers[finalMarkers.length - 1] || null
@@ -94,20 +95,18 @@ export default async function handler(req, res) {
     }
 
     const hintCount = attempts.filter((a) => a.result === 'hint-used').length
-
     const windowsUsed = new Set(attempts.map((a) => a.windowId).filter(Boolean)).size
-
     const country = attempts.find((a) => a.country)?.country || null
 
-    // latest correct list
     const latestWithCorrect = [...attempts].reverse().find((a) => a.correctAnswers?.length)
 
     // ---------- HARD DAY END DETECTION ----------
+    // Only success and exit-early end the DAY.
+    // lockout is a per-window state and must not block re-entry for later windows.
 
-    // Prefer explicit exit / success markers
-    const dayEndAttempt = [...attempts]
+    const dayEndAttempt = [...finalMarkers]
       .reverse()
-      .find((a) => ['success', 'exit-early', 'lockout'].includes(a.result))
+      .find((a) => ['success', 'exit-early'].includes(a.result))
 
     const dayEnded = !!dayEndAttempt
     const dayEndResult = dayEndAttempt?.result || null

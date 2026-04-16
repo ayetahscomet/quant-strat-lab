@@ -102,19 +102,19 @@ function descriptionForBadge(badge, { u, speedTop }) {
 
   switch (badge) {
     case 'Perfect Completion':
-      return `Clean sweep — ${completionPct}% completion. No notes.`
+      return `Clean sweep - ${completionPct}% completion. No notes.`
     case 'Sniper Accuracy':
       return `Sharpshooter mode: ${accuracyPct}% accuracy today.`
     case 'Lightning Fast':
-      return `Blink-and-it’s-done — faster than ${speedTop ?? '…'}% of players${seconds !== null ? ` (${seconds}s)` : ''}.`
+      return `Blink-and-it’s-done - faster than ${speedTop ?? '…'}% of players${seconds !== null ? ` (${seconds}s)` : ''}.`
     case 'Top 10% Accuracy':
-      return `Top 10% for accuracy — tidy work (${accuracyPct}%).`
+      return `Top 10% for accuracy - tidy work (${accuracyPct}%).`
     case 'Top 10% Completion':
-      return `Top 10% for completion — you filled more than most (${completionPct}%).`
+      return `Top 10% for completion - you filled more than most (${completionPct}%).`
     case 'No Hints Used':
-      return `No hints, no mercy — you did it the hard way (${hints} hints).`
+      return `No hints, no mercy - you did it the hard way (${hints} hints).`
     case 'Rare Finder':
-      return `You pulled ${rare} rare answers — niche knowledge unlocked.`
+      return `You pulled ${rare} rare answers - niche knowledge unlocked.`
     case 'Low Attempts, High Impact':
       return `Efficient: ${attempts} attempts with strong coverage (${completionPct}% completion).`
     case 'Played Today':

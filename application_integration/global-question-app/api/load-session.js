@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   try {
     // =====================================================
-    // Load ENTIRE day once — canonical session snapshot
+    // Load ENTIRE day once - canonical session snapshot
     // =====================================================
     const records = await base('UserAnswers')
       .select({

@@ -248,6 +248,10 @@ export const continentByCountryCode = {
   za: 'Africa', // South Africa
   zm: 'Africa', // Zambia
   zw: 'Africa', // Zimbabwe
+  tw: 'Asia', // Taiwan
+  xk: 'Europe', // Kosovo
+  cw: 'Americas', // Curaçao
+  io: 'Asia', // British Indian Ocean Territory
 }
 
 // helper

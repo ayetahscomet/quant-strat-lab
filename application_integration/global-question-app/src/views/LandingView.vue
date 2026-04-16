@@ -1,6 +1,6 @@
+<!-- src/views/LandingView.vue -->
 <template>
   <div class="landing-page">
-    <!-- LANDING SCREEN -->
     <div class="landing">
       <div class="landing-inner">
         <div class="brand-row">
@@ -11,8 +11,67 @@
           </div>
         </div>
 
+        <p class="hero-kicker">One question. Many countries.</p>
+
+        <p class="hero-copy">
+          Play today’s board and see how your country compares with the world.
+        </p>
+
+        <div v-if="hasAttributionContext" class="context-pill">
+          <span v-if="landingContext.ref">
+            Invited via <strong>{{ landingContext.ref }}</strong>
+          </span>
+          <span v-else-if="landingContext.creator">
+            Shared by <strong>{{ landingContext.creator }}</strong>
+          </span>
+          <span v-else-if="landingContext.seedCountry">
+            Seeded for <strong>{{ getName(landingContext.seedCountry) }}</strong>
+          </span>
+          <span v-else-if="landingContext.seedRegion">
+            Opened from <strong>{{ landingContext.seedRegion }}</strong>
+          </span>
+          <span v-else-if="landingContext.campus">
+            Opened from <strong>{{ landingContext.campus }}</strong>
+          </span>
+          <span v-else-if="landingContext.campaign">
+            Campaign <strong>{{ landingContext.campaign }}</strong>
+          </span>
+        </div>
+
+        <div class="live-board-card">
+          <div class="live-board-top">
+            <div>
+              <p class="live-board-label">You’re joining a global board</p>
+              <h2 class="live-board-title">This week’s board</h2>
+            </div>
+            <span class="live-badge" v-if="landingBoard.updatedLive">Updated live</span>
+          </div>
+
+          <p class="live-board-sub">
+            <template v-if="landingBoardLoading"> Loading countries joined this week… </template>
+            <template v-else-if="landingBoard.weeklyCountryCount > 0">
+              Players have joined from {{ landingBoard.weeklyCountryCount }}
+              {{ landingBoard.weeklyCountryCount === 1 ? 'country' : 'countries' }}.
+            </template>
+            <template v-else> Be one of the first countries on this week’s board. </template>
+          </p>
+
+          <div v-if="landingBoard.weeklyCountries.length" class="live-country-list">
+            <div v-for="code in visibleWeeklyCountries" :key="code" class="live-country-pill">
+              <img :src="getFlag(code)" :alt="`${getName(code)} flag`" />
+              <span>{{ getName(code) }}</span>
+            </div>
+          </div>
+
+          <p class="live-country-empty" v-else-if="!landingBoardLoading">
+            No countries showing yet.
+          </p>
+
+          <p class="live-board-footer">+ Add your country</p>
+        </div>
+
         <button class="play-btn" :disabled="!country" @click="goToGame">Play</button>
-        <p class="gate-note" v-if="!country">Select your country to begin.</p>
+        <p class="gate-note" v-if="!country">Select your country to join the global board.</p>
 
         <p class="date">{{ today }}</p>
 
@@ -53,63 +112,59 @@
           </div>
         </div>
 
-        <p class="micro" v-if="country">You can change this any time.</p>
+        <p class="micro" v-if="country">
+          Your country is used to place you on today’s board and compare your answers with the
+          world.
+        </p>
       </div>
     </div>
 
-    <!-- SEO / HERO SCROLL SECTION -->
     <section class="seo-hero" ref="seoHero">
       <div class="seo-inner">
         <header class="seo-head">
-          <h2>Akinto — The Global Daily Knowledge Game</h2>
-          <p class="seo-sub">A high-value habit for global literacy.</p>
+          <h2>Akinto - The Global Daily Knowledge Game</h2>
+          <p class="seo-sub">See how your country compares.</p>
         </header>
 
         <p class="seo-lead">
-          Akinto aims to become a benchmark app for global literacy and a place where curiosity
-          forms daily while a worldwide community grows around thoughtful exploration.
+          Akinto is not just a solo trivia game. Each day, players across different countries face
+          the same carefully designed question, allowing you to compare your thinking with your
+          country and with the wider world.
         </p>
 
         <p class="seo-lead">
-          What some call facts, we call globally common knowledge. Each day presents one carefully
-          designed question that rewards reflection over immediate correctness and shows how people
-          across countries approached the same challenge.
+          What some call facts, we call globally common knowledge. The aim is not only to answer,
+          but to reflect, return, and understand how different places approached the same prompt.
         </p>
 
         <div class="seo-cols">
           <div class="seo-col">
             <h3>How it works</h3>
             <ul>
+              <li><strong>One question daily:</strong> a single curated challenge for everyone</li>
+              <li><strong>Country-based comparison:</strong> see how your country performed</li>
               <li>
-                <strong>A Daily Ritual:</strong> One curated question designed to become a
-                high-value habit
-              </li>
-              <li>
-                <strong>Deep Reflection:</strong> Thoughtful inquiry prioritised over immediate
-                correctness
-              </li>
-              <li>
-                <strong>Global Insight:</strong> Compare your perspective with how the world thinks
+                <strong>Global perspective:</strong> compare your answers with players worldwide
               </li>
             </ul>
           </div>
 
           <div class="seo-col">
-            <h3>Our learning philosophy</h3>
-            <p>Akinto is guided by simple principles:</p>
+            <h3>Why it feels different</h3>
+            <p>Akinto is built around a different kind of daily puzzle:</p>
             <ul>
               <li><strong>Discovery</strong> over memorisation</li>
-              <li><strong>Curiosity</strong> over competition</li>
-              <li><strong>Global perspective</strong> over narrow local knowledge</li>
-              <li><strong>Simplicity</strong> rooted in genuine exploration</li>
+              <li><strong>Reflection</strong> over speed</li>
+              <li><strong>Global comparison</strong> over isolated play</li>
+              <li><strong>Curiosity</strong> over empty competition</li>
             </ul>
           </div>
 
           <div class="seo-col seo-cta">
             <h3>Join today</h3>
             <p>
-              Become part of a global community built on curiosity and return each day to sharpen
-              your view of the world.
+              Choose your country, play today’s board, and see how your perspective compares with
+              players around the world.
             </p>
             <button class="seo-play" @click="goToGame">Play today’s puzzle</button>
           </div>
@@ -150,6 +205,39 @@ const country = ref('')
 const showDropdown = ref(false)
 const search = ref('')
 
+const landingBoardLoading = ref(true)
+const landingBoard = ref({
+  updatedLive: true,
+  weeklyCountries: [],
+  weeklyCountryCount: 0,
+  todayCountries: [],
+  todayCountryCount: 0,
+  todayPlayerCount: 0,
+})
+
+const landingContext = ref({
+  ref: '',
+  campaign: '',
+  seedCountry: '',
+  creator: '',
+  seedRegion: '',
+  campus: '',
+})
+
+const hasAttributionContext = computed(() => {
+  const ctx = landingContext.value
+  return !!(
+    ctx.ref ||
+    ctx.campaign ||
+    ctx.seedCountry ||
+    ctx.creator ||
+    ctx.seedRegion ||
+    ctx.campus
+  )
+})
+
+const visibleWeeklyCountries = computed(() => landingBoard.value.weeklyCountries.slice(0, 8))
+
 const today = computed(() =>
   new Date().toLocaleDateString('en-GB', {
     weekday: 'long',
@@ -179,7 +267,9 @@ const filteredCountries = computed(() => {
   const q = String(search.value || '')
     .trim()
     .toLowerCase()
+
   if (!q) return countries
+
   return countries.filter((c) =>
     String(c.name || '')
       .toLowerCase()
@@ -193,6 +283,67 @@ function persistCountry(code) {
 
   localStorage.setItem('akinto_country', c)
   document.cookie = `akinto_country=${c}; path=/; max-age=31536000`
+}
+
+function persistAttributionValue(key, value) {
+  if (!value) return
+  localStorage.setItem(key, value)
+  sessionStorage.setItem(key, value)
+}
+
+function readStoredLandingContext() {
+  landingContext.value = {
+    ref: localStorage.getItem('akinto_pending_referral') || '',
+    campaign: localStorage.getItem('akinto_campaign') || '',
+    seedCountry: localStorage.getItem('akinto_seed_country') || '',
+    creator: localStorage.getItem('akinto_creator') || '',
+    seedRegion: localStorage.getItem('akinto_seed_region') || '',
+    campus: localStorage.getItem('akinto_seed_campus') || '',
+  }
+}
+
+async function loadLandingBoard() {
+  try {
+    landingBoardLoading.value = true
+
+    const res = await fetch('/api/load-landing-board')
+    if (!res.ok) return
+
+    const data = await res.json()
+
+    landingBoard.value = {
+      updatedLive: !!data.updatedLive,
+      weeklyCountries: Array.isArray(data.weeklyCountries) ? data.weeklyCountries : [],
+      weeklyCountryCount: Number(data.weeklyCountryCount || 0),
+      todayCountries: Array.isArray(data.todayCountries) ? data.todayCountries : [],
+      todayCountryCount: Number(data.todayCountryCount || 0),
+      todayPlayerCount: Number(data.todayPlayerCount || 0),
+    }
+  } catch (err) {
+    console.error('Failed to load landing board', err)
+  } finally {
+    landingBoardLoading.value = false
+  }
+}
+
+function cleanAttributionParamsFromUrl() {
+  const url = new URL(window.location.href)
+
+  const keysToRemove = ['src', 'ref', 'campaign', 'seedCountry', 'creator', 'seedRegion', 'campus']
+
+  let changed = false
+
+  for (const key of keysToRemove) {
+    if (url.searchParams.has(key)) {
+      url.searchParams.delete(key)
+      changed = true
+    }
+  }
+
+  if (!changed) return
+
+  const nextUrl = `${url.pathname}${url.search ? `?${url.searchParams.toString()}` : ''}${url.hash || ''}`
+  window.history.replaceState({}, document.title, nextUrl)
 }
 
 function selectCountry(code) {
@@ -217,6 +368,7 @@ function goToGame() {
     showDropdown.value = true
     return
   }
+
   router.push('/play')
 }
 
@@ -225,22 +377,75 @@ function handleLandingKey(e) {
     e.preventDefault()
     goToGame()
   }
+
   if (e.key === 'Escape') closeDropdown()
 }
 
-onMounted(() => {
+function captureLandingParams() {
   const params = new URLSearchParams(window.location.search)
+
   const srcRaw = params.get('src')
-  const src = (srcRaw || '').trim()
+  const src = String(srcRaw || '').trim()
 
   if (src && /^[a-z0-9_]{1,64}$/i.test(src)) {
-    localStorage.setItem('akinto_source', src)
-    sessionStorage.setItem('akinto_source', src)
-    window.history.replaceState({}, document.title, window.location.pathname)
+    persistAttributionValue('akinto_source', src)
   }
 
+  const refRaw = params.get('ref')
+  const referralCode = String(refRaw || '').trim()
+
+  if (referralCode && /^[a-z0-9_-]{4,64}$/i.test(referralCode)) {
+    localStorage.setItem('akinto_pending_referral', referralCode)
+    sessionStorage.setItem('akinto_pending_referral', referralCode)
+  }
+
+  const campaignRaw = params.get('campaign')
+  const campaign = String(campaignRaw || '').trim()
+
+  if (campaign && /^[a-z0-9_-]{1,64}$/i.test(campaign)) {
+    persistAttributionValue('akinto_campaign', campaign)
+  }
+
+  const seedCountryRaw = params.get('seedCountry')
+  const seedCountry = normaliseCode(seedCountryRaw)
+
+  if (seedCountry && countries.some((c) => normaliseCode(c.code) === seedCountry)) {
+    persistAttributionValue('akinto_seed_country', seedCountry)
+  }
+
+  const creatorRaw = params.get('creator')
+  const creator = String(creatorRaw || '').trim()
+
+  if (creator && /^[a-z0-9 _-]{1,64}$/i.test(creator)) {
+    persistAttributionValue('akinto_creator', creator)
+  }
+
+  const seedRegionRaw = params.get('seedRegion')
+  const seedRegion = String(seedRegionRaw || '').trim()
+
+  if (seedRegion && /^[a-z0-9 _-]{1,64}$/i.test(seedRegion)) {
+    persistAttributionValue('akinto_seed_region', seedRegion)
+  }
+
+  const campusRaw = params.get('campus')
+  const campus = String(campusRaw || '').trim()
+
+  if (campus && /^[a-z0-9 _-]{1,64}$/i.test(campus)) {
+    persistAttributionValue('akinto_seed_campus', campus)
+  }
+
+  readStoredLandingContext()
+  cleanAttributionParamsFromUrl()
+}
+
+onMounted(async () => {
+  captureLandingParams()
+  await loadLandingBoard()
+
   const existing = localStorage.getItem('akinto_country')
-  if (existing) country.value = normaliseCode(existing)
+  if (existing) {
+    country.value = normaliseCode(existing)
+  }
 
   window.addEventListener('keydown', handleLandingKey)
 
@@ -252,9 +457,7 @@ onMounted(() => {
         document.body.classList.remove('dark-bg')
       }
     },
-    {
-      threshold: 0.2,
-    },
+    { threshold: 0.2 },
   )
 
   if (seoHero.value) {
@@ -264,6 +467,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleLandingKey)
+
   if (seoObserver && seoHero.value) {
     seoObserver.unobserve(seoHero.value)
   }
@@ -288,18 +492,18 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 
-/* keep all your existing styles unchanged below */
 .landing {
-  height: 100vh;
+  min-height: 100vh;
   width: 100vw;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 36px 0;
 }
 
 .landing-inner {
   text-align: center;
-  transform: translateY(-40px);
+  width: min(92vw, 760px);
 }
 
 .brand-row {
@@ -308,14 +512,17 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 32px;
 }
+
 .logo {
   width: 110px;
   height: 110px;
   outline: 1.5px solid #242227;
 }
+
 .text-block {
   text-align: left;
 }
+
 .app-name {
   font-size: 46px;
   font-weight: 600;
@@ -323,6 +530,7 @@ onBeforeUnmount(() => {
   line-height: 1;
   color: #242227;
 }
+
 .motto {
   margin-top: 15px;
   font-size: 17px;
@@ -330,8 +538,137 @@ onBeforeUnmount(() => {
   color: #242227;
 }
 
+.hero-kicker {
+  margin: 26px 0 0;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #242227;
+}
+
+.hero-copy {
+  margin: 12px auto 0;
+  max-width: 560px;
+  font-size: 18px;
+  line-height: 1.5;
+  color: #242227;
+  opacity: 0.82;
+}
+
+.context-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 18px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #f5f5f5;
+  border: 1px solid #d9d9d9;
+  font-size: 13px;
+  color: #242227;
+  max-width: 90%;
+  line-height: 1.35;
+}
+
+.context-pill strong {
+  font-weight: 700;
+}
+
+.live-board-card {
+  margin: 24px auto 0;
+  width: min(100%, 640px);
+  padding: 20px 20px 18px;
+  border-radius: 20px;
+  border: 1px solid #d9d9d9;
+  background: radial-gradient(circle at top left, rgba(0, 0, 0, 0.035), transparent 45%), #fafafa;
+  text-align: left;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.06);
+}
+
+.live-board-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.live-board-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.live-board-title {
+  margin: 6px 0 0;
+  font-size: 26px;
+  line-height: 1.1;
+  color: #242227;
+}
+
+.live-badge {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.live-board-sub {
+  margin: 14px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #242227;
+  opacity: 0.82;
+}
+
+.live-country-list {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.live-country-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #dddddd;
+  font-size: 14px;
+  color: #242227;
+}
+
+.live-country-pill img {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.live-country-empty {
+  margin-top: 16px;
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+.live-board-footer {
+  margin: 16px 0 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #242227;
+}
+
 .play-btn {
-  margin-top: 30px;
+  margin-top: 28px;
   padding: 12px 68px;
   background: #000;
   color: #fff;
@@ -344,10 +681,12 @@ onBeforeUnmount(() => {
     transform 0.12s ease,
     opacity 0.12s ease;
 }
+
 .play-btn:hover {
   opacity: 0.92;
   transform: translateY(-2px);
 }
+
 .play-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
@@ -355,7 +694,7 @@ onBeforeUnmount(() => {
 }
 
 .seo-col li strong {
-  color: #f0e68c; /* A soft khaki/gold */
+  color: #f0e68c;
   font-weight: 700;
 }
 
@@ -393,6 +732,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   overflow: hidden;
 }
+
 .flag-circle img {
   width: 100%;
   height: 100%;
@@ -408,6 +748,7 @@ onBeforeUnmount(() => {
   font-size: 15px;
   color: #242227;
 }
+
 .chevron {
   font-size: 14px;
   color: #242227;
@@ -417,6 +758,7 @@ onBeforeUnmount(() => {
   transform: scale(1.05);
   transition: 0.15s;
 }
+
 .dropdown-wrapper {
   position: fixed;
   inset: 0;
@@ -546,7 +888,7 @@ onBeforeUnmount(() => {
 
 .seo-col ul {
   padding-left: 18px;
-  padding-top: 0px;
+  padding-top: 0;
 }
 
 .seo-col li {
@@ -587,10 +929,62 @@ onBeforeUnmount(() => {
   }
 }
 
+@media (max-width: 640px) {
+  .live-board-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .live-board-title {
+    font-size: 22px;
+  }
+}
+
 @media (max-width: 520px) {
+  .landing-inner {
+    width: min(94vw, 760px);
+  }
+
+  .brand-row {
+    gap: 18px;
+  }
+
   .logo {
     width: 85px;
     height: 85px;
+  }
+
+  .app-name {
+    font-size: 36px;
+  }
+
+  .motto {
+    margin-top: 10px;
+    font-size: 15px;
+  }
+
+  .hero-kicker {
+    margin-top: 22px;
+    font-size: 13px;
+  }
+
+  .hero-copy {
+    font-size: 15px;
+    max-width: 92%;
+  }
+
+  .context-pill {
+    font-size: 12px;
+    padding: 9px 12px;
+  }
+
+  .live-board-card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .live-country-pill {
+    font-size: 13px;
   }
 }
 

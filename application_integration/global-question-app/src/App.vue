@@ -1,3 +1,4 @@
+<!--src/App.vue -->
 <template>
   <div class="app-shell" :class="{ 'share-mode-active': isShareMode }">
     <!-- GLOBAL COOKIE CONSENT -->

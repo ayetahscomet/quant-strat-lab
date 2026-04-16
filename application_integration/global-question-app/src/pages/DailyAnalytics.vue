@@ -73,7 +73,7 @@
                     ? displaySpeed + '%'
                     : personal.paceSeconds
                       ? Math.max(1, Math.round(personal.paceSeconds / 60)) + 'm'
-                      : '—'
+                      : '-'
                 }}
               </span>
             </div>
@@ -361,7 +361,7 @@ function countryName(code) {
 
 function countryDisplay(codeOrName) {
   const raw = String(codeOrName || '').trim()
-  if (!raw) return '—'
+  if (!raw) return '-'
 
   const lower = raw.toLowerCase()
 
@@ -378,7 +378,7 @@ function getOrCreateUUID() {
   let id = localStorage.getItem('akinto_user_id')
 
   if (!id) {
-    const legacy = localStorage.getItem('akinto_uuid')
+    const legacy = localStorage.getItem('akinto_user_id') || localStorage.getItem('akinto_uuid')
     if (legacy) {
       id = legacy
       localStorage.setItem('akinto_user_id', legacy)
@@ -471,7 +471,7 @@ function generateMetricCommentary(p, g = {}) {
     const map = {
       elite: `${base} Full board. No leftovers.`,
       strong: `${base} High coverage. You left very little behind.`,
-      mid: `${base} Close — tomorrow tightens up.`,
+      mid: `${base} Close - tomorrow tightens up.`,
       low: `${base} Partial sweep. The grid had more to give.`,
       'very-low': `${base} Opening moves only. Build from here.`,
     }
@@ -495,15 +495,15 @@ function generateMetricCommentary(p, g = {}) {
     const map = {
       elite: `${base} Clinical. Almost no wasted motion.`,
       strong: `${base} High precision. You weren’t guessing.`,
-      mid: `${base} A few speculative swings — respectable hit rate.`,
+      mid: `${base} A few speculative swings - respectable hit rate.`,
       low: `${base} Akinto scores unique submissions only. Pause before firing.`,
-      'very-low': `${base} Deep end energy. Slow down — distinct entries score better.`,
+      'very-low': `${base} Deep end energy. Slow down - distinct entries score better.`,
     }
 
     accuracyFoot = map[accuracyTier] || base
 
     if (confidence === 'very-low') {
-      accuracyFoot += ' Small sample — precision stabilises with volume.'
+      accuracyFoot += ' Small sample - precision stabilises with volume.'
     }
   }
 
@@ -525,7 +525,7 @@ function generateMetricCommentary(p, g = {}) {
         strong: `Quicker than most. Faster than ${percentile}% today.`,
         mid: `Measured pace. Faster than ${percentile}% of players.`,
         low: `Deliberate tempo. Faster than ${percentile}% today.`,
-        'very-low': `Slow burn. Faster than ${percentile}% — but speed isn’t everything.`,
+        'very-low': `Slow burn. Faster than ${percentile}% - but speed isn’t everything.`,
       }
 
       speedFoot = map[paceTier]
@@ -614,7 +614,7 @@ function generateMetricCommentary(p, g = {}) {
 }
 
 function windowLabel(id) {
-  if (!id) return '—'
+  if (!id) return '-'
   const w = WINDOWS.find((w) => w.id === id)
   return w?.label || id
 }
@@ -818,7 +818,7 @@ function buildPersonalCards(rng) {
             ? `${pct(p.pacePercentile)}%`
             : p.paceSeconds
               ? `${Math.max(1, Math.round(p.paceSeconds / 60))}m`
-              : '—',
+              : '-',
         sub: 'Pace',
       },
     }),
@@ -1154,7 +1154,7 @@ function buildPersonalChart(rng) {
     {
       tag: 'Discipline',
       title: 'Duplicate drift',
-      caption: 'Repeats are normal — but fewer repeats usually means stronger recall.',
+      caption: 'Repeats are normal - but fewer repeats usually means stronger recall.',
       render(ctx) {
         const d = p.duplicatePenalty
         const score = d === 0 ? 90 : clamp(90 - d * 14, 10, 90)
@@ -1207,7 +1207,7 @@ function buildGlobalBlocks(rng) {
 
   const totalPlayers = typeof g.totalPlayers === 'number' ? g.totalPlayers : null
   const countryRank =
-    typeof g.yourCountryRank === 'number' ? `#${g.yourCountryRank}` : totalPlayers ? '—' : '—'
+    typeof g.yourCountryRank === 'number' ? `#${g.yourCountryRank}` : totalPlayers ? '-' : '-'
 
   const countryLabel = p.countryName || 'your country'
 
@@ -1235,7 +1235,7 @@ function buildGlobalBlocks(rng) {
         ],
         caption: 'World trend (stylised)',
       },
-      caption: 'A daily headline — not a spreadsheet.',
+      caption: 'A daily headline - not a spreadsheet.',
     }),
 
     () => ({
@@ -1257,7 +1257,7 @@ function buildGlobalBlocks(rng) {
                 }. That’s alpha.`
           })()
         : personal.value.duplicatePenalty === 0
-          ? 'Every submission was unique — clean work.'
+          ? 'Every submission was unique - clean work.'
           : `Duplicates cropped up ${personal.value.duplicatePenalty} times.`,
       tier: 'minor',
       shape: 'square',
@@ -1314,7 +1314,7 @@ function buildGlobalBlocks(rng) {
       tier: 'minor',
       shape: 'square',
       mini: {
-        big: typeof p.pacePercentile === 'number' ? `${pct(p.pacePercentile)}%` : '—',
+        big: typeof p.pacePercentile === 'number' ? `${pct(p.pacePercentile)}%` : '-',
         sub: 'Pace',
       },
       chart: {
@@ -1332,7 +1332,7 @@ function buildGlobalBlocks(rng) {
       body:
         typeof g.avgAccuracy === 'number' && g.totalPlayers > 5
           ? `World average accuracy: ${pct(g.avgAccuracy)}%. You: ${pct(p.accuracy)}%.`
-          : `We’re still waiting on your peers to catch up — global accuracy will firm up soon.`,
+          : `We’re still waiting on your peers to catch up - global accuracy will firm up soon.`,
 
       tier: 'major',
       shape: 'wide',
@@ -1400,9 +1400,9 @@ function buildGlobalBlocks(rng) {
           : {
               head: ['Country', 'Avg'],
               rows: [
-                ['—', '—'],
-                ['—', '—'],
-                ['—', '—'],
+                ['-', '-'],
+                ['-', '-'],
+                ['-', '-'],
               ],
             },
       caption: 'This will become addictive. Promise.',
@@ -1603,12 +1603,12 @@ function buildGlobalBlocks(rng) {
                 `${Math.round(Number(x.value || 0) * 10) / 10}%`,
               ])
           : [
-              ['1. —', '—'],
-              ['2. —', '—'],
-              ['3. —', '—'],
-              ['4. —', '—'],
-              ['5. —', '—'],
-              ['6. —', '—'],
+              ['1. -', '-'],
+              ['2. -', '-'],
+              ['3. -', '-'],
+              ['4. -', '-'],
+              ['5. -', '-'],
+              ['6. -', '-'],
             ]
 
       if (roll < 0.33) {
@@ -1627,7 +1627,7 @@ function buildGlobalBlocks(rng) {
             data: series,
           },
           caption: pick(rng, [
-            'Stylised trend — daily fresh.',
+            'Stylised trend - daily fresh.',
             'Not finance. Still a chart.',
             'The world had a tempo.',
           ]),
@@ -1710,7 +1710,7 @@ function buildGlobalBlocks(rng) {
             ? `${pct(p.pacePercentile)}%`
             : p.paceSeconds
               ? `${Math.max(1, Math.round(p.paceSeconds / 60))}m`
-              : '—',
+              : '-',
         sub: 'Pace',
       },
       caption: pick(rng, [
@@ -1815,7 +1815,7 @@ function buildGlobalBlocks(rng) {
       id: `gb_${blocks.length}_${tier}`,
       topic,
       kicker: b.kicker || 'Global',
-      title: b.title || '—',
+      title: b.title || '-',
       body: b.body || '',
       tier,
       shape: b.shape || 'square',
@@ -1838,7 +1838,7 @@ function buildGlobalBlocks(rng) {
         id: `gb_fallback_${blocks.length}`,
         kicker: 'Global',
         title: 'Today’s global totals are processing',
-        body: 'We’re aggregating worldwide play right now — refresh in a moment.',
+        body: 'We’re aggregating worldwide play right now - refresh in a moment.',
         tier: 'minor',
         shape: 'square',
         mini: null,
@@ -1987,6 +1987,8 @@ function derivePersonalFromUserDailyProfile(payload) {
     archetype: prof.Archetype ?? null,
     streakContinues: prof.StreakContinues ?? null,
     firstSolveToday: prof.FirstSolveToday ?? null,
+
+    dayResult: prof.DayResult || payload?.derived?.dayResult || 'unknown',
 
     countryCode: resolvedCountryCode,
     countryName: resolvedCountryName,
@@ -2166,7 +2168,7 @@ const canonicalShareMetrics = computed(() => {
         ? `${pct(p.pacePercentile)}%`
         : p.paceSeconds
           ? `${Math.max(1, Math.round(p.paceSeconds / 60))}m`
-          : '—',
+          : '-',
 
     pacePercentile: p.pacePercentile,
     completionReason: p.completionReason,

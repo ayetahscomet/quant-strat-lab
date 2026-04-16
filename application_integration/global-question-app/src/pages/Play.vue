@@ -1,3 +1,4 @@
+<!-- src/pages/Play.vue -->
 <template>
   <div class="play-route">
     <transition name="screen-fade" mode="out-in">
@@ -40,6 +41,29 @@
             />
           </div>
         </div>
+
+        <div v-if="screenState !== 'split-lockout'" class="global-live-bar">
+          <template v-if="landingBoardLoading">
+            <span class="global-live-bar-line">Today’s board is loading…</span>
+          </template>
+
+          <template v-else-if="landingBoard.todayCountryCount > 0">
+            <span class="global-live-bar-line">
+              Live today · {{ landingBoard.todayCountryCount }}
+              {{ landingBoard.todayCountryCount === 1 ? 'country has' : 'countries have' }}
+              already joined today’s board.
+            </span>
+            <span class="global-live-bar-sub">Your answers will be compared globally.</span>
+          </template>
+
+          <template v-else>
+            <span class="global-live-bar-line">
+              Live today · You could be one of the first countries on today’s board.
+            </span>
+            <span class="global-live-bar-sub">Your answers will be compared globally.</span>
+          </template>
+        </div>
+
         <div class="attempt-metric">
           {{ fieldStatus.filter((s) => s === 'correct').length }} / {{ answers.length }} correct
         </div>
@@ -51,7 +75,10 @@
           <transition name="split-lock" mode="out-in">
             <div
               class="lockout-split ready"
-              :class="{ 'lockout-return': lockoutMode === 'return' }"
+              :class="{
+                'lockout-return': lockoutMode === 'return',
+                'lockout-return-scrollable': lockoutMode === 'return',
+              }"
             >
               <!-- ============ LEFT PANE: LATEST ATTEMPT ============ -->
               <div class="left-pane">
@@ -63,32 +90,76 @@
                   class="locked-result"
                   :class="fieldStatus[i]"
                 >
-                  {{ ans || '—' }}
+                  {{ ans || '-' }}
                 </div>
               </div>
 
               <!-- ============ RIGHT PANE: LOCKOUT CARD ============ -->
               <div class="right-pane lockout-card">
-                <img src="/logo-800-full.svg" class="lockout-logo" @click="goHome" />
+                <div class="lockout-top">
+                  <img src="/logo-800-full.svg" class="lockout-logo" @click="goHome" />
 
-                <h2 class="lockout-headline-strong">{{ lockoutHeadlineStrong }}</h2>
-                <h2 class="lockout-headline-sub">{{ lockoutHeadlineSub }}</h2>
+                  <h2 class="lockout-headline-strong">{{ lockoutHeadlineStrong }}</h2>
+                  <h2 class="lockout-headline-sub">{{ lockoutHeadlineSub }}</h2>
 
-                <p class="midday-sub">Next window:</p>
-                <p class="midday-time">{{ nextSlotShort }}</p>
-                <p class="midday-countdown">Come back in {{ countdown }}</p>
+                  <p class="midday-sub">Next window:</p>
+                  <p class="midday-time">{{ nextSlotShort }}</p>
+                  <p class="midday-countdown">Come back in {{ countdown }}</p>
+                  <p class="lockout-live-copy">{{ lockoutLiveCopy }}</p>
 
-                <button
-                  class="notif-btn"
-                  :disabled="notificationsEnabled"
-                  @click="enableNotifications"
-                >
-                  {{ notificationsEnabled ? 'Email reminders enabled' : 'Enable email reminders' }}
-                </button>
+                  <button
+                    class="notif-btn"
+                    :disabled="notificationsEnabled"
+                    @click="enableNotifications"
+                  >
+                    {{
+                      notificationsEnabled ? 'Email reminders enabled' : 'Enable email reminders'
+                    }}
+                  </button>
 
-                <button class="exit-lockout-btn" @click="showExitConfirm = true">
-                  I’ve Had Enough for Today
-                </button>
+                  <button class="exit-lockout-btn" @click="showExitConfirm = true">
+                    I’ve Had Enough for Today
+                  </button>
+
+                  <div v-if="lockoutMode === 'return'" class="lockout-scroll-cue">
+                    <span class="lockout-scroll-cue-text">Let the question marinate for a sec</span>
+                    <span class="lockout-scroll-cue-arrow">↓</span>
+                  </div>
+                </div>
+
+                <div v-if="lockoutMode === 'return'" class="lockout-marinate">
+                  <div class="lockout-marinate-inner">
+                    <p class="lockout-marinate-kicker">Still locked out</p>
+
+                    <h3 class="lockout-marinate-title">Let the question marinate for a sec</h3>
+
+                    <div class="lockout-question-card">
+                      <p class="lockout-question-label">Question</p>
+                      <p class="lockout-question-text">
+                        {{ question || 'Today’s question is still loading.' }}
+                      </p>
+                    </div>
+
+                    <div class="lockout-attempt-card">
+                      <p class="lockout-question-label">Your latest attempt</p>
+
+                      <div class="lockout-attempt-stack">
+                        <div
+                          v-for="(ans, i) in answers"
+                          :key="`return-${i}`"
+                          class="lockout-attempt-pill"
+                          :class="fieldStatus[i]"
+                        >
+                          <span class="lockout-attempt-index">{{ i + 1 }}</span>
+                          <span class="lockout-attempt-text">{{ ans || '-' }}</span>
+                          <span class="lockout-attempt-state">
+                            {{ fieldStatus[i] === 'correct' ? 'Correct' : 'Missed' }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </transition>
@@ -141,6 +212,27 @@
               Lock In
             </button>
           </div>
+
+          <div class="button-row" style="margin-top: 15px">
+            <button class="share-btn" @click="openShareModal" :disabled="referralLoading">
+              {{ referralLoading ? 'Loading link...' : 'Share' }}
+            </button>
+          </div>
+
+          <div class="growth-box" style="margin-top: 5px">
+            <p v-if="growthLoading" class="growth-meta">Loading growth stats...</p>
+
+            <div v-else class="growth-stats" style="margin-top: 5px">
+              <p class="growth-meta">
+                <strong>{{ invitedUsersCount }}</strong> invited ·
+                <strong>{{ crossBorderInvitesCount }}</strong> reached abroad
+              </p>
+
+              <p class="growth-meta" v-if="unlockedCountries.length">
+                Countries reached: {{ unlockedCountries.join(', ').toUpperCase() }}
+              </p>
+            </div>
+          </div>
         </template>
 
         <!-- =======================================================
@@ -149,7 +241,9 @@
 
         <transition name="modal-fade">
           <div
-            v-if="modalMode || showExitConfirm || showFillWarning || showEmailModal"
+            v-if="
+              modalMode || showExitConfirm || showFillWarning || showEmailModal || showShareModal
+            "
             :class="['overlay', { 'modal-lower': modalMode && modalMode !== 'exit' }]"
           >
             <!-- FILL WARNING -->
@@ -226,6 +320,69 @@
               <p style="margin-top: 12px; font-size: 12px; opacity: 0.7">
                 You can unsubscribe any time from the email footer.
               </p>
+            </div>
+
+            <!-- SHARE MODAL -->
+            <!-- SHARE MODAL -->
+            <div v-else-if="showShareModal" class="modal share-modal">
+              <div class="share-card-lite">
+                <button class="share-close" @click="closeShareModal" aria-label="Close share modal">
+                  ×
+                </button>
+
+                <div class="share-head">
+                  <div class="share-brand">
+                    <img src="/logo-800-full.svg" class="share-brand-logo" alt="Akinto" />
+                    <div class="share-brand-text">
+                      <div class="share-brand-name">Akinto</div>
+                      <div class="share-brand-tag">A game of Common Knowledge.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="share-copy-block">
+                  <h2 class="share-title">Share with your furthest friend</h2>
+                  <p class="share-subtitle">
+                    Send today’s puzzle across borders and help Akinto spread.
+                  </p>
+                </div>
+
+                <div class="share-stats-row">
+                  <div class="share-stat share-stat-invited">
+                    <div class="share-stat-label">Invited</div>
+                    <div class="share-stat-value">{{ invitedUsersCount }}</div>
+                  </div>
+
+                  <div class="share-stat share-stat-abroad">
+                    <div class="share-stat-label">Reached abroad</div>
+                    <div class="share-stat-value">{{ crossBorderInvitesCount }}</div>
+                  </div>
+
+                  <div class="share-stat share-stat-countries">
+                    <div class="share-stat-label">Countries reached</div>
+                    <div class="share-stat-value">{{ unlockedCountries.length }}</div>
+                  </div>
+                </div>
+
+                <div class="share-note">
+                  <span v-if="unlockedCountries.length">
+                    {{ unlockedCountries.join(', ').toUpperCase() }}
+                  </span>
+                  <span v-else> Your next share could open a new country. </span>
+                </div>
+
+                <div class="share-actions">
+                  <button class="share-action primary" @click="handleNativeShare">Share</button>
+
+                  <button class="share-action secondary" @click="copyLink">
+                    {{ referralCopied ? 'Copied ✓' : 'Copy link' }}
+                  </button>
+
+                  <button class="share-action ghost" @click="closeShareModal">Close</button>
+                </div>
+
+                <div class="share-footer">akinto.io</div>
+              </div>
             </div>
           </div>
         </transition>
@@ -331,6 +488,22 @@ const modalMode = ref(null) // null | 'askHint' | 'hint' | 'success'
 const showExitConfirm = ref(false)
 const router = useRouter()
 
+const referralLink = ref(null)
+const referralLoading = ref(false)
+const referralCopied = ref(false)
+
+const growthLoading = ref(false)
+const invitedUsersCount = ref(0)
+const crossBorderInvitesCount = ref(0)
+const unlockedCountries = ref([])
+
+const landingBoardLoading = ref(true)
+const landingBoard = ref({
+  todayCountryCount: 0,
+  todayPlayerCount: 0,
+  todayCountries: [],
+})
+
 const hintUsedThisWindow = ref(false)
 const triedIncorrectToday = ref(new Set())
 const lockoutMode = ref(null)
@@ -347,10 +520,12 @@ const canPromptPush = computed(() => {
   )
 })
 
+const showShareModal = ref(false)
+const inputRefs = ref([])
+
 /* ======================================================
    INPUT REFERENCES (arrow navigation)
 ====================================================== */
-const inputRefs = ref([])
 
 function registerInputRef(el, i) {
   if (el) inputRefs.value[i] = el
@@ -473,6 +648,14 @@ function startCountdown() {
   countdownTimer = setInterval(updateCountdown, 1000)
 }
 
+function openShareModal() {
+  showShareModal.value = true
+}
+
+function closeShareModal() {
+  showShareModal.value = false
+}
+
 onMounted(() => {
   startCountdown()
 })
@@ -513,6 +696,142 @@ async function resolveDailyStateBeforePlay() {
   return false
 }
 
+async function loadReferralLink() {
+  try {
+    referralLoading.value = true
+
+    const res = await fetch('/api/create-referral-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    })
+
+    const data = await res.json().catch(() => ({}))
+
+    if (!res.ok) {
+      console.error('create-referral-link failed:', res.status, data)
+      return
+    }
+
+    referralLink.value = data.referralUrl || null
+
+    if (!referralLink.value) {
+      console.error('No referralUrl returned from create-referral-link')
+    }
+  } catch (e) {
+    console.error('Referral link load failed', e)
+  } finally {
+    referralLoading.value = false
+  }
+}
+
+async function handleNativeShare() {
+  if (!referralLink.value) {
+    await loadReferralLink()
+  }
+
+  if (!referralLink.value) {
+    referralLink.value = 'https://akinto.io/?ref=TEST123'
+  }
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: 'Akinto',
+        text: 'Play today’s global knowledge puzzle with me on Akinto.',
+        url: referralLink.value,
+      })
+      return
+    }
+
+    await copyLink()
+  } catch (e) {
+    console.error('Native share failed', e)
+  }
+}
+
+async function copyLink() {
+  if (!referralLink.value) {
+    await loadReferralLink()
+  }
+
+  if (!referralLink.value) {
+    referralLink.value = 'https://akinto.io/?ref=TEST123'
+  }
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(referralLink.value)
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = referralLink.value
+      textArea.setAttribute('readonly', '')
+      textArea.style.position = 'absolute'
+      textArea.style.left = '-9999px'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+    }
+
+    referralCopied.value = true
+
+    setTimeout(() => {
+      referralCopied.value = false
+    }, 2000)
+  } catch (e) {
+    console.error('Copy failed', e)
+  }
+}
+
+async function loadGrowthState() {
+  try {
+    growthLoading.value = true
+
+    const res = await fetch('/api/load-growth-state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    })
+
+    if (!res.ok) return
+
+    const data = await res.json()
+
+    invitedUsersCount.value = Number(data.invitedUsersCount || 0)
+    crossBorderInvitesCount.value = Number(data.crossBorderInvitesCount || 0)
+    unlockedCountries.value = Array.isArray(data.unlockedCountries) ? data.unlockedCountries : []
+
+    if (!referralLink.value && data.referralUrl) {
+      referralLink.value = data.referralUrl
+    }
+  } catch (e) {
+    console.error('Growth state load failed', e)
+  } finally {
+    growthLoading.value = false
+  }
+}
+
+async function loadLandingBoardState() {
+  try {
+    landingBoardLoading.value = true
+
+    const res = await fetch('/api/load-landing-board')
+    if (!res.ok) return
+
+    const data = await res.json()
+
+    landingBoard.value = {
+      todayCountryCount: Number(data.todayCountryCount || 0),
+      todayPlayerCount: Number(data.todayPlayerCount || 0),
+      todayCountries: Array.isArray(data.todayCountries) ? data.todayCountries : [],
+    }
+  } catch (e) {
+    console.error('Landing board load failed', e)
+  } finally {
+    landingBoardLoading.value = false
+  }
+}
 /* ======================================================
    TIME WINDOW / STAGE LABEL
 ====================================================== */
@@ -539,6 +858,26 @@ const nextSlotShort = computed(() => {
   const w = getNextWindow(tz.value)
   if (!w) return 'Next window soon.  '
   return `${w.start} – ${w.end}`
+})
+
+const lockoutLiveCopy = computed(() => {
+  if (landingBoardLoading.value) {
+    return 'The board is still moving.'
+  }
+
+  if (landingBoard.value.todayCountryCount > 1) {
+    return `The world is still answering across ${landingBoard.value.todayCountryCount} countries.`
+  }
+
+  if (landingBoard.value.todayCountryCount === 1) {
+    return 'The world is still answering today.'
+  }
+
+  return 'The board is still moving without you.'
+})
+
+const hasReturnLockoutContent = computed(() => {
+  return lockoutMode.value === 'return' && (!!question.value || answers.value.length > 0)
 })
 
 async function enableNotifications() {
@@ -599,15 +938,22 @@ onMounted(async () => {
       hardLocked.value = true
       lockoutMode.value = 'return'
       loading.value = false
+      await loadLandingBoardState()
       return
     }
   }
 
-  if (blocked) return
+  if (blocked) {
+    await loadLandingBoardState()
+    return
+  }
 
   await loadTodayQuestion()
   await loadSessionState()
   applyHydratedState()
+  loadReferralLink()
+  await loadGrowthState()
+  await loadLandingBoardState()
 })
 
 async function loadTodayQuestion() {
@@ -658,7 +1004,6 @@ async function loadTodayQuestion() {
     // ===============================
     // HYDRATE FROM LOCALSTORAGE (if any)
     // ===============================
-    loadSessionState()
 
     await nextTick()
     inputsVisible.value = true
@@ -947,9 +1292,14 @@ async function onLockIn() {
 ====================================================== */
 
 async function logPlay(result) {
+  const pendingReferral = localStorage.getItem('akinto_pending_referral')
+
   await fetch('/api/log-play', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(pendingReferral ? { 'x-akinto-ref': pendingReferral } : {}),
+    },
     body: JSON.stringify({
       userId,
       country: userCountry,
@@ -959,8 +1309,13 @@ async function logPlay(result) {
       answers: answers.value,
       correctAnswers: correctAnswers.value,
       result,
+      pendingReferral, // backup channel
     }),
   })
+
+  if (pendingReferral) {
+    localStorage.removeItem('akinto_pending_referral')
+  }
 }
 
 /* ======================================================
@@ -982,6 +1337,9 @@ function resolveCanonical(input, canon) {
     if (aliases.some((a) => normalise(a) === n)) {
       return c
     }
+
+    const match = fuzzyMatch(input, c)
+    if (match.ok) return c
   }
 
   return null
@@ -1142,11 +1500,15 @@ function goHome() {
 ====================================================== */
 
 function getOrCreateUUID() {
-  let id = localStorage.getItem('akinto_uuid')
+  let id = localStorage.getItem('akinto_user_id') || localStorage.getItem('akinto_uuid')
+
   if (!id) {
     id = crypto.randomUUID()
-    localStorage.setItem('akinto_uuid', id)
   }
+
+  localStorage.setItem('akinto_user_id', id)
+  localStorage.setItem('akinto_uuid', id)
+
   return id
 }
 </script>
@@ -1193,6 +1555,11 @@ body,
   inset: 0;
   z-index: 50;
   background: inherit;
+}
+
+.lockout-return-scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .lock:disabled {
@@ -1304,6 +1671,59 @@ body,
 
 .dot.active {
   opacity: 0.8; /* remaining attempts */
+}
+
+.global-live-bar {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #242227;
+  text-align: center;
+  max-width: min(92vw, 680px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.global-live-bar-line {
+  display: block;
+  font-weight: 800;
+}
+
+.global-live-bar-sub {
+  display: block;
+  font-weight: 500;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+.theme-night .global-live-bar {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.theme-night .global-live-bar-sub {
+  opacity: 0.9;
+}
+
+@media (max-width: 600px) {
+  .global-live-bar {
+    width: min(92vw, 520px);
+    font-size: 12px;
+    padding: 9px 12px;
+    margin-bottom: 12px;
+  }
+
+  .global-live-bar-sub {
+    margin-top: 4px;
+  }
 }
 
 /* Playscreen Layouts continued, but catering for dark mode*/
@@ -1954,6 +2374,7 @@ body,
   display: grid;
   grid-template-columns: 25% 75%;
   width: 100%;
+  min-height: 100vh;
   height: 100vh;
   padding: 0;
   margin: 0;
@@ -1983,7 +2404,7 @@ body,
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: flex-start;
   text-align: center;
 }
@@ -2010,15 +2431,14 @@ body,
 
 .lockout-card {
   width: 100%;
-  height: 100%;
-  background: white; /* no white card */
+  min-height: 100vh;
+  background: white;
   box-shadow: none;
-  padding: 4rem 3rem;
+  padding: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  align-items: flex-start; /* left align text */
-  align-items: center;
+  align-items: stretch;
   text-align: center;
 }
 
@@ -2045,6 +2465,187 @@ body,
   margin-top: 4px;
   font-size: 14px;
   opacity: 0.6;
+}
+
+.lockout-live-copy {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: 0.72;
+  max-width: 280px;
+  text-align: center;
+}
+
+.lockout-top {
+  min-height: 100vh;
+  padding: 4rem 3rem 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.lockout-scroll-cue {
+  margin-top: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.72;
+}
+
+.lockout-scroll-cue-text {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.lockout-scroll-cue-arrow {
+  font-size: 20px;
+  line-height: 1;
+  animation: lockoutArrowBounce 1.6s ease-in-out infinite;
+}
+
+.lockout-marinate {
+  width: 100%;
+  padding: 0 0 56px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(247, 247, 247, 1) 100%);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.lockout-marinate-inner {
+  width: min(760px, calc(100% - 32px));
+  margin: 0 auto;
+  padding-top: 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+}
+
+.lockout-marinate-kicker {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.58;
+}
+
+.lockout-marinate-title {
+  margin: 0 0 20px;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #111;
+}
+
+.lockout-question-card,
+.lockout-attempt-card {
+  background: #fff;
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  border-radius: 22px;
+  padding: 20px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.06);
+}
+
+.lockout-attempt-card {
+  margin-top: 14px;
+}
+
+.lockout-question-label {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.62;
+}
+
+.lockout-question-text {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.35;
+  font-weight: 650;
+  color: #111;
+}
+
+.lockout-attempt-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lockout-attempt-pill {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 2px solid #111;
+  background: #fff;
+  color: #111;
+}
+
+.lockout-attempt-pill.correct {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+.lockout-attempt-pill.incorrect {
+  background: #f7f7f7;
+  color: #111;
+  border-color: rgba(17, 17, 17, 0.18);
+  opacity: 0.78;
+}
+
+.lockout-attempt-index {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.lockout-attempt-pill.correct .lockout-attempt-index {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.lockout-attempt-text {
+  min-width: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.lockout-attempt-state {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.lockout-attempt-pill.correct .lockout-attempt-state {
+  opacity: 0.9;
+}
+
+@keyframes lockoutArrowBounce {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translateY(6px);
+    opacity: 1;
+  }
 }
 
 /* Page to Page Transitions via Spinners and Loading Displays */
@@ -2279,6 +2880,379 @@ body {
   letter-spacing: 0.15px;
   color: #111; /* rich contrast */
   margin-bottom: 6px;
+}
+
+/* --- Cleaning Referral Formatting --- */
+
+/* --- Share Modal Upgrade --- */
+
+.share-modal {
+  width: min(760px, 92vw);
+  max-width: 760px;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.share-card-lite {
+  position: relative;
+  width: 100%;
+  background:
+    radial-gradient(900px 420px at 20% 15%, rgba(255, 255, 255, 0.08), transparent 55%),
+    linear-gradient(135deg, #0d0f11 0%, #14181d 100%);
+  color: #fff;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
+  padding: 28px 28px 22px;
+  text-align: left;
+  overflow: hidden;
+}
+
+.share-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.share-close:hover {
+  opacity: 0.9;
+  transform: scale(1.03);
+}
+
+.share-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.share-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.share-brand-logo {
+  width: 64px;
+  height: 64px;
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  flex-shrink: 0;
+}
+
+.share-brand-text {
+  min-width: 0;
+}
+
+.share-brand-name {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -0.8px;
+  line-height: 1;
+}
+
+.share-brand-tag {
+  margin-top: 6px;
+  font-size: 14px;
+  opacity: 0.72;
+  line-height: 1.35;
+}
+
+.share-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  opacity: 0.95;
+}
+
+.share-copy-block {
+  margin-top: 24px;
+}
+
+.share-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+  color: #fff;
+}
+
+.share-subtitle {
+  margin: 10px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.share-stats-row {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.share-stat {
+  border-radius: 18px;
+  padding: 18px 18px 16px;
+  min-width: 0;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.32);
+}
+
+.share-stat-invited {
+  background: linear-gradient(180deg, #34e3a0, #1fbf85);
+  color: #fff;
+}
+
+.share-stat-abroad {
+  background: linear-gradient(180deg, #6d8cff, #4b63ff);
+  color: #fff;
+}
+
+.share-stat-countries {
+  background: linear-gradient(180deg, #ffd36a, #ffb547);
+  color: #111;
+}
+
+.share-stat-label {
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0.9;
+  letter-spacing: 0.3px;
+}
+
+.share-stat-value {
+  margin-top: 8px;
+  font-size: 34px;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+
+.share-note {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.82);
+  text-align: center;
+}
+
+.share-actions {
+  margin-top: 22px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.share-action {
+  border-radius: 999px;
+  padding: 11px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    opacity 0.16s ease;
+  min-width: 110px;
+  text-align: center;
+}
+
+.share-action:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+
+.share-action.primary {
+  background: #ffffff;
+  color: #111;
+  border: 1px solid #ffffff;
+}
+
+.share-action.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.share-action.ghost {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.share-footer {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: right;
+  font-size: 14px;
+  font-weight: 800;
+  opacity: 0.82;
+}
+
+.share-btn {
+  width: 100%;
+  padding: 0.45rem 2.5rem;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.85);
+  color: #111;
+  backdrop-filter: blur(6px);
+
+  border: 2px solid #d0d0d0;
+  cursor: pointer;
+
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.share-btn:hover {
+  background: #dcdcdc;
+  transform: translateY(-1px);
+}
+
+.share-btn:active {
+  transform: translateY(0);
+  background: #d2d2d2;
+}
+
+.share-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Mobile */
+@media (max-width: 700px) {
+  .share-modal {
+    width: 92vw;
+    max-width: 92vw;
+  }
+
+  .share-card-lite {
+    padding: 18px 18px 16px;
+    border-radius: 22px;
+  }
+
+  .share-head {
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .share-brand {
+    gap: 10px;
+  }
+
+  .share-brand-logo {
+    width: 46px;
+    height: 46px;
+  }
+
+  .share-brand-name {
+    font-size: 22px;
+  }
+
+  .share-brand-tag {
+    font-size: 11px;
+    margin-top: 4px;
+  }
+
+  .share-badge {
+    font-size: 10px;
+    padding: 6px 8px;
+  }
+
+  .share-copy-block {
+    margin-top: 16px;
+  }
+
+  .share-title {
+    font-size: 22px;
+  }
+
+  .share-subtitle {
+    font-size: 13px;
+    margin-top: 8px;
+  }
+
+  .share-stats-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .share-stat {
+    padding: 14px 14px 12px;
+    border-radius: 14px;
+  }
+
+  .share-stat-label {
+    font-size: 10px;
+  }
+
+  .share-stat-value {
+    font-size: 24px;
+    margin-top: 6px;
+  }
+
+  .share-note {
+    margin-top: 12px;
+    padding: 11px 12px;
+    font-size: 11px;
+    border-radius: 12px;
+  }
+
+  .share-actions {
+    margin-top: 16px;
+    gap: 10px;
+  }
+
+  .share-action {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    padding: 11px 14px;
+    font-size: 13px;
+  }
+
+  .share-footer {
+    margin-top: 14px;
+    padding-top: 10px;
+    font-size: 12px;
+  }
+
+  .share-close {
+    top: 12px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+    font-size: 22px;
+  }
 }
 
 /* ---Cleaning Game Play Features and Formatting --- */
@@ -2671,6 +3645,8 @@ body {
 
   .lockout-split {
     grid-template-columns: 100%;
+    min-height: 100svh;
+    height: auto;
   }
 
   .left-pane {
@@ -2681,10 +3657,85 @@ body {
     width: 100%;
   }
 
+  .lockout-top {
+    min-height: 100svh;
+    padding: 40px 18px 28px;
+  }
+
   .lockout-logo {
-    margin-top: 60px;
+    margin-top: 20px;
     width: 90px;
     height: 90px;
+  }
+
+  .lockout-headline-strong {
+    font-size: 26px;
+  }
+
+  .lockout-headline-sub {
+    font-size: 18px;
+    line-height: 1.35;
+    max-width: 320px;
+  }
+
+  .lockout-live-copy {
+    max-width: 300px;
+    font-size: 12px;
+  }
+
+  .lockout-scroll-cue {
+    margin-top: 20px;
+  }
+
+  .lockout-scroll-cue-text {
+    font-size: 12px;
+  }
+
+  .lockout-marinate {
+    padding-bottom: 34px;
+  }
+
+  .lockout-marinate-inner {
+    width: calc(100% - 24px);
+    padding-top: 22px;
+  }
+
+  .lockout-marinate-title {
+    font-size: 22px;
+    margin-bottom: 14px;
+  }
+
+  .lockout-question-card,
+  .lockout-attempt-card {
+    border-radius: 18px;
+    padding: 14px;
+  }
+
+  .lockout-question-text {
+    font-size: 18px;
+  }
+
+  .lockout-attempt-pill {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px 12px;
+  }
+
+  .lockout-attempt-index {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .lockout-attempt-text {
+    font-size: 15px;
+  }
+
+  .lockout-attempt-state {
+    grid-column: 2 / 3;
+    justify-self: start;
+    margin-top: 2px;
+    font-size: 10px;
   }
 
   /* ---------- SCROLL SAFETY ---------- */

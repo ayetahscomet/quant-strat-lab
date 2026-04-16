@@ -53,6 +53,7 @@ function deriveFromAttempts(attemptRows) {
 
   let requiredSlotsGuess = 0
   let lastValidSubmission = null
+  let dayResult = 'unknown'
 
   for (const r of attemptRows) {
     const f = r.fields || {}
@@ -67,7 +68,7 @@ function deriveFromAttempts(attemptRows) {
     if (
       answers.length > 0 &&
       f.Result !== 'snapshot' &&
-      f.AttemptIndex !== 999 &&
+      Number(f.AttemptIndex) !== 999 &&
       f.WindowID &&
       f.CreatedAt
     ) {
@@ -95,6 +96,10 @@ function deriveFromAttempts(attemptRows) {
 
     if (f.HintUsed === true) hintsUsed++
 
+    if (Number(f.AttemptIndex) === 999 && ['success', 'lockout', 'exit-early'].includes(f.Result)) {
+      dayResult = f.Result
+    }
+
     attempts.push({
       windowId: f.WindowID || null,
       result: f.Result || null,
@@ -112,14 +117,11 @@ function deriveFromAttempts(attemptRows) {
   const uniqueSubmitted = submittedSet.size
   const uniqueCorrect = Math.min(correctSet.size, requiredSlotsGuess)
 
-  // sane accuracy
   const denom = Math.max(uniqueSubmitted, requiredSlotsGuess)
   const accuracyPct = denom > 0 ? pct((uniqueCorrect / denom) * 100) : 0
 
-  // completion
   const completionPct = pct((uniqueCorrect / requiredSlotsGuess) * 100)
 
-  // pace
   const paceSeconds =
     firstAt && lastAt
       ? Math.max(0, Math.round((lastAt.getTime() - firstAt.getTime()) / 1000))
@@ -137,6 +139,7 @@ function deriveFromAttempts(attemptRows) {
     requiredSlotsGuess,
     submittedList: [...submittedSet],
     correctList: [...correctSet],
+    dayResult,
 
     completionWindowId: lastValidSubmission?.windowId || null,
     completionAt: lastValidSubmission?.createdAt || null,
@@ -192,7 +195,7 @@ function buildHeaderSentence({ completionPct, accuracyPct, paceSeconds, paceRela
     return 'Strong showing. You stayed in the hunt.'
   }
 
-  return 'One of those days — tomorrow tells a new story.'
+  return 'One of those days - tomorrow tells a new story.'
 }
 
 /* ======================================================
@@ -322,6 +325,8 @@ export default async function handler(req, res) {
 
         Country: profile.Country || null,
         Region: profile.Region || null,
+
+        DayResult: profile.DayResult ?? derived.dayResult,
 
         CompletionWindowId: derived.completionWindowId,
         CompletionAt: derived.completionAt,

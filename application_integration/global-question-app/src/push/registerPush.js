@@ -26,7 +26,7 @@ export async function registerPush() {
 
   // ---------- GDPR ----------
   if (!hasPushConsent()) {
-    console.log('[PUSH] blocked — no GDPR consent')
+    console.log('[PUSH] blocked - no GDPR consent')
     return false
   }
 

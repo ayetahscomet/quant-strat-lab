@@ -5,7 +5,7 @@ import { pickDateKey } from '../lib/dateKey.js'
 import { countries } from '../src/data/countries.js'
 
 /* ======================================================
-   Utils — normalisation / math
+   Utils - normalisation / math
 ====================================================== */
 
 function normalise(s) {

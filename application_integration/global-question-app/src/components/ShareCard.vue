@@ -1,3 +1,4 @@
+<!-- src/components/ShareCard.vue-->
 <template>
   <div class="share-card" :class="{ compact: isCompact }">
     <!-- Top row -->
@@ -13,9 +14,6 @@
 
       <div class="meta">
         <div class="date">{{ date }}</div>
-        <div class="sample" :class="{ warn: sampleTier !== 'strong' }">
-          {{ sampleLabel }}
-        </div>
       </div>
     </div>
 
@@ -100,7 +98,7 @@
         </div>
       </div>
 
-      <div class="leaders-empty" v-else>Leaderboard is still warming up — check back shortly.</div>
+      <div class="leaders-empty" v-else>Leaderboard is still warming up - check back shortly.</div>
     </div>
 
     <div class="footer">akinto.io</div>
@@ -147,7 +145,7 @@ const safeAccuracy = computed(() => clamp(Math.round(Number(props.accuracy) || 0
 
 const paceText = computed(() => {
   if (props.pace) return props.pace
-  return '—'
+  return '-'
 })
 
 const completionHeadline = computed(() => {
@@ -181,9 +179,9 @@ const scoreLine = computed(() => {
       : null
 
   if (p === null) return `Built from completion + accuracy (pace calibrating).`
-  if (p >= 80) return `High score energy — pace carried.`
+  if (p >= 80) return `High score energy - pace carried.`
   if (p >= 60) return `Strong balance across the board.`
-  return `Solid score — pace has room to run.`
+  return `Solid score - pace has room to run.`
 })
 
 /** Sample-size / credibility badge */
@@ -198,7 +196,7 @@ const sampleTier = computed(() => {
 
 const sampleLabel = computed(() => {
   const n = props.global?.totalPlayers
-  if (typeof n !== 'number') return `Sample: —`
+  if (typeof n !== 'number') return `Sample: -`
   if (n < 5) return `Sample: early (${n})`
   if (n < 15) return `Sample: building (${n})`
   return `Sample: ${n} players`
@@ -213,7 +211,7 @@ const isCompact = computed(() => {
 /** Global labels */
 const totalPlayersLabel = computed(() => {
   const n = props.global?.totalPlayers
-  return typeof n === 'number' ? `${n}` : '—'
+  return typeof n === 'number' ? `${n}` : '-'
 })
 
 const hasWorldAverages = computed(() => {
@@ -224,12 +222,12 @@ const hasWorldAverages = computed(() => {
 
 const avgCompletionLabel = computed(() => {
   const v = pct(props.global?.avgCompletion)
-  return v === null ? '—' : `${v}%`
+  return v === null ? '-' : `${v}%`
 })
 
 const avgAccuracyLabel = computed(() => {
   const v = pct(props.global?.avgAccuracy)
-  return v === null ? '—' : `${v}%`
+  return v === null ? '-' : `${v}%`
 })
 
 /** Country comparison + narrative */
@@ -272,7 +270,7 @@ const topCountries = computed(() => {
     .slice(0, 3)
     .map((x) => ({
       country: String(x.country || ''),
-      name: String(x.name || x.country || '—'),
+      name: String(x.name || x.country || '-'),
       value: pct(x.value) ?? 0,
     }))
 })

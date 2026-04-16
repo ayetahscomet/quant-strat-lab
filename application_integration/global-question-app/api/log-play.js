@@ -15,10 +15,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
-    const finalResult = result === 'success' ? 'success' : 'lockout'
+    const allowedResults = new Set(['success', 'lockout', 'exit-early'])
+
+    if (!allowedResults.has(result)) {
+      return res.status(400).json({ error: 'Invalid result state' })
+    }
+
+    const finalResult = result
 
     // =====================================================
-    // 1️⃣ Log final attempt to UserAnswers
+    // Log final play marker to UserAnswers
     // =====================================================
 
     await base('UserAnswers').create([
@@ -39,7 +45,7 @@ export default async function handler(req, res) {
     ])
 
     // =====================================================
-    // 2️⃣ Update EmailSubscriptions (if exists)
+    // Update EmailSubscriptions (if exists)
     // =====================================================
 
     const subs = await base('EmailSubscriptions')
@@ -52,18 +58,41 @@ export default async function handler(req, res) {
       const subRecord = subs[0]
 
       if (finalResult === 'lockout') {
-        // User failed → mark them for next-window reminder
+        // User failed this window but did not end the day
         await base('EmailSubscriptions').update(subRecord.id, {
           LastFailedWindowId: windowId,
           LastFailedDateKey: dateKey,
         })
       } else {
-        // User succeeded → clear reminder flags
+        // success OR exit-early both end the day for reminder purposes
         await base('EmailSubscriptions').update(subRecord.id, {
           LastFailedWindowId: null,
           LastFailedDateKey: null,
         })
       }
+    }
+
+    // =====================================================
+    // CLAIM REFERRAL (FIRST PLAY ONLY)
+    // =====================================================
+
+    try {
+      const pendingReferral = req.headers['x-akinto-ref'] || req.body?.pendingReferral || null
+
+      if (pendingReferral) {
+        await fetch(`${process.env.BASE_URL || ''}/api/claim-referral`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            referralCode: pendingReferral,
+            country,
+            source,
+          }),
+        }).catch(() => null)
+      }
+    } catch (e) {
+      console.warn('Referral claim skipped:', e)
     }
 
     return res.status(200).json({ ok: true })
