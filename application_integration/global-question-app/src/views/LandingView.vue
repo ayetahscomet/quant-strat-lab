@@ -66,8 +66,6 @@
           <p class="live-country-empty" v-else-if="!landingBoardLoading">
             No countries showing yet.
           </p>
-
-          <p class="live-board-footer">+ Add your country</p>
         </div>
 
         <button class="play-btn" :disabled="!country" @click="goToGame">Play</button>
@@ -658,13 +656,6 @@ onBeforeUnmount(() => {
   margin-top: 16px;
   font-size: 14px;
   opacity: 0.6;
-}
-
-.live-board-footer {
-  margin: 16px 0 0;
-  font-size: 15px;
-  font-weight: 800;
-  color: #242227;
 }
 
 .play-btn {
