@@ -10,7 +10,6 @@
 
     <!-- GLOBAL FOOTER -->
     <footer v-if="!isShareMode" class="trust-footer">
-      <span>No ads. No paywalls. We only store gameplay data.</span>
       <span>
         <a href="/privacy">Privacy</a>
         ·
