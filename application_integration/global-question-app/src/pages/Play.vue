@@ -424,7 +424,7 @@ import {
   todayKey,
 } from '../../lib/windows.js'
 import { onUnmounted } from 'vue'
-import { countryAliases } from '@/data/countryAliases'
+import { getCountryCanonicalMatch, normaliseCountryKey } from '@/data/countryAliases'
 import { registerPush } from '@/push/registerPush'
 import { useHead } from '@vueuse/head'
 
@@ -1181,13 +1181,19 @@ function applyHydratedState() {
 }
 
 function recomputeFieldStatusFromAnswers() {
+  const used = new Set()
+
   fieldStatus.value = answers.value.map((a) => {
     if (!a) return ''
 
-    const canonical = normalise(a)
-    const isCorrect = correctAnswers.value.some((c) => normalise(c) === canonical)
+    const canonical = resolveCanonical(a, correctAnswers.value)
+    if (!canonical) return 'incorrect'
 
-    return isCorrect ? 'correct' : 'incorrect'
+    const key = normalise(canonical)
+    if (used.has(key)) return 'incorrect'
+
+    used.add(key)
+    return 'correct'
   })
 }
 
@@ -1198,8 +1204,12 @@ function normalise(s) {
   return String(s || '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // remove accents
-    .replace(/[^a-z\s]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/['’]/g, '')
+    .replace(/\./g, ' ')
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/-/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -1216,7 +1226,6 @@ function levenshtein(a, b) {
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1
-
       dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
     }
   }
@@ -1228,14 +1237,13 @@ function fuzzyMatch(user, target) {
   const a = normalise(user)
   const b = normalise(target)
 
+  if (!a || !b) return { ok: false }
   if (a === b) return { ok: true, canonical: target }
 
   const dist = levenshtein(a, b)
   const maxLen = Math.max(a.length, b.length)
+  const similarity = maxLen ? 1 - dist / maxLen : 0
 
-  const similarity = 1 - dist / maxLen
-
-  // allow small typos only
   if (dist <= 2 || similarity >= 0.9) {
     return { ok: true, canonical: target }
   }
@@ -1386,21 +1394,10 @@ async function logPlay(result) {
 ========================================================= */
 
 function resolveCanonical(input, canon) {
-  const n = normalise(input)
+  const countryMatch = getCountryCanonicalMatch(input, canon)
+  if (countryMatch) return countryMatch
 
   for (const c of canon) {
-    const key = normalise(c)
-
-    // exact match
-    if (key === n) return c
-
-    const aliases = countryAliases[key] || []
-
-    // alias match
-    if (aliases.some((a) => normalise(a) === n)) {
-      return c
-    }
-
     const match = fuzzyMatch(input, c)
     if (match.ok) return c
   }

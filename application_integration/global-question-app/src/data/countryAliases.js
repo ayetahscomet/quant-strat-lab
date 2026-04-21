@@ -1,198 +1,175 @@
-export const countryAliases = {
-  afghanistan: [],
-  albania: [],
-  algeria: [],
-  andorra: [],
-  angola: [],
-  'antigua and barbuda': ['antigua', 'barbuda'],
-  argentina: [],
-  armenia: [],
-  australia: ['aus', 'oz'],
-  austria: [],
-  azerbaijan: [],
-  bahamas: ['the bahamas'],
-  bahrain: [],
-  bangladesh: [],
-  barbados: [],
-  belarus: [],
-  belgium: [],
-  belize: [],
-  benin: [],
-  bhutan: [],
-  bolivia: ['bolivia (plurinational state of)'],
-  'bosnia and herzegovina': ['bosnia'],
-  botswana: [],
+// src/data/countryAliases.js
+
+import { countries } from './countries.js'
+
+export function normaliseCountryKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/['’]/g, '')
+    .replace(/\./g, ' ')
+    .replace(/\((.*?)\)/g, ' $1 ')
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/-/g, ' ')
+    .replace(/\bsaint\b/g, 'st')
+    .replace(/\bthe\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function buildBaseVariants(name) {
+  const variants = new Set()
+  const raw = String(name || '').trim()
+
+  if (!raw) return []
+
+  variants.add(raw)
+
+  const noLeadingThe = raw.replace(/^the\s+/i, '').trim()
+  if (noLeadingThe) variants.add(noLeadingThe)
+
+  const saintToSt = raw.replace(/\bSaint\b/gi, 'St')
+  if (saintToSt) variants.add(saintToSt)
+  variants.add(saintToSt.replace(/\bSt\b/gi, 'St.'))
+
+  const andToAmp = raw.replace(/\band\b/gi, '&')
+  if (andToAmp) variants.add(andToAmp)
+
+  const ampToAnd = raw.replace(/&/g, 'and')
+  if (ampToAnd) variants.add(ampToAnd)
+
+  return [...variants]
+}
+
+const manualCountryAliases = {
+  'antigua and barbuda': ['antigua'],
+  bahamas: ['the bahamas', 'bahamas islands'],
+  bolivia: ['bolivia plurinational state of'],
+  'bosnia and herzegovina': ['bosnia', 'bosnia herzegovina'],
   brazil: ['brasil'],
   brunei: ['brunei darussalam'],
-  bulgaria: [],
-  'burkina faso': [],
-  burundi: [],
   'cabo verde': ['cape verde'],
-  cambodia: [],
-  cameroon: [],
-  canada: [],
   'central african republic': ['car'],
-  chad: [],
-  chile: [],
-  china: ['prc', "people's republic of china"],
-  colombia: [],
-  comoros: [],
-  'congo (congo-brazzaville)': ['republic of congo', 'congo republic', 'congo'],
-  'democratic republic of the congo': ['drc', 'dr congo', 'congo kinshasa', 'zaire'],
-  'costa rica': [],
-  "côte d'ivoire": ['ivory coast', 'cote d ivory', 'ivory coast'],
-  croatia: [],
-  cuba: [],
-  cyprus: [],
+  china: ['prc', 'peoples republic of china', "people's republic of china"],
+  'congo congo brazzaville': ['republic of congo', 'congo republic', 'congo brazzaville'],
+  'democratic republic of the congo': [
+    'drc',
+    'dr congo',
+    'drc congo',
+    'congo kinshasa',
+    'democratic republic of congo',
+    'zaire',
+  ],
+  "cote d'ivoire": ['ivory coast', 'cote divoire', 'cote d ivoire'],
   czechia: ['czech republic'],
-  denmark: [],
-  djibouti: [],
-  dominica: [],
-  'dominican republic': ['dr'],
-  ecuador: [],
-  egypt: [],
-  'el salvador': [],
-  'equatorial guinea': [],
-  eritrea: [],
-  estonia: [],
+  egypt: ['arab republic of egypt'],
   eswatini: ['swaziland'],
-  ethiopia: [],
-  fiji: [],
-  finland: [],
-  france: [],
-  gabon: [],
+  ethiopia: ['federal democratic republic of ethiopia'],
+  'falkland islands': ['falkland islands malvinas', 'falklands', 'islas malvinas'],
   gambia: ['the gambia'],
-  georgia: [],
+  georgia: ['sakartvelo'],
   germany: ['deutschland'],
-  ghana: [],
-  greece: [],
-  grenada: [],
-  guatemala: [],
-  guinea: [],
-  'guinea-bissau': [],
-  guyana: [],
-  haiti: [],
-  honduras: [],
-  hungary: [],
-  iceland: [],
-  india: [],
-  indonesia: [],
+  greece: ['hellas', 'hellenic republic'],
+  'hong kong': ['hong kong sar', 'hong kong sar china', 'hk'],
   iran: ['islamic republic of iran'],
-  iraq: [],
-  ireland: [],
-  israel: [],
-  italy: [],
-  jamaica: [],
-  japan: [],
-  jordan: [],
-  kazakhstan: [],
-  kenya: [],
-  kiribati: [],
-  kuwait: [],
-  kyrgyzstan: [],
-  laos: ['lao pdr'],
-  latvia: [],
-  lebanon: [],
-  lesotho: [],
-  liberia: [],
-  libya: [],
-  liechtenstein: [],
-  lithuania: [],
-  luxembourg: [],
-  madagascar: [],
-  malawi: [],
-  malaysia: [],
-  maldives: [],
-  mali: [],
-  malta: [],
-  'marshall islands': [],
-  mauritania: [],
-  mauritius: [],
-  mexico: [],
-  micronesia: ['fsm'],
-  moldova: [],
-  monaco: [],
-  mongolia: [],
-  montenegro: [],
-  morocco: [],
-  mozambique: [],
+  ireland: ['republic of ireland', 'eire'],
+  kyrgyzstan: ['kyrgyz republic'],
+  laos: ['lao pdr', 'lao peoples democratic republic'],
+  libya: ['state of libya'],
+  luxembourg: ['luxemburg'],
+  macao: ['macau', 'macao sar', 'macao sar china'],
+  'marshall islands': ['rmi', 'republic of the marshall islands'],
+  micronesia: ['fsm', 'federated states of micronesia'],
+  moldova: ['republic of moldova'],
   myanmar: ['burma'],
-  namibia: [],
-  nauru: [],
-  nepal: [],
   netherlands: ['the netherlands', 'holland'],
   'new zealand': ['nz'],
-  nicaragua: [],
-  niger: [],
-  nigeria: [],
-  'north korea': ['dprk'],
-  'south korea': ['rok', 'korea'],
-  'north macedonia': ['macedonia'],
-  norway: [],
-  oman: [],
-  pakistan: [],
-  palestine: ['state of palestine', 'west bank', 'gaza'],
-  palau: [],
-  panama: [],
+  'north korea': ['dprk', 'democratic peoples republic of korea'],
+  'north macedonia': ['macedonia', 'former yugoslav republic of macedonia', 'fyrom'],
+  palestine: ['state of palestine'],
   'papua new guinea': ['png'],
-  paraguay: [],
-  peru: [],
-  philippines: ['the philippines', 'ph'],
-  poland: [],
-  portugal: [],
-  qatar: [],
-  romania: [],
+  philippines: ['the philippines'],
   russia: ['russian federation'],
-  rwanda: [],
-  'saint kitts and nevis': ['st kitts'],
+  'saint kitts and nevis': ['st kitts', 'saint kitts'],
   'saint lucia': ['st lucia'],
-  'saint vincent and the grenadines': ['st vincent'],
-  samoa: [],
-  'san marino': [],
-  'sao tome and principe': ['são tomé and príncipe'],
+  'saint vincent and the grenadines': ['st vincent and the grenadines', 'st vincent'],
+  'sao tome and principe': ['sao tome'],
   'saudi arabia': ['ksa'],
-  senegal: [],
-  serbia: [],
-  seychelles: [],
-  'sierra leone': [],
-  singapore: [],
-  slovakia: [],
-  slovenia: [],
-  'solomon islands': [],
-  somalia: [],
+  slovakia: ['slovak republic'],
+  'solomon islands': ['the solomon islands'],
+  somalia: ['federal republic of somalia'],
   'south africa': ['rsa'],
-  'south sudan': [],
-  spain: [],
+  'south korea': ['rok', 'republic of korea', 'korea south'],
+  'south sudan': ['republic of south sudan'],
   'sri lanka': ['ceylon'],
-  sudan: [],
-  suriname: [],
-  sweden: [],
-  switzerland: ['ch'],
   syria: ['syrian arab republic'],
   taiwan: ['republic of china', 'roc', 'chinese taipei'],
-  tajikistan: [],
-  tanzania: [],
-  thailand: [],
-  'timor-leste': ['east timor'],
-  togo: [],
-  tonga: [],
+  tanzania: ['united republic of tanzania'],
+  'timor leste': ['east timor'],
   'trinidad and tobago': ['trinidad'],
-  tunisia: [],
-  turkey: ['türkiye'],
-  turkmenistan: [],
-  tuvalu: [],
-  uganda: [],
-  ukraine: [],
+  turkey: ['turkiye'],
+  turkmenistan: ['turkmenia'],
+  'turks and caicos islands': ['turks and caicos', 'turks caicos'],
   'united arab emirates': ['uae'],
-  'united kingdom': ['uk', 'great britain', 'britain', 'england'],
-  'united states': ['usa', 'us', 'united states of america', 'america'],
-  uruguay: [],
-  uzbekistan: [],
-  vanuatu: [],
-  'vatican city': ['holy see', 'vatican'],
-  venezuela: [],
-  vietnam: [],
-  yemen: [],
-  zambia: [],
-  zimbabwe: [],
+  'united kingdom': ['uk', 'great britain', 'britain', 'gb'],
+  'united states': ['us', 'usa', 'united states of america', 'america'],
+  'united states minor outlying islands': ['us minor outlying islands'],
+  uzbekistan: ['uzbek republic'],
+  'vatican city': ['holy see', 'vatican', 'vatican city state'],
+  venezuela: ['venezuela bolivarian republic of'],
+  vietnam: ['viet nam'],
+  'virgin islands british': ['british virgin islands', 'bvi'],
+  'virgin islands u s': ['us virgin islands', 'american virgin islands'],
+  'wallis and futuna': ['wallis and futuna islands'],
+}
+
+function buildCountryAliasMap() {
+  const aliasMap = {}
+
+  for (const country of countries) {
+    const canonicalName = country.name
+    const canonicalKey = normaliseCountryKey(canonicalName)
+
+    const bucket = new Set()
+    bucket.add(canonicalName)
+
+    for (const variant of buildBaseVariants(canonicalName)) {
+      bucket.add(variant)
+    }
+
+    const manual = manualCountryAliases[canonicalKey] || []
+    for (const variant of manual) {
+      bucket.add(variant)
+    }
+
+    aliasMap[canonicalKey] = [...bucket]
+  }
+
+  return aliasMap
+}
+
+export const countryAliases = buildCountryAliasMap()
+
+export function getCountryCanonicalMatch(input, canonList = []) {
+  const inputKey = normaliseCountryKey(input)
+  if (!inputKey) return null
+
+  for (const canonical of canonList) {
+    const canonicalKey = normaliseCountryKey(canonical)
+
+    if (inputKey === canonicalKey) {
+      return canonical
+    }
+
+    const aliases = countryAliases[canonicalKey] || []
+    const matchedAlias = aliases.some((alias) => normaliseCountryKey(alias) === inputKey)
+
+    if (matchedAlias) {
+      return canonical
+    }
+  }
+
+  return null
 }

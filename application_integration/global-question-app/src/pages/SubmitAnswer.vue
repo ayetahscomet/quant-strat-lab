@@ -1,3 +1,4 @@
+<!--src/pages/SubmitAnswer.vue-->
 <template>
   <div style="padding: 24px">
     <h1>Your Answer</h1>
