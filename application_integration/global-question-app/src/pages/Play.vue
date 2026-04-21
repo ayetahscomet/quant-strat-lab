@@ -680,14 +680,14 @@ async function resolveDailyStateBeforePlay() {
   if (!res.ok) return false
   const data = await res.json()
 
-  // Only "true day end" states should block re-entry
+  // Only true day-end states should block re-entry
   if (data.dayEnded) {
     if (data.dayEndResult === 'success') {
       currentView.value = 'success'
       return true
     }
 
-    if (data.dayEndResult === 'exit-early') {
+    if (data.dayEndResult === 'exit-early' || data.dayEndResult === 'final-window-lockout') {
       currentView.value = 'failure'
       return true
     }
@@ -1345,7 +1345,17 @@ async function onLockIn() {
     const w = curWin.value
 
     if (w?.id === 'last') {
-      await logPlay('exit-early')
+      await fetch('/api/end-day', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          dateKey: dateKey.value,
+          result: 'final-window-lockout',
+        }),
+      }).catch(() => null)
+
+      await logPlay('final-window-lockout')
 
       currentView.value = 'failure'
       return

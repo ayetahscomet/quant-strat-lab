@@ -271,6 +271,10 @@ const headline = computed(() => {
     return 'You Called It For Today.'
   }
 
+  if (summary.value.finalState === 'final-window-lockout') {
+    return 'You Went All In.'
+  }
+
   if (props.mode === 'persistence') {
     return 'You Went All In.'
   }
@@ -281,6 +285,10 @@ const headline = computed(() => {
 const subline = computed(() => {
   if (summary.value.finalState === 'exit-early') {
     return 'You chose to stop early. The correct answers are below.'
+  }
+
+  if (summary.value.finalState === 'final-window-lockout') {
+    return 'You used every window today. The correct answers are below.'
   }
 
   if (props.mode === 'persistence') {
@@ -443,6 +451,10 @@ const inviteShareText = computed(() => {
 const continuationTitle = computed(() => {
   if (summary.value.finalState === 'exit-early') {
     return 'The board moves on without you'
+  }
+
+  if (summary.value.finalState === 'final-window-lockout') {
+    return 'You gave today the full run'
   }
 
   if (props.mode === 'persistence') {
@@ -822,7 +834,7 @@ async function loadFailureSummaryFromAirtable() {
     correctAnswers,
     fieldStatus: computeFieldStatus(finalAnswers, correctAnswers),
     result: finalAttempt?.result || '',
-    finalState: data.dayEndResult || '',
+    finalState: data.dayEndResult || finalAttempt?.result || '',
     attemptIndex: finalAttempt?.attemptIndex ?? null,
     windowId: finalAttempt?.windowId || '',
     createdAt: finalAttempt?.createdAt || '',
@@ -868,9 +880,11 @@ async function submitAnswerIssue() {
         summaryType:
           summary.value.finalState === 'exit-early'
             ? 'exit-early'
-            : props.mode === 'persistence'
-              ? 'failure'
-              : 'lockout',
+            : summary.value.finalState === 'final-window-lockout'
+              ? 'final-window-lockout'
+              : props.mode === 'persistence'
+                ? 'failure'
+                : 'lockout',
         disputedAnswer: feedbackForm.value.disputedAnswer.trim(),
         suggestedAnswer: feedbackForm.value.suggestedAnswer.trim(),
         furtherComments: feedbackForm.value.furtherComments.trim(),
