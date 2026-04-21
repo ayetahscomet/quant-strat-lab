@@ -131,7 +131,11 @@
           v-for="block in globalBlocks"
           :key="block.id"
           class="g-block"
-          :class="['tier-' + block.tier, 'shape-' + block.shape]"
+          :class="[
+            'tier-' + block.tier,
+            'shape-' + block.shape,
+            block.topic ? 'topic-' + block.topic : '',
+          ]"
           :style="blockStyle(block)"
         >
           <div class="g-inner">
@@ -367,6 +371,36 @@ function countryDisplay(codeOrName) {
 
   if (/^[a-z]{2}$/.test(lower)) {
     return countries.find((c) => String(c.code || '').toLowerCase() === lower)?.name || raw
+  }
+
+  return raw
+}
+
+function countryNameKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/['’]/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/-/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function formatAnswerDisplay(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return '-'
+
+  const key = countryNameKey(raw)
+
+  const matchedCountry = countries.find((c) => {
+    return countryNameKey(c.name) === key || countryNameKey(c.code) === key
+  })
+
+  if (matchedCountry) {
+    return matchedCountry.name
   }
 
   return raw
@@ -1270,7 +1304,9 @@ function buildGlobalBlocks(rng) {
         p.countryName && typeof g.yourCountryAvgCompletion === 'number'
           ? `Average accuracy in ${p.countryName}: ${pct(g.yourCountryAvgCompletion)}%.`
           : p.countryName
-            ? `Processing today’s ${p.countryName} totals…`
+            ? totalPlayers
+              ? `Processing today’s ${p.countryName} totals... Global sample: ${totalPlayers} player${totalPlayers === 1 ? '' : 's'}.`
+              : `Processing today’s ${p.countryName} totals...`
             : 'Set your country to unlock this comparison.',
 
       tier: 'major',
@@ -1278,7 +1314,9 @@ function buildGlobalBlocks(rng) {
       mini:
         p.countryName && typeof g.yourCountryAvgCompletion === 'number'
           ? { big: `${pct(g.yourCountryAvgCompletion)}%`, sub: `${p.countryName} accuracy` }
-          : null,
+          : totalPlayers
+            ? { big: `${totalPlayers}`, sub: 'Players today' }
+            : null,
       table:
         Array.isArray(g.countryLeaderboard) && g.countryLeaderboard.length
           ? {
@@ -1440,7 +1478,7 @@ function buildGlobalBlocks(rng) {
       tier: 'badge',
       shape: 'wide',
       mini: null,
-      rareList: rare.map((r) => r.answer),
+      rareList: rare.map((r) => formatAnswerDisplay(r.answer)),
       caption: 'Low frequency. High culture.',
     }
   }
@@ -1449,7 +1487,7 @@ function buildGlobalBlocks(rng) {
     const og = g.mostOverGuessedWrong
     if (!og || !og.answer) return null
 
-    const formatted = String(og.answer)
+    const formatted = formatAnswerDisplay(og.answer)
 
     return {
       topic: 'overguess',
@@ -1457,9 +1495,9 @@ function buildGlobalBlocks(rng) {
       title: 'Most over-guessed wrong answer',
       body: `${formatted} was consistently incorrectly guessed. You're not the only one.`,
       tier: 'minor',
-      shape: 'square',
+      shape: 'wide',
       mini: {
-        big: `${clamp(Math.round(og.overGuessRatio), 1, 25)}×`,
+        big: `${Math.max(1, Math.round(Number(og.overGuessRatio) || 0))}×`,
         sub: 'Over-guess ratio',
       },
       caption: 'Confidence is not correctness.',
@@ -1748,14 +1786,18 @@ function buildGlobalBlocks(rng) {
       body: p.countryName
         ? typeof g.yourCountryAvgCompletion === 'number'
           ? `${p.countryName} avg accuracy: ${pct(g.yourCountryAvgCompletion)}%.`
-          : `Processing today’s ${p.countryName} totals…`
+          : totalPlayers
+            ? `Processing today’s ${p.countryName} totals... Global sample: ${totalPlayers} player${totalPlayers === 1 ? '' : 's'}.`
+            : `Processing today’s ${p.countryName} totals...`
         : 'Set your country to unlock comparisons.',
       tier: pick(rng, ['minor', 'ticker']),
       shape: pick(rng, ['wide', 'square']),
       mini:
         p.countryName && typeof g.yourCountryRank === 'number'
           ? { big: `#${g.yourCountryRank}`, sub: 'Rank' }
-          : null,
+          : totalPlayers
+            ? { big: `${totalPlayers}`, sub: 'Players today' }
+            : null,
       caption: pick(rng, [
         'Culture shows up in the strangest places.',
         'One question. Many worlds.',
@@ -1832,6 +1874,7 @@ function buildGlobalBlocks(rng) {
       tier,
       shape: b.shape || 'square',
       mini: b.mini || null,
+      rareList: Array.isArray(b.rareList) ? b.rareList : null,
       table: b.table || null,
       chart: b.chart || null,
       caption: b.caption || null,
@@ -2930,6 +2973,19 @@ async function downloadImage() {
   padding-top: 10px;
 }
 
+.topic-overguess .g-inner {
+  justify-content: flex-start;
+}
+
+.topic-overguess .g-mini {
+  margin-top: 14px;
+  padding-top: 0;
+}
+
+.topic-overguess .g-body {
+  max-width: 34rem;
+}
+
 .g-mini-big {
   font-size: 22px;
   font-weight: 900;
@@ -3575,6 +3631,24 @@ async function downloadImage() {
   .personal-dynamics {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
+  }
+
+  .personal-card {
+    min-height: 0;
+    padding-bottom: 16px;
+  }
+
+  .card-title,
+  .card-body {
+    padding-right: 0;
+  }
+
+  .card-mini {
+    position: static;
+    right: auto;
+    bottom: auto;
+    margin-top: 14px;
+    text-align: left;
   }
 
   .chart-dynamic {
