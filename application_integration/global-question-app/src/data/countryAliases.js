@@ -94,7 +94,11 @@ const manualCountryAliases = {
   russia: ['russian federation'],
   'saint kitts and nevis': ['st kitts', 'saint kitts'],
   'saint lucia': ['st lucia'],
-  'saint vincent and the grenadines': ['st vincent and the grenadines', 'st vincent'],
+  'saint vincent and the grenadines': [
+    'st vincent and the grenadines',
+    'st vincent',
+    'saint vincent',
+  ],
   'sao tome and principe': ['sao tome'],
   'saudi arabia': ['ksa'],
   slovakia: ['slovak republic'],
