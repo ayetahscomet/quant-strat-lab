@@ -137,6 +137,7 @@ const manualCountryAliases = {
   vietnam: ['viet nam'],
   'virgin islands british': ['british virgin islands', 'bvi'],
   'virgin islands u s': ['us virgin islands', 'american virgin islands'],
+  'western sahara': ['sahrawi arab democratic republic', 'sadr', 'sahrawi republic'],
   'wallis and futuna': ['wallis and futuna islands'],
 }
 
